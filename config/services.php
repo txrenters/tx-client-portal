@@ -1,0 +1,91 @@
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Third Party Services
+    |--------------------------------------------------------------------------
+    |
+    | This file is for storing the credentials for third party services such
+    | as Resend, Postmark, AWS, and more. This file provides the de facto
+    | location for this type of information, allowing packages to have
+    | a conventional file to locate the various service credentials.
+    |
+    */
+
+    // The messaging hub in tx-chatbot: every conversation with clients, by text or in this app.
+    'chat_hub' => [
+        'url' => env('CHAT_HUB_URL'),
+        'token' => env('CHAT_HUB_TOKEN'),
+        'webhook_secret' => env('CHAT_HUB_WEBHOOK_SECRET'),
+        // TLS check: true by default, or a CA bundle path for local .test sites.
+        'verify' => env('CHAT_HUB_VERIFY', true),
+    ],
+
+    // tx-cma: our MLS listing data, used for property photos.
+    'tx_cma' => [
+        'url' => env('TX_CMA_URL'),
+        'token' => env('TX_CMA_TOKEN'),
+        'photo_cache_hours' => (int) env('TX_CMA_PHOTO_CACHE_HOURS', 24),
+        // TLS check: true by default, or a CA bundle path for local .test sites.
+        'verify' => env('TX_CMA_VERIFY', true),
+    ],
+
+    'propertyware' => [
+        'base_url' => env('PROPERTYWARE_BASE_URL', 'https://api.propertyware.com/pw/api/rest/v1'),
+        'client_id' => env('PROPERTYWARE_CLIENT_ID'),
+        'client_secret' => env('PROPERTYWARE_CLIENT_SECRET'),
+        'system_id' => env('PROPERTYWARE_SYSTEM_ID'),
+        'cache_seconds' => (int) env('PROPERTYWARE_CACHE_SECONDS', 300),
+        // Portfolios, buildings, leases and contacts only change when the office
+        // edits them in Propertyware, never through a client, and resolving a
+        // client's scope touches them on every request. Nothing busts these keys
+        // on write, so the short default above is kept for the datasets clients
+        // do change: work orders and documents.
+        'directory_cache_seconds' => (int) env('PROPERTYWARE_DIRECTORY_CACHE_SECONDS', 1800),
+        'discover_accounts' => env('PROPERTYWARE_DISCOVER_ACCOUNTS', true),
+        // Propertyware's SOAP API, for what its REST API can't do (approving work orders).
+        'soap' => [
+            'url' => env('PROPERTYWARE_SOAP_URL'),
+            'username' => env('PROPERTYWARE_SOAP_USERNAME'),
+            'password' => env('PROPERTYWARE_SOAP_PASSWORD'),
+        ],
+        // Push owner approvals from the portal into Propertyware. Off by default: it
+        // writes to the live record and makes Propertyware send its own "Work Order
+        // Approved" alert. Until then approvals are kept in the portal and sent later.
+        'approval_push' => (bool) env('PROPERTYWARE_APPROVAL_PUSH', false),
+        // Propertyware logins of TexasRenters.com staff, comma separated. Conversation
+        // messages from these (or a property's listed managers) show as staff; any
+        // other author is the client replying through their Propertyware portal.
+        'staff_logins' => array_values(array_filter(array_map(
+            fn (string $login): string => strtolower(trim($login)),
+            explode(',', (string) env('PROPERTYWARE_STAFF_LOGINS', '')),
+        ))),
+        // Testing only: shows the approve button on every owner work order. These
+        // approvals stay in the portal and are never sent to Propertyware.
+        'approval_test_mode' => (bool) env('PROPERTYWARE_APPROVAL_TEST_MODE', false),
+    ],
+
+    'postmark' => [
+        'key' => env('POSTMARK_API_KEY'),
+    ],
+
+    'resend' => [
+        'key' => env('RESEND_API_KEY'),
+    ],
+
+    'ses' => [
+        'key' => env('AWS_ACCESS_KEY_ID'),
+        'secret' => env('AWS_SECRET_ACCESS_KEY'),
+        'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+    ],
+
+    'slack' => [
+        'notifications' => [
+            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
+            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
+        ],
+    ],
+
+];
