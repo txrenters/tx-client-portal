@@ -12,6 +12,10 @@ export type User = {
 
 export type Auth = {
     user: User;
+    /** Whether the signed-in user may open the admin dashboard. */
+    isAdmin: boolean;
+    /** True while an admin is signed in as this user. */
+    impersonating: boolean;
 };
 
 export type Passkey = {

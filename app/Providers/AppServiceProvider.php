@@ -2,20 +2,24 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use App\Services\ChatHub\ChatHubClient;
 use App\Services\Propertyware\DocumentLibrary;
 use App\Services\Propertyware\Financials;
 use App\Services\Propertyware\LeaseLedger;
+use App\Services\Propertyware\LeaseLedgerSource;
 use App\Services\Propertyware\LeaseLedgerStore;
 use App\Services\Propertyware\MaintenanceSummary;
 use App\Services\Propertyware\PropertywareClient;
 use App\Services\Propertyware\PropertywareDirectory;
 use App\Services\Propertyware\PropertywareSoap;
+use App\Services\Scheduling\SchedulingClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -40,6 +44,13 @@ class AppServiceProvider extends ServiceProvider
             self::tlsVerify(config('services.chat_hub.verify', true)),
         ));
 
+        $this->app->singleton(SchedulingClient::class, fn (): SchedulingClient => new SchedulingClient(
+            config('services.scheduling.url'),
+            config('services.scheduling.token'),
+            config('services.scheduling.page'),
+            self::tlsVerify(config('services.scheduling.verify', true)),
+        ));
+
         $this->app->singleton(PropertywareSoap::class, fn (): PropertywareSoap => new PropertywareSoap(
             config('services.propertyware.soap.url'),
             config('services.propertyware.soap.username'),
@@ -50,15 +61,18 @@ class AppServiceProvider extends ServiceProvider
             $this->app->make(PropertywareClient::class),
             $this->app->make(PropertywareDirectory::class),
             $this->app->make(LeaseLedgerStore::class),
-            $this->app->make(PropertywareSoap::class),
+        ));
+
+        $this->app->singleton(LeaseLedgerSource::class, fn (): LeaseLedgerSource => new LeaseLedgerSource(
+            $this->app->make(PropertywareClient::class),
         ));
 
         $this->app->singleton(LeaseLedgerStore::class, fn (): LeaseLedgerStore => new LeaseLedgerStore(
-            $this->app->make(PropertywareSoap::class),
+            $this->app->make(LeaseLedgerSource::class),
         ));
 
         $this->app->singleton(LeaseLedger::class, fn (): LeaseLedger => new LeaseLedger(
-            $this->app->make(PropertywareSoap::class),
+            $this->app->make(LeaseLedgerSource::class),
             $this->app->make(LeaseLedgerStore::class),
         ));
 
@@ -86,6 +100,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::define('admin', fn (User $user): bool => in_array(
+            strtolower($user->email),
+            config('services.admin_emails', []),
+            strict: true,
+        ));
+
+        // The log viewer package authorises through its own gate; point it at
+        // the same allowlist so there is only one answer to "who is an admin".
+        Gate::define('viewLogViewer', fn (?User $user): bool => $user !== null && Gate::forUser($user)->allows('admin'));
+
         $this->configureDefaults();
         $this->configureEmails();
     }

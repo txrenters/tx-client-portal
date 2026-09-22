@@ -45,16 +45,27 @@
     --color-ring: var(--ring);
     --color-success: var(--success);
     --color-success-foreground: var(--success-foreground);
+    /* Overlay for text sitting on a photograph, dark in both themes. */
+    --color-scrim: var(--scrim);
+    --color-scrim-foreground: var(--scrim-foreground);
+    --color-scrim-accent: var(--scrim-accent);
     /* Message categories, so a conversation's subject is colour-coded in the list. */
     --color-category-accounting: var(--category-accounting);
     --color-category-maintenance: var(--category-maintenance);
     --color-category-leasing: var(--category-leasing);
     --color-category-foreground: var(--category-foreground);
+    /* The far end of a category's gradient; see the tokens for why. */
+    --color-category-accounting-deep: var(--category-accounting-deep);
+    --color-category-maintenance-deep: var(--category-maintenance-deep);
+    --color-category-leasing-deep: var(--category-leasing-deep);
     --color-chart-1: var(--chart-1);
     --color-chart-2: var(--chart-2);
     --color-chart-3: var(--chart-3);
     --color-chart-4: var(--chart-4);
     --color-chart-5: var(--chart-5);
+    /* Money in and money out, which read as one pair wherever they appear. */
+    --color-chart-income: var(--chart-income);
+    --color-chart-expense: var(--chart-expense);
     --color-sidebar: var(--sidebar);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
@@ -71,6 +82,9 @@
     --brand-green: oklch(0.741 0.173 130.778);
     --success: oklch(0.607 0.15 132.088);
     --success-foreground: oklch(0.985 0.01 130);
+    --scrim: oklch(0.21 0.085 263);
+    --scrim-foreground: oklch(0.985 0 0);
+    --scrim-accent: oklch(0.4 0.13 140);
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
@@ -93,11 +107,35 @@
     --category-maintenance: oklch(0.5 0.16 250);
     --category-leasing: oklch(0.52 0.15 145);
     --category-foreground: oklch(0.99 0 0);
-    --chart-1: oklch(0.386 0.145 263.521);
-    --chart-2: oklch(0.741 0.173 130.778);
-    --chart-3: oklch(0.478 0.164 263.661);
-    --chart-4: oklch(0.607 0.15 132.088);
-    --chart-5: oklch(0.808 0.159 129.54);
+    /*
+     * The far end of each category's gradient. Fading the category colour
+     * out instead — to 60% over the page — drops white text to 2.4:1, so the
+     * gradient travels deeper rather than lighter. Every step here is inside
+     * sRGB and clears 4.5:1 against --category-foreground, so body text is
+     * readable at both ends of the card.
+     */
+    --category-accounting-deep: oklch(0.37 0.176 322);
+    --category-maintenance-deep: oklch(0.38 0.15 262);
+    --category-leasing-deep: oklch(0.4 0.106 152);
+    /*
+     * Categorical chart steps: the brand's navy and green alternating, so
+     * neighbouring slices never share a hue. Every step sits inside the
+     * readable lightness band and clears colour-blind separation — checked
+     * with the dataviz validator, not by eye. Re-run it before changing one.
+     */
+    --chart-1: oklch(0.52 0.17 263.5);
+    --chart-2: oklch(0.63 0.15 131);
+    --chart-3: oklch(0.7 0.12 263.5);
+    --chart-4: oklch(0.75 0.17 130.8);
+    --chart-5: oklch(0.58 0.1 263.5);
+    /*
+     * Income and expense. Green and red would read better as meaning, but the
+     * theme's green against its red measures ΔE 2.2 for deuteranopia — the
+     * same colour to roughly one man in twelve. Blue against red measures 28
+     * and says the same thing.
+     */
+    --chart-income: oklch(0.55 0.19 263.5);
+    --chart-expense: oklch(0.66 0.18 27);
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.386 0.145 263.521);
@@ -131,11 +169,20 @@
     --category-maintenance: oklch(0.76 0.12 250);
     --category-leasing: oklch(0.7 0.17 145);
     --category-foreground: oklch(0.16 0 0);
-    --chart-1: oklch(0.72 0.12 263.6);
-    --chart-2: oklch(0.808 0.159 129.54);
-    --chart-3: oklch(0.6 0.13 263.6);
-    --chart-4: oklch(0.741 0.173 130.778);
-    --chart-5: oklch(0.607 0.15 132.088);
+    /* Dark mode carries near-black text on these, so the gradient travels
+     * lighter here rather than deeper — the same reasoning, mirrored. */
+    --category-accounting-deep: oklch(0.75 0.16 324);
+    --category-maintenance-deep: oklch(0.87 0.064 254);
+    --category-leasing-deep: oklch(0.82 0.14 148);
+    /* Dark mode is stepped for its own surface, not flipped from light: the
+     * readable band is narrower here (L 0.48–0.67). */
+    --chart-1: oklch(0.53 0.16 263.5);
+    --chart-2: oklch(0.63 0.16 131);
+    --chart-3: oklch(0.66 0.13 263.5);
+    --chart-4: oklch(0.56 0.15 130.8);
+    --chart-5: oklch(0.6 0.13 263.5);
+    --chart-income: oklch(0.62 0.16 263.5);
+    --chart-expense: oklch(0.66 0.17 27);
     --sidebar: oklch(0.205 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
     --sidebar-primary: oklch(0.72 0.12 263.6);

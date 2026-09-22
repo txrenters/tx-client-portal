@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Client\PropertyIndexRequest;
 use App\Models\ClientAccount;
 use App\Services\Listings\ListingPhotos;
-use App\Services\Propertyware\Data\Property;
 use App\Services\Propertyware\DocumentLibrary;
 use App\Services\Propertyware\MaintenanceSummary;
 use App\Services\Propertyware\PropertyTimeline;

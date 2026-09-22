@@ -7,6 +7,7 @@ use App\Http\Controllers\Owner\DashboardController as OwnerDashboardController;
 use App\Http\Controllers\Owner\DocumentController as OwnerDocumentController;
 use App\Http\Controllers\Owner\FinancialController as OwnerFinancialController;
 use App\Http\Controllers\Owner\MaintenanceController as OwnerMaintenanceController;
+use App\Http\Controllers\Owner\MeetingController as OwnerMeetingController;
 use App\Http\Controllers\Owner\MessageController as OwnerMessageController;
 use App\Http\Controllers\Owner\PortfolioController as OwnerPortfolioController;
 use App\Http\Controllers\Owner\PropertyController as OwnerPropertyController;
@@ -70,6 +71,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('maintenance.documents.download');
         Route::get('maintenance/{workOrder}/documents/{document}/preview', [OwnerMaintenanceController::class, 'previewDocument'])
             ->name('maintenance.documents.preview');
+        Route::get('meetings', [OwnerMeetingController::class, 'index'])->name('meetings.index');
+
         Route::get('messages', [OwnerMessageController::class, 'index'])->name('messages.index');
         Route::post('messages', [OwnerMessageController::class, 'store'])->middleware('throttle:10,1')->name('messages.store');
         Route::post('messages/{thread}/replies', [OwnerMessageController::class, 'reply'])->whereNumber('thread')->middleware('throttle:30,1')->name('messages.reply');

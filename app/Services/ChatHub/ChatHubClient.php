@@ -29,6 +29,35 @@ class ChatHubClient
     }
 
     /**
+     * Check the hub is answering, without touching any conversation.
+     *
+     * The hub publishes no health endpoint, so this only asks whether it
+     * responds at all: any HTTP reply means the host and its certificate are
+     * fine, and only a failure to connect counts as down. It deliberately does
+     * not read a thread, because the cheapest conversation read still returns
+     * a client's messages.
+     *
+     * @throws ChatHubException
+     */
+    public function ping(): void
+    {
+        if (! $this->isConfigured()) {
+            throw new ChatHubException('The messaging hub is not configured.');
+        }
+
+        try {
+            Http::withToken((string) $this->token)
+                ->acceptJson()
+                ->withOptions(['verify' => $this->verify])
+                ->timeout(8)
+                ->connectTimeout(5)
+                ->get(rtrim((string) $this->url, '/').'/');
+        } catch (ConnectionException $exception) {
+            throw new ChatHubException('Could not reach the messaging hub.', previous: $exception);
+        }
+    }
+
+    /**
      * A contact's threads, most recent activity first.
      *
      * @param  array{search?: ?string, status?: ?string, category?: ?string, from?: ?string, to?: ?string}  $filters  Status "open" or "closed"; category is the thread's department; dates as Y-m-d, matching message activity.

@@ -5,7 +5,6 @@ use App\Models\ClientAccount;
 use App\Models\LeaseLedgerEntry;
 use App\Models\LeaseLedgerSync;
 use App\Models\User;
-use App\Services\Propertyware\PropertywareSoap;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
@@ -30,20 +29,27 @@ beforeEach(function () {
         '*/leases/55' => Http::response(['id' => 55, 'active' => true, 'status' => 'Active', 'baseRent' => 1400.0, 'leaseBalance' => 120.5]),
     ]);
 
-    // Propertyware's ledger: charges positive, money received negative, plus
-    // the bank details and internal ids the tenant must never be shown.
-    $this->mock(PropertywareSoap::class, function ($mock) {
-        $mock->shouldReceive('isConfigured')->andReturnTrue();
-        $mock->shouldReceive('leaseLedger')->andReturn([
-            ['ID' => 1, 'date' => '2026-09-01', 'amount' => 1400.0, 'comments' => '', 'referenceNumber' => '', 'account' => ['ID' => 4000, 'name' => 'Rent', 'accountCode' => 'RENT', 'accountType' => 'Income', 'bankAccountNumber' => '1234567']],
-            ['ID' => 2, 'date' => '2026-09-03', 'amount' => -1400.0, 'comments' => 'One Time ePayment received', 'referenceNumber' => 'EP-9', 'account' => ['ID' => 1000, 'name' => 'Accounts Receivable', 'accountCode' => 'AR', 'accountType' => 'A/R']],
-            ['ID' => 3, 'date' => '2026-08-01', 'amount' => 40.0, 'comments' => '', 'referenceNumber' => '', 'account' => ['ID' => 4100, 'name' => 'Tenant Benefit Package', 'accountCode' => 'TENANTBENEFI', 'accountType' => 'Income']],
-            // The tenant's own prepaid money being moved onto a charge.
-            ['ID' => 4, 'date' => '2026-08-01', 'amount' => -40.0, 'comments' => 'PREPAY Applied to Charges', 'referenceNumber' => '', 'account' => ['ID' => 2000, 'name' => 'Prepayments', 'accountCode' => 'PREPAY', 'accountType' => 'Current Liability']],
-            // Rent credited back.
-            ['ID' => 5, 'date' => '2026-07-01', 'amount' => -100.0, 'comments' => 'Rent adjustment', 'referenceNumber' => '', 'account' => ['ID' => 4000, 'name' => 'Rent', 'accountCode' => 'RENT', 'accountType' => 'Income']],
-        ]);
-    });
+    // Propertyware's consolidated ledger: charges positive, money received
+    // negative, plus the internal ids the tenant must never be shown.
+    $this->ledger = [
+        ['id' => 1, 'leaseID' => 55, 'date' => '2026-09-01', 'amount' => 1400.0, 'glAccountID' => 4000],
+        ['id' => 2, 'leaseID' => 55, 'date' => '2026-09-03', 'amount' => -1400.0, 'glAccountID' => 1000, 'refNo' => 'EP-9', 'comments' => 'One Time ePayment received', 'destinationAccountID' => 1234567],
+        ['id' => 3, 'leaseID' => 55, 'date' => '2026-08-01', 'amount' => 40.0, 'glAccountID' => 4100],
+        // The tenant's own prepaid money being applied to a charge.
+        ['id' => 4, 'leaseID' => 55, 'date' => '2026-08-01', 'amount' => -40.0, 'glAccountID' => 2000, 'comments' => 'PREPAY Applied to Charges'],
+        // Rent credited back.
+        ['id' => 5, 'leaseID' => 55, 'date' => '2026-07-01', 'amount' => -100.0, 'glAccountID' => 4000, 'comments' => 'Rent adjustment'],
+    ];
+
+    Http::fake([
+        '*/accounting/glaccounts*' => Http::response([
+            ['id' => 4000, 'name' => 'Rent', 'accountType' => 'Income'],
+            ['id' => 4100, 'name' => 'Tenant Benefit Package', 'accountType' => 'Income'],
+            ['id' => 1000, 'name' => 'Accounts Receivable', 'accountType' => 'A/R'],
+            ['id' => 2000, 'name' => 'Prepayments', 'accountType' => 'Current Liability'],
+        ]),
+        '*/leases/adjustments*' => fn () => Http::response($this->ledger),
+    ]);
 
     $this->tenant = User::factory()->create();
     $this->account = ClientAccount::factory()->resident()->for($this->tenant)->create(['propertyware_id' => '900']);
@@ -72,15 +78,13 @@ test('shows the tenant what they were charged and what they paid, newest first',
 
 test('pages the transactions, counting every one in the totals', function () {
     // 30 charges: three pages of ten.
-    $this->mock(PropertywareSoap::class, function ($mock) {
-        $mock->shouldReceive('isConfigured')->andReturnTrue();
-        $mock->shouldReceive('leaseLedger')->andReturn(collect(range(1, 30))->map(fn (int $day): array => [
-            'ID' => $day,
-            'date' => '2026-01-'.str_pad((string) min($day, 28), 2, '0', STR_PAD_LEFT),
-            'amount' => 100.0,
-            'account' => ['name' => 'Rent'],
-        ])->all());
-    });
+    $this->ledger = collect(range(1, 30))->map(fn (int $day): array => [
+        'id' => $day,
+        'leaseID' => 55,
+        'date' => '2026-01-'.str_pad((string) min($day, 28), 2, '0', STR_PAD_LEFT),
+        'amount' => 100.0,
+        'glAccountID' => 4000,
+    ])->all();
 
     $this->actingAs($this->tenant);
 
@@ -117,8 +121,7 @@ test('owners have no tenant ledger', function () {
 });
 
 test('says so when the ledger connection is not set up', function () {
-    config(['services.propertyware.soap.url' => null]);
-    $this->mock(PropertywareSoap::class, fn ($mock) => $mock->shouldReceive('isConfigured')->andReturnFalse());
+    config(['services.propertyware.client_id' => null, 'services.propertyware.client_secret' => null]);
 
     $this->actingAs($this->tenant)
         ->get(route('resident.lease'))

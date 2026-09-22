@@ -2,6 +2,7 @@
 import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
+import ImpersonationBanner from '@/components/ImpersonationBanner.vue';
 import ClientSidebar from '@/components/ClientSidebar.vue';
 import MobileNavigation from '@/components/MobileNavigation.vue';
 import PageGlow from '@/components/PageGlow.vue';
@@ -21,6 +22,7 @@ withDefaults(defineProps<Props>(), {
     <AppShell variant="sidebar">
         <ClientSidebar />
         <AppContent variant="sidebar" class="min-w-0 overflow-x-clip">
+            <ImpersonationBanner />
             <AppSidebarHeader :breadcrumbs="breadcrumbs" />
             <div class="@container/main relative isolate flex-1 pb-20 md:pb-0">
                 <PageGlow />

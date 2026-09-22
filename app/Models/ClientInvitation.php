@@ -9,7 +9,20 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property string $email
+ * @property string $name
+ * @property ClientRole $role
+ * @property ?string $propertyware_id
+ * @property string $token_hash
+ * @property ?Carbon $expires_at
+ * @property ?Carbon $accepted_at
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
+ */
 #[Fillable(['email', 'name', 'role', 'propertyware_id', 'token_hash', 'expires_at'])]
 #[Hidden(['propertyware_id', 'token_hash'])]
 class ClientInvitation extends Model

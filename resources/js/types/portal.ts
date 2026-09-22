@@ -449,3 +449,80 @@ export type OwnerRevenue = {
     from: string;
     to: string;
 };
+
+/** One line of the owner's ledger, as Propertyware's owner portal shows it. */
+export type OwnerLedgerEntry = {
+    id: number;
+    date: string;
+    reference: string | null;
+    location: string | null;
+    description: string;
+    details: string | null;
+    amount: number;
+    balance: number;
+};
+
+export type OwnerLedgerData = {
+    income: number;
+    expense: number;
+    managementFee: number;
+    openingBalance: number;
+    endingBalance: number;
+    net: number;
+    /** True when the balance runs from the portfolio's first day. */
+    fromInception: boolean;
+    entries: OwnerLedgerEntry[];
+    from: string;
+    to: string;
+};
+
+/** One GL account's share of a period's income or expense. */
+export type OwnerLedgerAccount = {
+    name: string;
+    amount: number;
+};
+
+/** The owner dashboard's money summary for the current period. */
+export type OwnerDashboardLedger = OwnerLedgerData & {
+    months: OwnerMonthlyTotals[];
+    incomeAccounts: OwnerLedgerAccount[];
+    expenseAccounts: OwnerLedgerAccount[];
+    portfolioMinimum: number;
+    outstanding: number;
+    availableBalance: number;
+};
+
+/** One month of an owner's income and expense. */
+export type OwnerMonthlyTotals = {
+    month: string;
+    income: number;
+    expense: number;
+};
+
+/** A meeting staff offer, from tx-scheduling. */
+export type MeetingType = {
+    slug: string;
+    /** The booking page this one is booked on; they differ within an org. */
+    page: string;
+    host: string | null;
+    name: string;
+    description: string | null;
+    color: string;
+    durationMinutes: number;
+    locationType: string;
+    locationLabel: string;
+    url: string;
+};
+
+/** A meeting the client already has booked. */
+export type UpcomingMeeting = {
+    id: number;
+    uid: string;
+    name: string | null;
+    startsAt: string;
+    endsAt: string;
+    timezone: string;
+    locationLabel: string | null;
+    meetingUrl: string | null;
+    manageUrl: string;
+};

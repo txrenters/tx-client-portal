@@ -12,6 +12,7 @@ import { store } from '@/routes/register';
 
 defineOptions({
     layout: {
+        showAppLinks: true,
         title: 'Create your account',
         description:
             "Use the email address TexasRenters.com has on file. We'll send a link to confirm it's yours.",

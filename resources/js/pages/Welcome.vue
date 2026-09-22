@@ -19,6 +19,7 @@ import {
     Smartphone,
     Wrench,
 } from '@lucide/vue';
+import AppStoreBadges from '@/components/marketing/AppStoreBadges.vue';
 import PortalPreview from '@/components/marketing/PortalPreview.vue';
 import ThemeToggle from '@/components/marketing/ThemeToggle.vue';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +34,7 @@ const heroPills = [
 ];
 
 const heroTiles = [
-    { label: 'Maintenance', icon: Wrench, live: true },
+    { label: 'Work Orders', icon: Wrench, live: true },
     { label: 'Documents', icon: FileText, live: true },
     { label: 'Property', icon: Building2, live: true },
     { label: 'Payments', icon: Banknote, live: false },
@@ -51,7 +52,7 @@ const navLinks = [
 const features = [
     {
         icon: Wrench,
-        title: 'Maintenance',
+        title: 'Work Orders',
         description:
             'Every work order with its status, schedule, assigned vendor and full history.',
         tags: ['Open', 'Scheduled', 'Completed'],
@@ -285,7 +286,7 @@ const securityPoints = [
                             class="text-muted-foreground mx-auto max-w-2xl text-lg text-pretty"
                         >
                             The resident and owner portal for TexasRenters.com
-                            property management in Houston. Maintenance,
+                            property management in Houston. Work orders,
                             documents and property information, any time, from
                             any device.
                         </p>
@@ -311,6 +312,11 @@ const securityPoints = [
                             <Link :href="login()">Sign in</Link>
                         </Button>
                     </div>
+
+                    <AppStoreBadges
+                        heading="Also on your phone"
+                        class="items-center"
+                    />
 
                     <ul
                         class="mt-4 grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"
@@ -636,6 +642,8 @@ const securityPoints = [
                         Serving Houston, Katy, Sugar Land, The Woodlands,
                         Cypress, Pearland and surrounding areas.
                     </p>
+
+                    <AppStoreBadges class="pt-1" />
                 </div>
 
                 <div class="flex flex-col gap-2 text-sm">

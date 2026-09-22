@@ -3,7 +3,6 @@
 use App\Jobs\ImportOwnerLedgers;
 use App\Models\ClientAccount;
 use App\Models\User;
-use App\Services\Propertyware\PropertywareSoap;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -46,7 +45,19 @@ beforeEach(function () {
                 ->all());
         },
         '*/units*' => Http::response([]),
+        // Propertyware's chart of accounts, which says which splits are expenses.
+        '*/accounting/glaccounts*' => Http::response([
+            ['id' => 4201, 'name' => 'Management Fees', 'accountType' => 'Expense'],
+            ['id' => 4210, 'name' => 'Late Fee', 'accountType' => 'Income'],
+            ['id' => 4000, 'name' => 'Rent', 'accountType' => 'Income'],
+            ['id' => 1000, 'name' => 'Accounts Receivable', 'accountType' => 'A/R'],
+        ]),
         '*/vendors/900' => Http::response(['id' => 900, 'name' => 'Acme Plumbing']),
+        // Each lease bills a month's rent and receives most of it.
+        '*/leases/adjustments*' => fn ($request) => Http::response([
+            ['id' => 1, 'leaseID' => (int) ($request->data()['leaseID'] ?? 0), 'date' => '2026-05-01', 'amount' => 1000.0, 'glAccountID' => 4000],
+            ['id' => 2, 'leaseID' => (int) ($request->data()['leaseID'] ?? 0), 'date' => '2026-05-03', 'amount' => -900.0, 'glAccountID' => 1000],
+        ]),
         // Two leases on one building: the tenancy that ended, and the one that followed.
         '*/leases*' => fn ($request) => Http::response((int) ($request->data()['buildingID'] ?? 0) === 7
             ? [
@@ -82,20 +93,6 @@ beforeEach(function () {
         }),
     ]);
 
-    // Each lease's ledger, as the portal stores it.
-    $this->mock(PropertywareSoap::class, function ($mock) {
-        $mock->shouldReceive('isConfigured')->andReturnTrue();
-        // Propertyware's chart of accounts, which says which splits are expenses.
-        $mock->shouldReceive('accounts')->andReturn([
-            4201 => ['name' => 'Management Fees', 'type' => 'Expense'],
-            4210 => ['name' => 'Late Fee', 'type' => 'Income'],
-        ]);
-        $mock->shouldReceive('leaseLedger')->andReturnUsing(fn (int $leaseId): array => [
-            ['ID' => $leaseId.'1', 'date' => '2026-05-01', 'amount' => 1000.0, 'comments' => '', 'referenceNumber' => '', 'account' => ['name' => 'Rent', 'accountCode' => 'RENT', 'accountType' => 'Income']],
-            ['ID' => $leaseId.'2', 'date' => '2026-05-03', 'amount' => -900.0, 'comments' => 'ePayment', 'referenceNumber' => '', 'account' => ['name' => 'Accounts Receivable', 'accountCode' => 'AR', 'accountType' => 'A/R']],
-        ]);
-    });
-
     $this->owner = User::factory()->create();
     $this->account = ClientAccount::factory()->owner()->for($this->owner)->create(['propertyware_id' => '500']);
 });
@@ -114,8 +111,10 @@ test('shows the owner only their share of each bill, by portfolio', function () 
         'bills' => 2,
     ])
         ->and($response->json('props.financials.portfolios'))->toMatchArray([
-            ['id' => 2, 'name' => 'Elm Portfolio', 'expenses' => 300.0, 'bills' => 1],
-            ['id' => 3, 'name' => 'Oak Portfolio', 'expenses' => 200.0, 'bills' => 1],
+            // Each portfolio carries the same three figures as the page totals,
+            // so one can be shown on its own without asking for it again.
+            ['id' => 2, 'name' => 'Elm Portfolio', 'expenses' => 300.0, 'paid' => 300.0, 'outstanding' => 0.0, 'bills' => 1],
+            ['id' => 3, 'name' => 'Oak Portfolio', 'expenses' => 200.0, 'paid' => 0.0, 'outstanding' => 200.0, 'bills' => 1],
         ])
         ->and($response->json('props.financials.bills.0'))->toMatchArray([
             'vendor' => 'Acme Plumbing',
@@ -197,6 +196,19 @@ test('totals what each property billed and received, across every lease in the p
         ->and($properties->firstWhere('id', 8))->toMatchArray(['billed' => 1000.0, 'received' => 900.0, 'leases' => 1])
         ->and($response->json('props.revenue.totals'))->toMatchArray(['billed' => 3000.0, 'received' => 2700.0, 'properties' => 2]);
 });
+
+test('hands the page numeric ids, so picking a portfolio still lists its properties', function () {
+    $this->actingAs($this->owner);
+
+    // Query strings arrive as strings and the "integer" rule validates without
+    // casting. The page matches ids with ===, so a string id silently emptied
+    // the properties menu the moment a portfolio was picked.
+    $this->get(route('owner.financials', ['portfolios' => [2], 'properties' => [7]]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('filters.portfolios', [2])
+            ->where('filters.properties', [7]));
+})->group('regression');
 
 test('keeps utility account numbers out of a bills note', function () {
     $this->actingAs($this->owner);

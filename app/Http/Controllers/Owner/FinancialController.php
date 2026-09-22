@@ -6,7 +6,9 @@ use App\Enums\ClientRole;
 use App\Http\Controllers\Concerns\ResolvesClientScope;
 use App\Http\Controllers\Controller;
 use App\Jobs\ImportOwnerLedgers;
+use App\Jobs\WarmOwnerLedgerBalance;
 use App\Services\Propertyware\Financials;
+use App\Services\Propertyware\OwnerLedger;
 use App\Services\Propertyware\PropertywareDirectory;
 use App\Services\Propertyware\PropertywareException;
 use Illuminate\Http\Request;
@@ -23,7 +25,7 @@ class FinancialController extends Controller
      * Propertyware gives us bills but no income ledger, so this is the expense
      * side; the page says as much rather than implying a full statement.
      */
-    public function __invoke(Request $request, PropertywareDirectory $directory, Financials $financials): Response
+    public function __invoke(Request $request, PropertywareDirectory $directory, Financials $financials, OwnerLedger $ledger): Response
     {
         $account = $this->activeClientAccount($request, ClientRole::Owner);
         abort_if($account === null, 403);
@@ -41,8 +43,12 @@ class FinancialController extends Controller
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
         ]);
         $filters = [
-            'portfolios' => $validated['portfolios'] ?? [],
-            'properties' => $validated['properties'] ?? [],
+            // Query strings arrive as strings and the "integer" rule validates
+            // without casting, so these are cast here. The page compares them
+            // against numeric ids with ===, and a string never matches: that is
+            // what made picking a portfolio empty the properties menu.
+            'portfolios' => array_map(intval(...), $validated['portfolios'] ?? []),
+            'properties' => array_map(intval(...), $validated['properties'] ?? []),
             'status' => $validated['status'] ?? 'all',
             'range' => $validated['range'] ?? null,
             'from' => $validated['from'] ?? null,
@@ -61,6 +67,51 @@ class FinancialController extends Controller
 
         return Inertia::render('owner/Financials', [
             'filters' => $filters,
+            // The ledger Propertyware's own owner portal shows: what came in,
+            // what went out, and what it left. One portfolio at a time, as
+            // Propertyware does, because a balance across portfolios is not a
+            // figure the owner is ever shown anywhere else.
+            'ledger' => Inertia::defer(function () use ($request, $directory, $financials, $ledger, $filters): ?array {
+                try {
+                    $scope = $this->clientScope($request, ClientRole::Owner, $directory);
+                    $portfolioId = (int) ($filters['portfolios'][0] ?? $scope->portfolioIds[0] ?? 0);
+
+                    if ($portfolioId === 0) {
+                        return null;
+                    }
+
+                    [$from, $to] = $financials->period($filters);
+
+                    // Reading the portfolio's whole history is a queued job;
+                    // until it has run the ledger shows this period's movement.
+                    WarmOwnerLedgerBalance::dispatch($portfolioId, $from);
+
+                    // Only the owner's own properties can be filtered to, so a
+                    // building id in the query cannot reach anyone else's.
+                    $buildingIds = array_values(array_intersect(
+                        array_map(intval(...), $filters['properties']),
+                        $scope->buildingIds,
+                    ));
+
+                    $locations = collect($directory->propertiesFor($scope))
+                        ->mapWithKeys(fn ($property): array => [
+                            (int) $property->id => $property->name ?: $property->address,
+                        ])
+                        ->all();
+
+                    return $ledger->forPortfolio(
+                        $scope,
+                        $portfolioId,
+                        $from,
+                        $to,
+                        withOpeningBalance: true,
+                        buildingIds: $buildingIds,
+                        locations: $locations,
+                    );
+                } catch (PropertywareException) {
+                    return null;
+                }
+            }),
             'portfolios' => Inertia::defer(function () use ($request, $directory): array {
                 try {
                     return $directory->portfolioOptionsFor($this->clientScope($request, ClientRole::Owner, $directory));

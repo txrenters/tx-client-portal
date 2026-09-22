@@ -6,10 +6,12 @@ use App\Enums\ClientRole;
 use App\Http\Controllers\Concerns\ResolvesClientScope;
 use App\Http\Controllers\Concerns\ShowsDashboardFeeds;
 use App\Http\Controllers\Controller;
+use App\Jobs\WarmOwnerLedgerBalance;
 use App\Services\ChatHub\ClientConversations;
 use App\Services\Propertyware\DocumentLibrary;
 use App\Services\Propertyware\Financials;
 use App\Services\Propertyware\MaintenanceSummary;
+use App\Services\Propertyware\OwnerLedger;
 use App\Services\Propertyware\PropertywareDirectory;
 use App\Services\Propertyware\PropertywareException;
 use App\Services\Propertyware\WorkOrderApprovals;
@@ -25,13 +27,47 @@ class DashboardController extends Controller
     /**
      * Show the owner's portfolio home page.
      */
-    public function __invoke(Request $request, PropertywareDirectory $directory, MaintenanceSummary $maintenance, WorkOrderApprovals $approvals, DocumentLibrary $documents, ClientConversations $conversations, Financials $financials): Response
+    public function __invoke(Request $request, PropertywareDirectory $directory, MaintenanceSummary $maintenance, WorkOrderApprovals $approvals, DocumentLibrary $documents, ClientConversations $conversations, Financials $financials, OwnerLedger $ledger): Response
     {
         $account = $this->activeClientAccount($request, ClientRole::Owner);
         abort_if($account === null, 403);
         $onceKey = 'owner-dashboard-'.$account->id;
 
         return Inertia::render('owner/Dashboard', [
+            // The figures Propertyware's own owner dashboard opens with: what
+            // the portfolio carried in, earned, spent, and has left.
+            'ledger' => Inertia::defer(function () use ($request, $directory, $financials, $ledger): ?array {
+                try {
+                    $scope = $this->clientScope($request, ClientRole::Owner, $directory);
+                    $portfolioId = $scope->portfolioIds[0] ?? null;
+
+                    if ($portfolioId === null) {
+                        return null;
+                    }
+
+                    [$from, $to] = $financials->period([]);
+                    WarmOwnerLedgerBalance::dispatch($portfolioId, $from);
+
+                    $period = $ledger->forPortfolio($scope, $portfolioId, $from, $to, withOpeningBalance: true);
+
+                    // What is still owed on bills is held back before the owner
+                    // is paid, alongside the portfolio's minimum balance.
+                    $outstanding = (float) ($financials->forOwner($scope)['totals']['outstanding'] ?? 0);
+
+                    return [
+                        ...$period,
+                        // The months the balance walk already read, charted.
+                        'months' => $ledger->monthly($scope, $portfolioId, 12),
+                        'outstanding' => round($outstanding, 2),
+                        'availableBalance' => round(
+                            $period['endingBalance'] - $period['portfolioMinimum'] - $outstanding,
+                            2,
+                        ),
+                    ];
+                } catch (PropertywareException) {
+                    return null;
+                }
+            }, 'feeds'),
             'portfolio' => Inertia::defer(function () use ($request, $directory): ?array {
                 try {
                     $scope = $this->clientScope($request, ClientRole::Owner, $directory);

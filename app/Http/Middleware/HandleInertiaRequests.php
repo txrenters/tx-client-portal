@@ -3,8 +3,10 @@
 namespace App\Http\Middleware;
 
 use App\Enums\ClientRole;
+use App\Http\Controllers\Admin\ImpersonationController;
 use App\Models\ClientAccount;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -42,6 +44,12 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+                // Only decides whether the admin link is shown; every admin
+                // route checks the gate again for itself.
+                'isAdmin' => $request->user() !== null && Gate::forUser($request->user())->allows('admin'),
+                // Set only while an admin is signed in as someone else, so
+                // every page can say so rather than looking like a normal visit.
+                'impersonating' => $request->session()->has(ImpersonationController::SESSION_KEY),
             ],
             'client' => fn (): ?array => $this->clientPortal($request),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

@@ -1,14 +1,9 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { Building2, ChevronDown, FolderOpen, Receipt } from '@lucide/vue';
+import { ChevronDown } from '@lucide/vue';
+import { watchDebounced } from '@vueuse/core';
 import { computed, onUnmounted, ref, watch } from 'vue';
-import AppCard from '@/components/AppCard.vue';
-import EmptyState from '@/components/EmptyState.vue';
-import ErrorState from '@/components/ErrorState.vue';
-import LoadingSkeleton from '@/components/LoadingSkeleton.vue';
 import PageHeader from '@/components/PageHeader.vue';
-import ResultsPagination from '@/components/ResultsPagination.vue';
-import RevenueByProperty from '@/components/RevenueByProperty.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -26,26 +21,17 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import { Spinner } from '@/components/ui/spinner';
 import { useFormattedDate } from '@/composables/useFormattedDate';
 import { PERIOD_PRESETS, presetDates } from '@/lib/dateRange';
 import { dashboard, financials as financialsRoute } from '@/routes/owner';
-import type { OwnerFinancials, OwnerRevenue } from '@/types';
+import OwnerLedgerPanel from '@/components/OwnerLedgerPanel.vue';
+import type { OwnerFinancials, OwnerLedgerData, OwnerRevenue } from '@/types';
 
 defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Home', href: dashboard() },
-            { title: 'Financials', href: financialsRoute() },
+            { title: 'My Ledger', href: financialsRoute() },
         ],
     },
 });
@@ -62,22 +48,21 @@ const props = defineProps<{
     /** Undefined while loading, null when it couldn't be read. */
     financials?: OwnerFinancials | null;
     revenue?: OwnerRevenue | null;
+    ledger?: OwnerLedgerData | null;
     portfolios?: { id: number; name: string; properties: string[] | null }[];
     properties?: { id: number; name: string; portfolioId: number | null }[];
 }>();
 
 const { formatDate } = useFormattedDate();
 
-const money = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-});
+/** The portfolio the ledger is showing, named as Propertyware names it. */
 
-const exact = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-});
+/** The period on screen, written the way Propertyware writes it. */
+const ledgerPeriod = computed<string | null>(() =>
+    props.ledger
+        ? `${formatDate(props.ledger.from)} – ${formatDate(props.ledger.to)}`
+        : null,
+);
 
 /** The portfolios ticked in the menu; empty means all of them. */
 const chosen = ref<number[]>([...props.filters.portfolios]);
@@ -146,7 +131,7 @@ function apply(): void {
     router.get(financialsRoute().url, query(picked()), {
         preserveState: true,
         preserveScroll: true,
-        only: ['financials', 'revenue', 'filters'],
+        only: ['ledger', 'filters'],
         onFinish: () => {
             isLoading.value = false;
         },
@@ -157,6 +142,9 @@ function clear(): void {
     chosen.value = [];
     chosenProperties.value = [];
     status.value = 'all';
+    range.value = 'this-month';
+    from.value = '';
+    to.value = '';
     apply();
 }
 
@@ -285,6 +273,50 @@ const range = ref(appliedRange(props.filters));
 const from = ref(props.filters.from ?? '');
 const to = ref(props.filters.to ?? '');
 
+/** Whether anything is narrowing the ledger from its default view. */
+const isFiltered = computed(
+    () =>
+        chosen.value.length > 0 ||
+        chosenProperties.value.length > 0 ||
+        (range.value !== 'this-month' && range.value !== ''),
+);
+
+/**
+ * Whether the controls already match what the server has applied.
+ *
+ * The bar is kept in step with the server's answer, so without this a reply
+ * would move the controls, the watcher would fire, and the page would ask
+ * again forever.
+ */
+function matchesApplied(): boolean {
+    const picked_ = picked();
+    const applied = props.filters;
+
+    return (
+        picked_.portfolios.join() === applied.portfolios.join() &&
+        picked_.properties.join() === applied.properties.join() &&
+        (picked_.range ?? '') === (applied.range ?? '') &&
+        (picked_.from ?? '') === (applied.from ?? '') &&
+        (picked_.to ?? '') === (applied.to ?? '')
+    );
+}
+
+// Filtering applies itself, as it does on the properties page: picking a
+// period or a property asks the server straight away rather than waiting for
+// a button. Typing into the custom dates pauses first so a half-typed year
+// never gets sent.
+watchDebounced(
+    [chosen, chosenProperties, range, from, to],
+    () => {
+        if (matchesApplied()) {
+            return;
+        }
+
+        apply();
+    },
+    { debounce: 300, deep: true },
+);
+
 /**
  * Follow the filters the server actually applied.
  *
@@ -370,24 +402,6 @@ const shownPortfolios = computed(() => {
           );
 });
 
-/**
- * Turn to another page of bills, leaving the rest of the page alone. It pages
- * the filters that are applied, not whatever the controls have been changed to
- * since.
- */
-function goToPage(page: number): void {
-    router.get(financialsRoute().url, query(props.filters, page), {
-        preserveState: true,
-        preserveScroll: true,
-        only: ['financials'],
-    });
-}
-
-/** How the bill list names a bill's state, the way the owner portal does. */
-function statusLabel(status: 'paid' | 'part-paid' | 'unpaid'): string {
-    return { paid: 'Paid', 'part-paid': 'Part paid', unpaid: 'Unpaid' }[status];
-}
-
 const hasSeveralPortfolios = computed(
     () => (props.portfolios?.length ?? 0) > 1,
 );
@@ -395,18 +409,22 @@ const hasSeveralPortfolios = computed(
 
 <template>
     <div class="flex min-w-0 flex-col gap-6 p-4 md:p-6">
-        <Head title="Financials" />
+        <Head title="My Ledger" />
 
         <PageHeader
-            title="Financials"
-            description="Rent collected and bills paid on your properties, by portfolio."
+            title="My Ledger"
+            :description="
+                ledgerPeriod ?? 'What came in, what went out, and what it left.'
+            "
         />
 
         <div
-            v-if="hasSeveralPortfolios"
             class="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-end"
         >
-            <div class="grid w-full gap-1.5 sm:w-auto">
+            <div
+                v-if="hasSeveralPortfolios"
+                class="grid w-full gap-1.5 sm:w-auto"
+            >
                 <span class="text-sm font-medium">Portfolios</span>
                 <DropdownMenu>
                     <DropdownMenuTrigger as-child>
@@ -523,20 +541,6 @@ const hasSeveralPortfolios = computed(
                 </Select>
             </div>
 
-            <div class="grid w-full gap-1.5 sm:w-auto">
-                <span class="text-sm font-medium">Bills</span>
-                <Select v-model="status">
-                    <SelectTrigger class="w-full sm:w-40">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All bills</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                        <SelectItem value="unpaid">Outstanding</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-
             <div
                 v-if="range === 'custom'"
                 class="grid w-full gap-1.5 sm:w-auto"
@@ -553,240 +557,16 @@ const hasSeveralPortfolios = computed(
                 <Input v-model="to" type="date" :min="from || undefined" />
             </div>
 
-            <Button variant="outline" :disabled="isLoading" @click="apply">
-                {{ isLoading ? 'Loading…' : 'Show results' }}
-            </Button>
             <Button
-                v-if="
-                    chosen.length > 0 ||
-                    chosenProperties.length > 0 ||
-                    status !== 'all'
-                "
+                v-if="isFiltered"
                 variant="ghost"
                 :disabled="isLoading"
                 @click="clear"
             >
-                All portfolios
+                Clear filters
             </Button>
         </div>
 
-        <AppCard title="Revenue by property">
-            <div
-                v-if="revenue?.importing"
-                class="border-border/60 bg-muted/40 mb-4 flex items-center gap-3 rounded-xl border p-3"
-                role="status"
-            >
-                <Spinner class="size-4 shrink-0" />
-                <p class="text-muted-foreground text-sm">
-                    We're still importing your leases from Propertyware. What we
-                    have is below, and the rest appears as it arrives.
-                </p>
-            </div>
-
-            <LoadingSkeleton v-if="revenue === undefined" :rows="3" />
-
-            <ErrorState
-                v-else-if="revenue === null"
-                description="We couldn't load what your properties brought in right now."
-            />
-
-            <EmptyState
-                v-else-if="
-                    revenue.properties.length === 0 && !revenue.importing
-                "
-                :icon="Building2"
-                title="No properties in this portfolio"
-                :description="
-                    filters.portfolios.length > 0
-                        ? 'This portfolio has bills against it but no property attached yet, so there is no rent to show.'
-                        : 'Rent appears here once a property and its lease are attached to your portfolios.'
-                "
-            />
-
-            <template v-else>
-                <div class="mb-4 flex flex-wrap gap-x-8 gap-y-2">
-                    <span class="flex flex-col">
-                        <span class="text-2xl font-semibold tabular-nums">{{
-                            exact.format(revenue.totals.received)
-                        }}</span>
-                        <span class="text-muted-foreground text-xs"
-                            >received across
-                            {{ revenue.totals.properties }}
-                            {{
-                                revenue.totals.properties === 1
-                                    ? 'property'
-                                    : 'properties'
-                            }}</span
-                        >
-                    </span>
-                    <span class="flex flex-col">
-                        <span class="text-2xl font-semibold tabular-nums">{{
-                            exact.format(revenue.totals.billed)
-                        }}</span>
-                        <span class="text-muted-foreground text-xs"
-                            >billed</span
-                        >
-                    </span>
-                    <span v-if="financials" class="flex flex-col">
-                        <span class="text-2xl font-semibold tabular-nums">{{
-                            exact.format(
-                                revenue.totals.received -
-                                    financials.totals.expenses,
-                            )
-                        }}</span>
-                        <span class="text-muted-foreground text-xs"
-                            >after expenses</span
-                        >
-                    </span>
-                </div>
-
-                <RevenueByProperty :revenue="revenue" />
-            </template>
-        </AppCard>
-
-        <div class="grid gap-4 sm:grid-cols-3">
-            <AppCard title="Expenses">
-                <Skeleton v-if="financials === undefined" class="h-9 w-28" />
-                <p v-else class="text-3xl leading-none font-semibold">
-                    {{
-                        financials
-                            ? money.format(financials.totals.expenses)
-                            : '—'
-                    }}
-                </p>
-            </AppCard>
-
-            <AppCard title="Paid to vendors">
-                <Skeleton v-if="financials === undefined" class="h-9 w-28" />
-                <p v-else class="text-3xl leading-none font-semibold">
-                    {{
-                        financials ? money.format(financials.totals.paid) : '—'
-                    }}
-                </p>
-            </AppCard>
-
-            <AppCard title="Outstanding">
-                <Skeleton v-if="financials === undefined" class="h-9 w-28" />
-                <p v-else class="text-3xl leading-none font-semibold">
-                    {{
-                        financials
-                            ? money.format(financials.totals.outstanding)
-                            : '—'
-                    }}
-                </p>
-            </AppCard>
-        </div>
-
-        <AppCard title="Bills">
-            <LoadingSkeleton v-if="financials === undefined" :rows="4" />
-
-            <ErrorState
-                v-else-if="financials === null"
-                description="We couldn't load your financials right now."
-            />
-
-            <EmptyState
-                v-else-if="financials.bills.length === 0"
-                :icon="Receipt"
-                title="No bills in this period"
-                description="Work carried out on your properties will appear here."
-            />
-
-            <template v-else>
-                <p class="text-muted-foreground mb-3 text-xs">
-                    {{ formatDate(financials.from) }} –
-                    {{ formatDate(financials.to) }} · by payment date, newest
-                    first
-                </p>
-
-                <!--
-                  The columns Propertyware's own Bills page shows, in its order,
-                  so an owner can read the two side by side. It scrolls sideways
-                  on a phone rather than dropping any of them.
-                -->
-                <div class="-mx-2 overflow-x-auto px-2">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Bill #</TableHead>
-                                <TableHead>Bill date</TableHead>
-                                <TableHead>Building</TableHead>
-                                <TableHead>Unit</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Due date</TableHead>
-                                <TableHead>Payment date</TableHead>
-                                <TableHead class="text-right">Amount</TableHead>
-                                <TableHead class="text-right"
-                                    >Amount paid</TableHead
-                                >
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            <TableRow
-                                v-for="bill in financials.bills"
-                                :key="bill.id"
-                            >
-                                <TableCell class="tabular-nums">{{
-                                    bill.number ?? '—'
-                                }}</TableCell>
-                                <TableCell class="whitespace-nowrap">{{
-                                    formatDate(bill.billDate)
-                                }}</TableCell>
-                                <!--
-                                  A bill can be split across a whole portfolio,
-                                  so the row names the first building and counts
-                                  the rest rather than running off the page.
-                                -->
-                                <TableCell
-                                    class="max-w-64 truncate"
-                                    :title="bill.buildings.join(', ')"
-                                >
-                                    {{ bill.buildings[0] ?? '—'
-                                    }}<span
-                                        v-if="bill.buildings.length > 1"
-                                        class="text-muted-foreground"
-                                    >
-                                        +{{
-                                            bill.buildings.length - 1
-                                        }}
-                                        more</span
-                                    >
-                                </TableCell>
-                                <TableCell>{{ bill.unit ?? '' }}</TableCell>
-                                <TableCell>{{
-                                    statusLabel(bill.status)
-                                }}</TableCell>
-                                <TableCell class="whitespace-nowrap">{{
-                                    bill.dueDate
-                                        ? formatDate(bill.dueDate)
-                                        : '—'
-                                }}</TableCell>
-                                <TableCell class="whitespace-nowrap">{{
-                                    bill.paymentDate
-                                        ? formatDate(bill.paymentDate)
-                                        : '—'
-                                }}</TableCell>
-                                <TableCell class="text-right tabular-nums">{{
-                                    exact.format(bill.amount)
-                                }}</TableCell>
-                                <TableCell class="text-right tabular-nums">{{
-                                    exact.format(bill.paid)
-                                }}</TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </div>
-            </template>
-        </AppCard>
-
-        <ResultsPagination
-            v-if="financials?.results"
-            :results="financials.results"
-            @change="goToPage"
-        />
-        <p class="text-muted-foreground text-xs">
-            Rent collected, owner draws and statements are not in Propertyware's
-            API yet, so this page shows what has been billed to your properties.
-        </p>
+        <OwnerLedgerPanel :ledger="ledger" />
     </div>
 </template>

@@ -33,13 +33,13 @@ class LeaseLedger
     public const PER_PAGE = 10;
 
     public function __construct(
-        private PropertywareSoap $soap,
+        private LeaseLedgerSource $source,
         private LeaseLedgerStore $store,
     ) {}
 
     public function isAvailable(): bool
     {
-        return $this->soap->isConfigured();
+        return $this->source->isConfigured();
     }
 
     /**

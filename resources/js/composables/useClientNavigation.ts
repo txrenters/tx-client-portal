@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/vue3';
 import {
     Banknote,
+    CalendarClock,
     Building2,
     CircleQuestionMark,
     FileText,
@@ -8,12 +9,14 @@ import {
     LayoutGrid,
     MessageSquare,
     ScrollText,
+    ShieldCheck,
     Settings,
     User,
     Wrench,
 } from '@lucide/vue';
 import type { ComputedRef } from 'vue';
 import { computed } from 'vue';
+import { dashboard as adminDashboard } from '@/routes/admin';
 import { help } from '@/routes';
 import {
     dashboard as ownerDashboard,
@@ -22,6 +25,7 @@ import {
     portfolio,
 } from '@/routes/owner';
 import { index as ownerMaintenance } from '@/routes/owner/maintenance';
+import { index as ownerMeetings } from '@/routes/owner/meetings';
 import { index as ownerMessages } from '@/routes/owner/messages';
 import { index as ownerProperties } from '@/routes/owner/properties';
 import { edit as editProfile } from '@/routes/profile';
@@ -44,7 +48,7 @@ export type UseClientNavigationReturn = {
 
 const residentNavItems = (): NavItem[] => [
     { title: 'Dashboard', href: residentDashboard(), icon: Home },
-    { title: 'Maintenance', href: residentMaintenance(), icon: Wrench },
+    { title: 'Work Orders', href: residentMaintenance(), icon: Wrench },
     { title: 'Messages', href: residentMessages(), icon: MessageSquare },
     { title: 'Lease', href: lease(), icon: ScrollText },
     { title: 'Documents', href: residentDocuments(), icon: FileText },
@@ -53,10 +57,11 @@ const residentNavItems = (): NavItem[] => [
 const ownerNavItems = (): NavItem[] => [
     { title: 'Dashboard', href: ownerDashboard(), icon: Home },
     { title: 'Portfolio', href: portfolio(), icon: LayoutGrid },
+    { title: 'My Ledger', href: financials(), icon: Banknote },
     { title: 'Properties', href: ownerProperties(), icon: Building2 },
-    { title: 'Maintenance', href: ownerMaintenance(), icon: Wrench },
+    { title: 'Work Orders', href: ownerMaintenance(), icon: Wrench },
     { title: 'Messages', href: ownerMessages(), icon: MessageSquare },
-    { title: 'Financials', href: financials(), icon: Banknote },
+    { title: 'Meetings', href: ownerMeetings(), icon: CalendarClock },
     { title: 'Documents', href: ownerDocuments(), icon: FileText },
 ];
 
@@ -77,21 +82,25 @@ export function useClientNavigation(): UseClientNavigationReturn {
     });
 
     const secondaryNavItems = computed<NavItem[]>(() => [
+        // Staff only; the server decides, and every admin route checks again.
+        ...(page.props.auth?.isAdmin
+            ? [{ title: 'Admin', href: adminDashboard(), icon: ShieldCheck }]
+            : []),
         { title: 'Help', href: help(), icon: CircleQuestionMark },
         { title: 'Profile', href: editProfile(), icon: Settings },
     ]);
 
     const mobileNavItems = computed<NavItem[]>(() => {
         const items = mainNavItems.value.filter((item) =>
-            ['Dashboard', 'Maintenance', 'Messages', 'Properties'].includes(
+            ['Dashboard', 'Work Orders', 'Messages', 'Properties'].includes(
                 item.title,
             ),
         );
 
         const priority =
             activeRole.value === 'owner'
-                ? ['Dashboard', 'Properties', 'Maintenance', 'Messages']
-                : ['Dashboard', 'Maintenance', 'Messages'];
+                ? ['Dashboard', 'Properties', 'Work Orders', 'Messages']
+                : ['Dashboard', 'Work Orders', 'Messages'];
 
         return [
             ...priority

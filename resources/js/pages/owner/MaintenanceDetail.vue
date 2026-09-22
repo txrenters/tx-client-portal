@@ -35,7 +35,7 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Home', href: dashboard() },
-            { title: 'Maintenance', href: maintenanceRoute() },
+            { title: 'Work Orders', href: maintenanceRoute() },
         ],
     },
 });

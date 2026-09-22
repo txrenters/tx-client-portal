@@ -19,6 +19,17 @@ enum ClientRole: string
     }
 
     /**
+     * The role with its article, for reading inside a sentence.
+     */
+    public function article(): string
+    {
+        return match ($this) {
+            self::Resident => 'a resident',
+            self::Owner => 'an owner',
+        };
+    }
+
+    /**
      * Get the name of the role's dashboard route.
      */
     public function dashboardRoute(): string

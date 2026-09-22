@@ -32,6 +32,30 @@ return [
         'verify' => env('TX_CMA_VERIFY', true),
     ],
 
+    /*
+     * Who may open the admin dashboard, as a comma separated list of email
+     * addresses. Admin is deliberately not a column or a role: nothing in the
+     * portal can grant it, so a compromised account cannot escalate into it.
+     */
+    'admin_emails' => array_values(array_filter(array_map(
+        fn (string $email): string => strtolower(trim($email)),
+        explode(',', (string) env('ADMIN_EMAILS', '')),
+    ))),
+
+    /*
+     * tx-scheduling: staff availability and bookings. The portal shows what a
+     * page offers and books against it; availability, reminders and calendar
+     * sync all stay in that app rather than being rebuilt here.
+     */
+    'scheduling' => [
+        'url' => env('SCHEDULING_URL'),
+        'token' => env('SCHEDULING_TOKEN'),
+        // Whose booking page owners are offered.
+        'page' => env('SCHEDULING_PAGE'),
+        // TLS check: true by default, or a CA bundle path for local .test sites.
+        'verify' => env('SCHEDULING_VERIFY', true),
+    ],
+
     'propertyware' => [
         'base_url' => env('PROPERTYWARE_BASE_URL', 'https://api.propertyware.com/pw/api/rest/v1'),
         'client_id' => env('PROPERTYWARE_CLIENT_ID'),

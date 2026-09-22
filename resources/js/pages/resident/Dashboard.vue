@@ -133,7 +133,7 @@ function refreshDashboard(): void {
                 <Button
                     variant="outline"
                     size="xs"
-                    class="h-5 cursor-pointer gap-1.5 rounded-full px-2 py-0 text-xs"
+                    class="border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground h-5 cursor-pointer gap-1.5 rounded-full px-2 py-0 text-xs"
                     :disabled="refreshing"
                     @click="refreshDashboard"
                 >
@@ -164,7 +164,7 @@ function refreshDashboard(): void {
 
         <div class="grid gap-4 lg:grid-cols-2">
             <AppCard
-                title="Maintenance"
+                title="Work Orders"
                 :href="maintenanceRoute()"
                 link-label="View work orders"
             >

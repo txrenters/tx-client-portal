@@ -13,9 +13,8 @@ use Illuminate\Support\Facades\Cache;
 /**
  * What an owner has been billed, by portfolio.
  *
- * Propertyware's REST API carries bills and vendors but no ledger, and its SOAP
- * sync calls (getCharges, getPayments) answer nothing for our login, so this is
- * the expense side only: no rent collected, no owner draws, no statements.
+ * Bills, vendors and the chart of accounts all come from the REST API. This is
+ * the expense side: what the owner has been billed, split per portfolio.
  *
  * A bill can be split across many portfolios, so an owner is only ever shown
  * the splits belonging to portfolios they own, never the bill's full amount.
@@ -38,7 +37,6 @@ class Financials
         private PropertywareClient $propertyware,
         private PropertywareDirectory $directory,
         private LeaseLedgerStore $ledgers,
-        private PropertywareSoap $soap,
     ) {}
 
     /**
@@ -81,17 +79,40 @@ class Financials
         $buildingIds = $this->chosenProperties($scope, $filters);
         // A large owner reads from what is held while the import fills the rest.
         $readNow = count($portfolioIds) <= self::MAX_PORTFOLIOS;
-        $bills = $this->bills($portfolioIds, $readNow);
-        $vendors = $this->vendorNames($bills);
 
         $status = (string) ($filters['status'] ?? 'all');
 
         // A bill reaches the owner's statement on the day it is paid, which is
         // how Propertyware's own ledger dates it; one still unpaid is shown on
         // its bill date so it isn't hidden until someone pays it.
-        $inWindow = collect($bills)
-            ->filter(fn (array $bill): bool => $this->within($this->postedOn($bill), $from, $to))
-            ->values();
+        //
+        // Narrowed per portfolio rather than after merging them all. A single
+        // portfolio's bills are a multi-megabyte cache entry that unserializes
+        // into several times that in arrays, and one read covers thirteen
+        // months while the page usually shows one — so holding every portfolio
+        // whole, to then drop most of it, is what exhausted the memory limit.
+        $inWindow = collect();
+
+        foreach ($portfolioIds as $portfolioId) {
+            $held = Cache::get($this->billsKey($portfolioId));
+
+            if ($held === null && $readNow) {
+                $held = $this->readBills($portfolioId);
+            }
+
+            foreach ($held ?? [] as $bill) {
+                if ($this->within($this->postedOn($bill), $from, $to)) {
+                    $inWindow->push($bill);
+                }
+            }
+
+            unset($held);
+        }
+
+        $inWindow = $inWindow->values();
+
+        // Only the vendors these bills name, not every vendor in thirteen months.
+        $vendors = $this->vendorNames($inWindow->all());
 
         // The list names the building the way the owner portal does, so the
         // addresses of whatever these bills touch are read in one go.
@@ -125,6 +146,9 @@ class Financials
                 'id' => $portfolioId,
                 'name' => $names[$portfolioId] ?? 'Portfolio '.$portfolioId,
                 'expenses' => round($rows->sum(fn (array $bill): float => $bill['byPortfolio'][$portfolioId] ?? 0), 2),
+                'paid' => round($rows->sum(fn (array $bill): float => $bill['paidByPortfolio'][$portfolioId] ?? 0), 2),
+                'outstanding' => round($rows->sum(fn (array $bill): float => ($bill['byPortfolio'][$portfolioId] ?? 0)
+                    - ($bill['paidByPortfolio'][$portfolioId] ?? 0)), 2),
                 'bills' => $rows->filter(fn (array $bill): bool => isset($bill['byPortfolio'][$portfolioId]))->count(),
             ])
             ->sortByDesc('expenses')
@@ -133,7 +157,7 @@ class Financials
 
         // A month of a large portfolio runs to hundreds of bills, so the list
         // is paged while the totals above it still count every one.
-        $listed = $rows->map(fn (array $bill): array => collect($bill)->except('byPortfolio')->all());
+        $listed = $rows->map(fn (array $bill): array => collect($bill)->except(['byPortfolio', 'paidByPortfolio'])->all());
         $page = max($page, 1);
         $paginator = new LengthAwarePaginator(
             $listed->forPage($page, self::PER_PAGE)->values()->all(),
@@ -344,6 +368,13 @@ class Financials
             ->map(fn ($group): float => round($group->sum(fn (array $split): float => (float) ($split['amount'] ?? 0)), 2))
             ->all();
 
+        // What has been settled, per portfolio. The billed figure alone cannot
+        // answer "how much of this is still owed" for one portfolio out of many.
+        $paidByPortfolio = $splits
+            ->groupBy(fn (array $split): int => (int) $split['portfolioID'])
+            ->map(fn ($group): float => round($group->sum(fn (array $split): float => (float) ($split['amountPaid'] ?? 0)), 2))
+            ->all();
+
         $amount = round($splits->sum(fn (array $split): float => (float) ($split['amount'] ?? 0)), 2);
         $paid = round($splits->sum(fn (array $split): float => (float) ($split['amountPaid'] ?? 0)), 2);
 
@@ -390,36 +421,8 @@ class Financials
                 ->implode(', ') ?: null,
             'portfolios' => collect($byPortfolio)->keys()->map(fn (int $id): string => $names[$id] ?? 'Portfolio '.$id)->values()->all(),
             'byPortfolio' => $byPortfolio,
+            'paidByPortfolio' => $paidByPortfolio,
         ];
-    }
-
-    /**
-     * The owner's bills, read per portfolio and kept for a few minutes.
-     *
-     * Propertyware has no bill-date filter, but it can leave out everything
-     * untouched since a date, which cuts a portfolio's read from hundreds of
-     * bills to a handful without losing any inside the window.
-     *
-     * @param  array<int, int>  $portfolioIds
-     * @return array<int, array<string, mixed>>
-     *
-     * @throws PropertywareException
-     */
-    private function bills(array $portfolioIds, bool $fetchMissing = true): array
-    {
-        $bills = [];
-
-        foreach ($portfolioIds as $portfolioId) {
-            $held = Cache::get($this->billsKey($portfolioId));
-
-            if ($held === null && $fetchMissing) {
-                $held = $this->readBills($portfolioId);
-            }
-
-            $bills = [...$bills, ...($held ?? [])];
-        }
-
-        return $bills;
     }
 
     /**
@@ -527,7 +530,13 @@ class Financials
     {
         return Cache::remember('propertyware:gl-accounts', now()->addDay(), function (): array {
             try {
-                return $this->soap->accounts();
+                return collect($this->propertyware->listAll('accounting/glaccounts', [], 2000))
+                    ->filter(fn (array $account): bool => filled($account['id'] ?? null))
+                    ->mapWithKeys(fn (array $account): array => [(int) $account['id'] => [
+                        'name' => (string) ($account['name'] ?? ''),
+                        'type' => (string) ($account['accountType'] ?? ''),
+                    ]])
+                    ->all();
             } catch (PropertywareException) {
                 return [];
             }

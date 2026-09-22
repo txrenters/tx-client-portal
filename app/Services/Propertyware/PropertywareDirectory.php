@@ -132,30 +132,6 @@ class PropertywareDirectory
     }
 
     /**
-     * Find the tenant or owner contact that matches a client's email address.
-     *
-     * Propertyware filters contacts server-side, so this is one request rather
-     * than a scan of every contact in the account.
-     *
-     * @return array<int, Contact>
-     *
-     * @throws PropertywareException
-     */
-    public function findContactsByEmail(string $email, ClientRole $role): array
-    {
-        $records = $this->propertyware->list('contacts', [
-            'email' => $email,
-            'type' => $role === ClientRole::Owner ? 'OWNER' : 'TENANT',
-        ]);
-
-        return collect($records)
-            ->map(fn (array $record): Contact => Contact::fromArray($record))
-            ->filter(fn (Contact $contact): bool => $contact->role === $role)
-            ->values()
-            ->all();
-    }
-
-    /**
      * Get the properties the client rents or owns.
      *
      * @return array<int, Property>
@@ -568,22 +544,6 @@ class PropertywareDirectory
         return collect($portfolioIds)
             ->flatMap(fn (int $portfolioId): array => $cached->get($portfolioId, []))
             ->all();
-    }
-
-    /**
-     * Get the buildings in one portfolio, filtered by Propertyware.
-     *
-     * @return array<int, array<string, mixed>>
-     *
-     * @throws PropertywareException
-     */
-    public function buildingsInPortfolio(int $portfolioId): array
-    {
-        return Cache::remember(
-            "propertyware:portfolio:{$portfolioId}:buildings",
-            $this->cacheSeconds,
-            fn (): array => $this->propertyware->listAll('buildings', ['portfolioID' => $portfolioId]),
-        );
     }
 
     /**

@@ -29,13 +29,17 @@ const greeting = computed(() => {
 
 <template>
     <header
-        class="glass-strong flex min-w-0 flex-col items-start gap-3 rounded-2xl p-5 sm:p-7"
+        class="from-primary to-ring text-primary-foreground flex min-w-0 flex-col items-start gap-3 rounded-2xl bg-gradient-to-br p-5 sm:p-7"
     >
         <div
             v-if="portalLabel || $slots.actions"
             class="flex flex-wrap items-center gap-3"
         >
-            <Badge v-if="portalLabel" variant="outline" class="gap-1.5 py-1">
+            <Badge
+                v-if="portalLabel"
+                variant="outline"
+                class="border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground gap-1.5 py-1"
+            >
                 <span class="bg-success size-2 rounded-full" />
                 {{ portalLabel }}
             </Badge>
@@ -46,14 +50,10 @@ const greeting = computed(() => {
             class="font-heading text-3xl font-semibold tracking-tight text-balance wrap-anywhere"
         >
             {{ greeting }},
-            <span
-                class="from-primary to-success bg-gradient-to-r bg-clip-text text-transparent"
-            >
-                {{ accountName }}
-            </span>
+            <span class="opacity-90">{{ accountName }}</span>
         </h1>
 
-        <p v-if="description" class="text-muted-foreground text-pretty">
+        <p v-if="description" class="text-primary-foreground/80 text-pretty">
             {{ description }}
         </p>
     </header>

@@ -26,7 +26,7 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Home', href: dashboard() },
-            { title: 'Maintenance', href: maintenanceRoute() },
+            { title: 'Work Orders', href: maintenanceRoute() },
         ],
     },
 });
@@ -45,9 +45,9 @@ const results = computed(() => props.maintenance?.workOrders?.data ?? []);
 
 <template>
     <div class="flex flex-col gap-6 p-4 md:p-6">
-        <Head title="Maintenance" />
+        <Head title="Work Orders" />
         <PageHeader
-            title="Maintenance"
+            title="Work Orders"
             description="Repairs and work happening at your home."
         >
             <template #actions>
