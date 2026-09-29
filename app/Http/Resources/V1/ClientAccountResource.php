@@ -24,6 +24,8 @@ class ClientAccountResource extends JsonResource
             'portal' => $this->role->portalLabel(),
             'label' => $this->label ?? 'Account '.$this->id,
             'reference' => $this->propertyware_id,
+            // Propertyware's own portal for this account's role: owner or tenant.
+            'propertywarePortalUrl' => config("services.propertyware.portal_urls.{$this->role->value}"),
         ];
     }
 }

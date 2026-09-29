@@ -21,6 +21,8 @@ defineOptions({
 const props = defineProps<{
     preferences: {
         message_replies_email: boolean;
+        /** Pushed to the mobile app; there is no switch for it here. */
+        message_replies_push: boolean;
     };
     /**
      * Texted replies live in the messaging hub: undefined while it answers,

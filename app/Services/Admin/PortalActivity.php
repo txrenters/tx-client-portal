@@ -4,6 +4,7 @@ namespace App\Services\Admin;
 
 use App\Models\ClientAccount;
 use App\Models\ClientInvitation;
+use App\Models\HelpRequest;
 use App\Models\User;
 use App\Models\WorkOrderApproval;
 use Illuminate\Support\Collection;
@@ -12,15 +13,16 @@ use Illuminate\Support\Facades\DB;
 /**
  * What has happened in the portal lately.
  *
- * The app keeps no audit log, so rather than invent one this reads the
- * timestamps the tables already carry — when accounts were created, when
- * invitations were accepted, when an owner approved a work order, when an app
- * session was last used — and merges them into one feed. That means the feed
- * only knows about things that leave a row behind, which is worth remembering
- * before treating it as a security log.
+ * Reads the timestamps the tables already carry — when accounts were created,
+ * when invitations were accepted, when an owner approved a work order, when an
+ * app session was last used — and merges them with the admin audit trail into
+ * one feed. Client-side events only exist where they leave a row behind, so
+ * only the staff actions amount to an audit log.
  */
 class PortalActivity
 {
+    public function __construct(private AdminAudit $audit) {}
+
     /**
      * The most recent events across the portal, newest first.
      *
@@ -110,6 +112,18 @@ class PortalActivity
                 'actor' => null,
             ]);
 
-        return collect([$signups, $links, $invitations, $approvals, $sessions])->flatten(1);
+        $helpRequests = HelpRequest::query()
+            ->with('user:id,email')
+            ->latest()
+            ->limit(50)
+            ->get()
+            ->map(fn (HelpRequest $request): array => [
+                'type' => 'help_request',
+                'at' => $request->created_at->toIso8601String(),
+                'summary' => 'Asked for help: '.$request->topic->label(),
+                'actor' => $request->user?->email,
+            ]);
+
+        return collect([$signups, $links, $invitations, $approvals, $sessions, $helpRequests, $this->audit->recent(50)])->flatten(1);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Client;
 
+use App\Services\Propertyware\MaintenanceSummary;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -17,7 +18,7 @@ class CreateWorkOrderRequest extends FormRequest
     {
         return [
             'property_id' => ['nullable', 'integer'],
-            'category' => ['required', 'string', Rule::in(config('maintenance.categories'))],
+            'category' => ['required', 'string', Rule::in(MaintenanceSummary::clientCategories())],
             'description' => ['required', 'string', 'max:2000'],
             'location' => ['nullable', 'string', 'max:255'],
             'urgency' => ['required', 'in:normal,urgent'],

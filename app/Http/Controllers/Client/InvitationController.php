@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Client\AcceptInvitationRequest;
 use App\Models\ClientInvitation;
 use App\Models\User;
+use App\Services\Security\IpGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,6 +26,8 @@ class InvitationController extends Controller
         $invitation = ClientInvitation::findPending($token);
 
         if ($invitation === null) {
+            app(IpGuard::class)->record($request, 'invalid_invitation');
+
             return Inertia::render('auth/AcceptInvitation', ['invitation' => null]);
         }
 

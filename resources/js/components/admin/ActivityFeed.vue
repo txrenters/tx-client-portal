@@ -2,7 +2,9 @@
 import {
     Building2,
     CircleCheck,
+    LifeBuoy,
     MailCheck,
+    ShieldCheck,
     Smartphone,
     UserPlus,
     Wrench,
@@ -28,6 +30,8 @@ const icons: Record<string, unknown> = {
     work_order_approved: Wrench,
     work_order_declined: Wrench,
     app_session: Smartphone,
+    help_request: LifeBuoy,
+    admin_action: ShieldCheck,
 };
 
 const when = appDateFormatter({

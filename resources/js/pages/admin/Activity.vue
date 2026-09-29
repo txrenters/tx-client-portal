@@ -4,6 +4,18 @@ import AppCard from '@/components/AppCard.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import ActivityFeed from '@/components/admin/ActivityFeed.vue';
 import type { AdminActivityEvent } from '@/types';
+import { dashboard as adminHome } from '@/routes/admin';
+import { activity as activityCrumb } from '@/routes/admin';
+
+/** The trail in the header beside the sidebar's collapse button. */
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Admin', href: adminHome() },
+            { title: 'Activity', href: activityCrumb() },
+        ],
+    },
+});
 
 defineProps<{
     /** Undefined while the feed is still being read. */
@@ -23,10 +35,10 @@ defineProps<{
         <AppCard>
             <ActivityFeed :events="activity" />
             <p class="text-muted-foreground mt-6 text-sm text-pretty">
-                Built from the timestamps the portal's own tables carry, so it
-                shows what leaves a record behind. It is not a security audit
-                log, and it does not include anything that happened in
-                Propertyware.
+                Every action staff take in the admin area is recorded here with
+                who took it. Client activity comes from the timestamps the
+                portal's own tables carry, so it only shows what leaves a record
+                behind, and nothing that happened in Propertyware.
             </p>
         </AppCard>
     </div>

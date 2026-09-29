@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\ClientAccount;
+use App\Models\Setting;
 use App\Models\User;
+use App\Services\Scheduling\MeetingCatalog;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
@@ -13,6 +15,11 @@ beforeEach(function () {
         'services.scheduling.token' => 'token',
         'services.scheduling.page' => 'texas-renters',
     ]);
+
+    // Clients only see meeting types staff approved; approve the one faked below.
+    // Written directly: resolving the catalog here would build the scheduling
+    // client before tests that change its config get the chance.
+    Setting::put(MeetingCatalog::SETTING, json_encode(['owner-meeting']));
 
     $this->owner = User::factory()->create(['name' => 'Xue Gao', 'email' => 'owner@example.com']);
     $this->account = ClientAccount::factory()->owner()->for($this->owner)->create();

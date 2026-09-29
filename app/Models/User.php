@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ClientRole;
+use App\Enums\StaffRole;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -28,6 +29,9 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  * @property string|null $remember_token
+ * @property Carbon|null $last_seen_at When they last used the portal or the apps; see TrackLastSeen.
+ * @property StaffRole|null $staff_role Staff access granted in the admin area; see isOwner() for the config owners.
+ * @property Carbon|null $suspended_at Set by staff to shut the login out; see isSuspended().
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -49,6 +53,59 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function clientAccounts(): HasMany
     {
         return $this->hasMany(ClientAccount::class);
+    }
+
+    /**
+     * The phones that have asked to be rung for this login.
+     *
+     * @return HasMany<PushToken, $this>
+     */
+    public function pushTokens(): HasMany
+    {
+        return $this->hasMany(PushToken::class);
+    }
+
+    /**
+     * What the person has asked staff for help with.
+     *
+     * @return HasMany<HelpRequest, $this>
+     */
+    public function helpRequests(): HasMany
+    {
+        return $this->hasMany(HelpRequest::class);
+    }
+
+    /**
+     * Whether this login is one of the ADMIN_EMAILS owners, who hold every
+     * permission and cannot be changed from inside the app.
+     */
+    public function isOwner(): bool
+    {
+        return in_array(strtolower($this->email), config('services.admin_emails', []), strict: true);
+    }
+
+    /**
+     * Whether this login may use the admin area at all.
+     */
+    public function isStaff(): bool
+    {
+        return $this->isOwner() || $this->staff_role !== null;
+    }
+
+    /**
+     * Whether this login may add, change and remove staff.
+     */
+    public function canManageStaff(): bool
+    {
+        return $this->isOwner() || $this->staff_role === StaffRole::Admin;
+    }
+
+    /**
+     * Whether staff have shut this login out of the portal and the apps.
+     */
+    public function isSuspended(): bool
+    {
+        return $this->suspended_at !== null;
     }
 
     /**
@@ -115,6 +172,9 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'suspended_at' => 'datetime',
+            'last_seen_at' => 'datetime',
+            'staff_role' => StaffRole::class,
             'notification_preferences' => 'array',
         ];
     }
@@ -127,6 +187,9 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public const NOTIFICATION_DEFAULTS = [
         // Email when TexasRenters.com replies in the portal to a message the client wrote there.
         'message_replies_email' => true,
+        // The same reply, pushed to the app. Separate from the email because a
+        // client with the app installed usually wants one and not the other.
+        'message_replies_push' => true,
     ];
 
     /**

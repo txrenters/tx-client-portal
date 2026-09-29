@@ -37,7 +37,7 @@ test('the admin can take their own account back', function () {
     $this->actingAs($this->admin)->post(route('admin.users.impersonate', $this->client));
 
     $this->delete(route('impersonate.stop'))
-        ->assertRedirect(route('admin.users.index'));
+        ->assertRedirect(route('admin.users.show', $this->client));
 
     expect(auth()->id())->toBe($this->admin->id)
         ->and(session()->has(ImpersonationController::SESSION_KEY))->toBeFalse();

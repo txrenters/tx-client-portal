@@ -46,7 +46,7 @@ const rows = [
             <span class="size-2.5 rounded-full bg-amber-400/70" />
             <span class="bg-success/60 size-2.5 rounded-full" />
             <span class="text-muted-foreground ml-2 font-mono text-xs">
-                portal.texasrenters.com
+                app.texasrenters.com
             </span>
         </div>
 

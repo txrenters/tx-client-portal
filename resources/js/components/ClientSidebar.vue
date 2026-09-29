@@ -17,7 +17,7 @@ import {
 import { useClientNavigation } from '@/composables/useClientNavigation';
 import { dashboard } from '@/routes';
 
-const { mainNavItems, secondaryNavItems, availableRoles } =
+const { mainNavGroups, secondaryNavItems, availableRoles } =
     useClientNavigation();
 </script>
 
@@ -41,9 +41,18 @@ const { mainNavItems, secondaryNavItems, availableRoles } =
             <RoleSwitcher v-if="availableRoles.length > 1" />
         </SidebarHeader>
 
-        <SidebarContent>
-            <NavMain :items="mainNavItems" label="Main" />
-            <NavMain :items="secondaryNavItems" label="Other" class="mt-auto" />
+        <SidebarContent class="gap-2 py-2">
+            <NavMain
+                v-for="group in mainNavGroups"
+                :key="group.label"
+                :items="group.items"
+                :label="group.label"
+            />
+            <NavMain
+                :items="secondaryNavItems"
+                label="More"
+                class="border-sidebar-border mt-auto border-t pt-2"
+            />
         </SidebarContent>
 
         <SidebarFooter>

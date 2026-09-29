@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\Client\AccountController;
+use App\Http\Controllers\Client\AnnouncementController;
+use App\Http\Controllers\Client\HelpController;
 use App\Http\Controllers\Client\NotificationController;
+use App\Http\Controllers\Client\PromotionController;
 use App\Http\Controllers\Owner\ConversationController as OwnerConversationController;
 use App\Http\Controllers\Owner\DashboardController as OwnerDashboardController;
 use App\Http\Controllers\Owner\DocumentController as OwnerDocumentController;
@@ -11,6 +14,7 @@ use App\Http\Controllers\Owner\MeetingController as OwnerMeetingController;
 use App\Http\Controllers\Owner\MessageController as OwnerMessageController;
 use App\Http\Controllers\Owner\PortfolioController as OwnerPortfolioController;
 use App\Http\Controllers\Owner\PropertyController as OwnerPropertyController;
+use App\Http\Controllers\Owner\ReferralController as OwnerReferralController;
 use App\Http\Controllers\Resident\ConversationController as ResidentConversationController;
 use App\Http\Controllers\Resident\DashboardController as ResidentDashboardController;
 use App\Http\Controllers\Resident\DocumentController as ResidentDocumentController;
@@ -18,13 +22,20 @@ use App\Http\Controllers\Resident\LeaseController as ResidentLeaseController;
 use App\Http\Controllers\Resident\MaintenanceController as ResidentMaintenanceController;
 use App\Http\Controllers\Resident\MessageController as ResidentMessageController;
 use App\Http\Controllers\Resident\PropertyController as ResidentPropertyController;
+use App\Http\Controllers\Resident\ReferralController as ResidentReferralController;
 use App\Http\Middleware\EnsureClientRole;
+use App\Services\Promotions\PromotionBoard;
 use Illuminate\Support\Facades\Route;
 
 /*
  * Section pages not built yet render the shared "coming soon" shell so navigation stays complete.
  */
 Route::middleware(['auth', 'verified'])->group(function () {
+    // The once-a-day promotion popup, asked for by the client layout.
+    Route::get('promotion', [PromotionController::class, 'show'])->name('promotion.show');
+    Route::post('promotions/{promotion}/{action}', [PromotionController::class, 'record'])
+        ->whereIn('action', PromotionBoard::ACTIONS)->middleware('throttle:60,1')->name('promotions.record');
+
     Route::middleware(EnsureClientRole::class.':resident')->prefix('resident')->name('resident.')->group(function () {
         Route::get('dashboard', ResidentDashboardController::class)->name('dashboard');
         Route::get('property', [ResidentPropertyController::class, 'show'])->name('property');
@@ -41,6 +52,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('messages', [ResidentMessageController::class, 'store'])->middleware('throttle:10,1')->name('messages.store');
         Route::post('messages/{thread}/replies', [ResidentMessageController::class, 'reply'])->whereNumber('thread')->middleware('throttle:30,1')->name('messages.reply');
         Route::get('conversations', [ResidentConversationController::class, 'index'])->name('conversations.index');
+        Route::get('referrals', [ResidentReferralController::class, 'index'])->name('referrals.index');
+        Route::post('referrals', [ResidentReferralController::class, 'store'])->middleware('throttle:10,1')->name('referrals.store');
         Route::get('lease', ResidentLeaseController::class)->name('lease');
         // Payments live on the lease page now; the old address still works.
         Route::redirect('payments', '/resident/lease')->name('payments');
@@ -77,6 +90,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('messages', [OwnerMessageController::class, 'store'])->middleware('throttle:10,1')->name('messages.store');
         Route::post('messages/{thread}/replies', [OwnerMessageController::class, 'reply'])->whereNumber('thread')->middleware('throttle:30,1')->name('messages.reply');
         Route::get('conversations', [OwnerConversationController::class, 'index'])->name('conversations.index');
+        Route::get('referrals', [OwnerReferralController::class, 'index'])->name('referrals.index');
+        Route::post('referrals', [OwnerReferralController::class, 'store'])->middleware('throttle:10,1')->name('referrals.store');
         Route::get('financials', OwnerFinancialController::class)->name('financials');
         Route::inertia('statements', 'client/ComingSoon', ['title' => 'Statements'])->name('statements');
         Route::get('documents', [OwnerDocumentController::class, 'index'])->name('documents');
@@ -94,5 +109,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('notifications/latest', [NotificationController::class, 'latest'])->name('notifications.latest');
-    Route::inertia('help', 'client/ComingSoon', ['title' => 'Help'])->name('help');
+    Route::post('announcements/{announcement}/dismiss', [AnnouncementController::class, 'dismiss'])->name('announcements.dismiss');
+});
+
+// Not behind "verified": someone whose confirmation email never arrives is
+// exactly who needs to ask for help.
+Route::middleware('auth')->group(function () {
+    Route::get('help', [HelpController::class, 'index'])->name('help');
+    Route::post('help', [HelpController::class, 'store'])->middleware('throttle:5,1')->name('help.store');
 });

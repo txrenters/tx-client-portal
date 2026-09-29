@@ -1,19 +1,41 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
-import { CircleAlert, RefreshCw, ScrollText } from '@lucide/vue';
+import { CircleAlert, RefreshCw, RotateCcw, ScrollText, Trash2 } from '@lucide/vue';
 import AppCard from '@/components/AppCard.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import ConfirmAction from '@/components/admin/ConfirmAction.vue';
 import IntegrationStatusList from '@/components/admin/IntegrationStatusList.vue';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { appDateFormatter } from '@/lib/timezone';
 import { refresh } from '@/routes/admin/integrations';
-import type { AdminIntegration, AdminQueueHealth } from '@/types';
+import { forget, retry } from '@/routes/admin/integrations/failed-jobs';
+import type {
+    AdminFailedJob,
+    AdminIntegration,
+    AdminQueueHealth,
+} from '@/types';
+import { dashboard as adminHome } from '@/routes/admin';
+import { index as integrationsCrumb } from '@/routes/admin/integrations';
+
+/** The trail in the header beside the sidebar's collapse button. */
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Admin', href: adminHome() },
+            { title: 'Integrations', href: integrationsCrumb() },
+        ],
+    },
+});
 
 defineProps<{
     queue: AdminQueueHealth;
+    failedJobs: AdminFailedJob[];
     /** Undefined while the services are being checked. */
     integrations?: AdminIntegration[];
 }>();
+
+const failedAt = appDateFormatter({ dateStyle: 'medium', timeStyle: 'short' });
 </script>
 
 <template>
@@ -87,6 +109,66 @@ defineProps<{
                     </Button>
                 </div>
             </div>
+
+            <ul
+                v-if="failedJobs.length > 0"
+                class="divide-border/60 mt-4 divide-y border-t"
+            >
+                <li
+                    v-for="job in failedJobs"
+                    :key="job.uuid"
+                    class="flex flex-wrap items-start justify-between gap-3 py-3"
+                >
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium">
+                            {{ job.job }}
+                            <span class="text-muted-foreground font-normal"
+                                >on {{ job.queue }} ·
+                                {{ failedAt.format(new Date(job.failedAt)) }}</span
+                            >
+                        </p>
+                        <p
+                            class="text-muted-foreground mt-1 text-xs break-words"
+                        >
+                            {{ job.error }}
+                        </p>
+                    </div>
+                    <div class="flex gap-2">
+                        <Form
+                            v-bind="retry.form(job.uuid)"
+                            :options="{ preserveScroll: true }"
+                            #default="{ processing }"
+                        >
+                            <Button
+                                type="submit"
+                                variant="outline"
+                                size="sm"
+                                :disabled="processing"
+                            >
+                                <Spinner v-if="processing" class="size-4" />
+                                <RotateCcw v-else class="size-4" />
+                                Retry
+                            </Button>
+                        </Form>
+                        <ConfirmAction
+                            title="Discard this failed job?"
+                            description="It will not run again, and the record of why it failed is gone. Retry it instead if the work still needs doing."
+                            confirm-label="Discard"
+                            destructive
+                            :action="forget(job.uuid)"
+                        >
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                class="text-destructive"
+                            >
+                                <Trash2 class="size-4" />
+                                Discard
+                            </Button>
+                        </ConfirmAction>
+                    </div>
+                </li>
+            </ul>
         </AppCard>
     </div>
 </template>

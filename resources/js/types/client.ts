@@ -11,5 +11,7 @@ export type ClientAccountOption = {
 export type ClientPortal = {
     roles: ClientRole[];
     activeRole: ClientRole | null;
+    /** Propertyware's own owner or tenant portal for the role in view. */
+    propertywarePortalUrl: string | null;
     accounts: ClientAccountOption[];
 };

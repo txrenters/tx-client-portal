@@ -18,12 +18,12 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
             <li
                 v-for="item in mobileNavItems"
                 :key="toUrl(item.href)"
-                class="flex-1"
+                class="min-w-0 flex-1"
             >
                 <Link
                     :href="item.href"
                     prefetch
-                    class="flex min-h-[3.25rem] flex-col items-center justify-center gap-1 px-2 py-2 text-xs font-medium transition-colors duration-150"
+                    class="flex min-h-[3.25rem] flex-col items-center justify-center gap-1 px-0.5 py-2 text-[11px] font-medium transition-colors duration-150"
                     :class="
                         isCurrentOrParentUrl(item.href)
                             ? 'text-primary'
@@ -34,7 +34,11 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                     "
                 >
                     <component :is="item.icon" class="size-5" />
-                    <span>{{ item.title }}</span>
+                    <!-- One line each, so a longer label like "Work Orders" never drops below the rest. -->
+                    <span
+                        class="max-w-full truncate leading-tight whitespace-nowrap"
+                        >{{ item.title }}</span
+                    >
                 </Link>
             </li>
         </ul>

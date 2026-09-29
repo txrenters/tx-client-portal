@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Admin\IntegrationHealth;
 use App\Services\Admin\PortalActivity;
 use App\Services\Admin\PortalStatistics;
+use App\Services\Help\HelpDesk;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,11 +19,12 @@ class DashboardController extends Controller
      * integration checks call four services, so they are deferred: a vendor
      * being slow should not hold up the numbers.
      */
-    public function __invoke(PortalStatistics $statistics, IntegrationHealth $health, PortalActivity $activity): Response
+    public function __invoke(PortalStatistics $statistics, IntegrationHealth $health, PortalActivity $activity, HelpDesk $helpDesk): Response
     {
         return Inertia::render('admin/Dashboard', [
             'stats' => $statistics->summary(),
             'queue' => $health->queue(),
+            'openHelpRequests' => $helpDesk->openCount(),
             'integrations' => Inertia::defer(fn (): array => $health->all()),
             'activity' => Inertia::defer(fn (): array => $activity->recent(12)),
         ]);

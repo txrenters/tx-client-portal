@@ -173,6 +173,67 @@ class OwnerLedger
     }
 
     /**
+     * The figures a portfolio's card leads with, as already read.
+     *
+     * Null when the portfolio has not been read yet. A list of ninety-four
+     * cannot walk ninety-four general ledgers on one request, so these are
+     * served from what has been cached, and a portfolio still waiting says so
+     * rather than reporting zeroes it cannot stand behind.
+     *
+     * @return array{income: float, expense: float, managementFee: float}|null
+     */
+    public function heldSummary(int $portfolioId, string $from, string $to): ?array
+    {
+        $held = Cache::get($this->summaryKey($portfolioId, $from, $to));
+
+        // Rebuilt rather than returned as found, so an entry left over from an
+        // older shape reads as "not yet known" instead of leaking through.
+        if (! is_array($held) || ! isset($held['income'], $held['expense'], $held['managementFee'])) {
+            return null;
+        }
+
+        return [
+            'income' => (float) $held['income'],
+            'expense' => (float) $held['expense'],
+            'managementFee' => (float) $held['managementFee'],
+        ];
+    }
+
+    /**
+     * Read a portfolio's figures for the window and hold on to them.
+     *
+     * The opening balance is deliberately left out: it costs a request per
+     * month of history, and the list quotes what moved in the period rather
+     * than a standing balance.
+     *
+     * @return array{income: float, expense: float, managementFee: float}
+     *
+     * @throws PropertywareException
+     */
+    public function warmSummary(ClientScope $scope, int $portfolioId, string $from, string $to): array
+    {
+        $book = $this->forPortfolio($scope, $portfolioId, $from, $to);
+        $summary = [
+            'income' => (float) $book['income'],
+            'expense' => (float) $book['expense'],
+            'managementFee' => (float) $book['managementFee'],
+        ];
+
+        Cache::put(
+            $this->summaryKey($portfolioId, $from, $to),
+            $summary,
+            (int) config('services.propertyware.cache_seconds'),
+        );
+
+        return $summary;
+    }
+
+    private function summaryKey(int $portfolioId, string $from, string $to): string
+    {
+        return "owner-ledger:summary:{$portfolioId}:{$from}:{$to}";
+    }
+
+    /**
      * One transaction as a ledger line, or null when none of it is this
      * portfolio's or it nets to nothing for the owner.
      *

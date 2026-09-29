@@ -10,6 +10,7 @@ use App\Http\Resources\V1\ClientAccountResource;
 use App\Http\Resources\V1\UserResource;
 use App\Models\ClientInvitation;
 use App\Models\User;
+use App\Services\Security\IpGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -70,6 +71,10 @@ class InvitationController extends Controller
     private function findInvitation(string $token): ClientInvitation
     {
         $invitation = ClientInvitation::findPending($token);
+
+        if ($invitation === null) {
+            app(IpGuard::class)->record(request(), 'invalid_invitation');
+        }
 
         abort_if($invitation === null, 404, __('This invitation is invalid or has expired.'));
 

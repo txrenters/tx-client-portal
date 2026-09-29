@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import {
     CircleAlert,
     KeyRound,
+    LifeBuoy,
     Plug,
     ScrollText,
     ShieldCheck,
@@ -14,8 +15,10 @@ import AppCard from '@/components/AppCard.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import IntegrationStatusList from '@/components/admin/IntegrationStatusList.vue';
 import ActivityFeed from '@/components/admin/ActivityFeed.vue';
+import DailyBarChart from '@/components/admin/DailyBarChart.vue';
 import { Button } from '@/components/ui/button';
 import { activity as activityRoute } from '@/routes/admin';
+import { index as helpRequestsRoute } from '@/routes/admin/help-requests';
 import { index as integrationsRoute } from '@/routes/admin/integrations';
 import { index as usersRoute } from '@/routes/admin/users';
 import type {
@@ -24,16 +27,25 @@ import type {
     AdminQueueHealth,
     AdminStats,
 } from '@/types';
+import { dashboard as adminHome } from '@/routes/admin';
+
+/** The trail in the header beside the sidebar's collapse button. */
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Admin', href: adminHome() },
+        ],
+    },
+});
 
 const props = defineProps<{
     stats: AdminStats;
     queue: AdminQueueHealth;
+    openHelpRequests: number;
     /** Undefined while the services are being checked. */
     integrations?: AdminIntegration[];
     activity?: AdminActivityEvent[];
 }>();
-
-const busiestDay = Math.max(1, ...props.stats.signups.map((day) => day.count));
 
 const totalSignups = props.stats.signups.reduce(
     (total, day) => total + day.count,
@@ -123,6 +135,44 @@ const tiles = [
         </div>
 
         <AppCard
+            title="Sign-ups"
+            description="New portal accounts over the last 30 days."
+        >
+            <DailyBarChart
+                :days="stats.signups"
+                :series="[
+                    { key: 'count', label: 'Sign-ups', colorClass: 'bg-chart-1' },
+                ]"
+                unit="sign-up"
+            />
+            <p class="text-muted-foreground mt-2 text-sm">
+                {{ totalSignups }} sign-up(s) in this window.
+                <ShieldCheck class="text-success inline size-3.5" />
+                {{ stats.invitations.pending }} invitation(s) still pending.
+            </p>
+        </AppCard>
+
+        <AppCard v-if="openHelpRequests > 0" class="border-primary/40">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-start gap-3">
+                    <LifeBuoy class="text-primary mt-0.5 size-5 shrink-0" />
+                    <div class="space-y-1">
+                        <p class="font-medium">
+                            {{ openHelpRequests }} help request(s) waiting
+                        </p>
+                        <p class="text-muted-foreground text-sm">
+                            Clients who reported a problem with the portal or
+                            the app.
+                        </p>
+                    </div>
+                </div>
+                <Button as-child size="sm">
+                    <Link :href="helpRequestsRoute()">Open the inbox</Link>
+                </Button>
+            </div>
+        </AppCard>
+
+        <AppCard
             v-if="queue.failed > 0"
             class="border-destructive/40 bg-destructive/5"
         >
@@ -138,9 +188,16 @@ const tiles = [
                             Most recent: {{ queue.lastFailureAt }}.
                         </span>
                     </p>
-                    <Button as-child variant="outline" size="sm" class="mt-2">
-                        <a href="/log-viewer">Open the log</a>
-                    </Button>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <Button as-child variant="outline" size="sm">
+                            <Link :href="integrationsRoute()"
+                                >Retry or discard them</Link
+                            >
+                        </Button>
+                        <Button as-child variant="outline" size="sm">
+                            <a href="/log-viewer">Open the log</a>
+                        </Button>
+                    </div>
                 </div>
             </div>
         </AppCard>
@@ -162,26 +219,5 @@ const tiles = [
             </AppCard>
         </div>
 
-        <AppCard
-            title="Sign-ups"
-            description="New portal accounts over the last 30 days."
-        >
-            <div class="flex h-32 items-end gap-1" aria-hidden="true">
-                <div
-                    v-for="day in stats.signups"
-                    :key="day.date"
-                    class="bg-primary/70 hover:bg-primary min-h-0.5 flex-1 rounded-t-sm transition-colors"
-                    :style="{
-                        height: `${Math.max(2, (day.count / busiestDay) * 100)}%`,
-                    }"
-                    :title="`${day.date}: ${day.count}`"
-                />
-            </div>
-            <p class="text-muted-foreground mt-2 text-sm">
-                {{ totalSignups }} sign-up(s) in this window.
-                <ShieldCheck class="text-success inline size-3.5" />
-                {{ stats.invitations.pending }} invitation(s) still pending.
-            </p>
-        </AppCard>
     </div>
 </template>

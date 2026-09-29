@@ -15,6 +15,11 @@ use Illuminate\Support\Facades\Http;
 class ChatHubClient
 {
     /**
+     * Seconds to wait for the hub to take a client's message, bot answer included.
+     */
+    private const CLIENT_MESSAGE_TIMEOUT = 35;
+
+    /**
      * @param  bool|string  $verify  Whether to check TLS, or a CA bundle path for local .test sites.
      */
     public function __construct(
@@ -171,6 +176,10 @@ class ChatHubClient
     public function postClientMessage(int $threadId, ?string $body, string $idempotencyKey, ?UploadedFile $attachment = null): array
     {
         return $this->send(function (PendingRequest $http) use ($threadId, $body, $idempotencyKey, $attachment) {
+            // The hub has its bot answer before it responds, which can outlast the
+            // usual limit; giving up then reports a failure for a message it kept.
+            $http = $http->timeout(self::CLIENT_MESSAGE_TIMEOUT);
+
             if ($attachment !== null) {
                 $http = $http->attach('attachment', (string) file_get_contents($attachment->getRealPath()), $attachment->getClientOriginalName());
             }

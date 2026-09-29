@@ -30,8 +30,8 @@ trait CreatesWorkOrders
     protected function workOrderOptions(ClientScope $scope, PropertywareDirectory $directory): array
     {
         return [
-            'categories' => collect(config('maintenance.categories'))
-                ->map(fn (string $category): array => ['value' => $category, 'label' => trim($category)])
+            'categories' => collect(MaintenanceSummary::clientCategories())
+                ->map(fn (string $category): array => ['value' => $category, 'label' => $category])
                 ->all(),
             'properties' => $this->propertyOptions($scope, $directory),
             'maxPhotos' => (int) config('maintenance.max_photos'),

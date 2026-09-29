@@ -5,6 +5,7 @@ use App\Events\ClientConversationUpdated;
 use App\Models\ClientAccount;
 use App\Models\ConversationRead;
 use App\Models\User;
+use App\Notifications\Channels\ExpoChannel;
 use App\Notifications\StaffRepliedNotification;
 use App\Services\ChatHub\ChatHubClient;
 use Illuminate\Http\Client\Request;
@@ -166,6 +167,16 @@ test('sends a reply as the client, once, however often it is retried', function 
         && $request['idempotency_key'] === $key);
 });
 
+test('a client\'s message refreshes their other open pages and devices straight away', function () {
+    Event::fake([ClientConversationUpdated::class]);
+    Sanctum::actingAs($this->owner);
+
+    $this->postJson(route('api.v1.accounts.messages.reply', [$this->account, 10]), ['body' => 'Sent from my phone'])
+        ->assertSuccessful();
+
+    Event::assertDispatched(ClientConversationUpdated::class, fn (ClientConversationUpdated $event): bool => $event->contactId === '500' && $event->threadId === 10);
+});
+
 test('starts a conversation on the category the client picked and opens it', function () {
     $this->actingAs($this->owner)
         ->post(route('owner.messages.store'), ['category' => 'accounting', 'body' => 'Why is this fee here?'])
@@ -254,6 +265,29 @@ test('the app lists conversations with the channel to listen on', function () {
         ->assertOk()
         ->assertJsonPath('data.0.id', 10)
         ->assertJsonPath('meta.channel', 'contacts.500.messages');
+});
+
+test('tells the app where to listen live, reachable from the phone', function () {
+    config([
+        'broadcasting.connections.reverb.key' => 'app-key',
+        'broadcasting.connections.reverb.options.host' => 'localhost',
+        'broadcasting.connections.reverb.options.port' => 8080,
+        'broadcasting.connections.reverb.options.scheme' => 'http',
+    ]);
+    Sanctum::actingAs($this->owner);
+
+    // A local Reverb named "localhost" is reached through the address the phone used for the portal.
+    $this->getJson('http://192.168.1.20:8000'.route('api.v1.accounts.realtime', $this->account, false))
+        ->assertOk()
+        ->assertExactJson(['data' => [
+            'key' => 'app-key',
+            'host' => '192.168.1.20',
+            'port' => 8080,
+            'tls' => false,
+            'channel' => 'contacts.500.messages',
+            'event' => 'conversation.updated',
+            'authEndpoint' => 'http://192.168.1.20:8000/api/v1/broadcasting/auth',
+        ]]);
 });
 
 test('passes on a signed hub event to the client\'s open page', function () {
@@ -355,19 +389,52 @@ function hubEvent(array $payload): TestResponse
     ], $body);
 }
 
-test('emails the client once when staff reply in the portal', function () {
-    Notification::fake();
-    $reply = fn (string $body) => ['event' => 'message.sent', 'data' => [
+function staffReply(string $body): array
+{
+    return ['event' => 'message.sent', 'data' => [
         'thread' => ['id' => 10, 'contact_id' => '500', 'subject' => 'Kitchen leak'],
         'message' => ['sender' => 'agent', 'sender_name' => 'Laura Motelet', 'channel' => 'app', 'body' => $body],
     ]];
+}
 
-    hubEvent($reply('The plumber comes Tuesday.'))->assertNoContent();
-    hubEvent($reply('Also, please leave the gate open.'))->assertNoContent();
+test('pushes every reply to the app but emails at most one per conversation', function () {
+    Notification::fake();
 
-    Notification::assertSentToTimes($this->owner, StaffRepliedNotification::class, 1);
-    Notification::assertSentTo($this->owner, StaffRepliedNotification::class,
-        fn ($notification) => $notification->threadId === 10 && $notification->author === 'Laura Motelet' && $notification->role === ClientRole::Owner);
+    hubEvent(staffReply('The plumber comes Tuesday.'))->assertNoContent();
+    hubEvent(staffReply('Also, please leave the gate open.'))->assertNoContent();
+
+    Notification::assertSentToTimes($this->owner, StaffRepliedNotification::class, 2);
+
+    $sent = collect();
+    Notification::assertSentTo($this->owner, StaffRepliedNotification::class, function ($notification) use ($sent) {
+        $sent->push($notification->channels);
+
+        return $notification->threadId === 10 && $notification->author === 'Laura Motelet' && $notification->role === ClientRole::Owner;
+    });
+
+    expect($sent)->toHaveCount(2)
+        ->and($sent->flatten()->filter(fn (string $channel): bool => $channel === 'mail'))->toHaveCount(1)
+        ->and($sent->every(fn (array $each): bool => in_array(ExpoChannel::class, $each, true)))->toBeTrue();
+});
+
+test('a pushed reply carries what the app needs to open the conversation', function () {
+    Notification::fake();
+
+    hubEvent(staffReply('The plumber comes Tuesday.'))->assertNoContent();
+
+    Notification::assertSentTo($this->owner, StaffRepliedNotification::class, function ($notification) {
+        $push = $notification->toExpo($this->owner);
+
+        expect($push->data)->toMatchArray([
+            'type' => 'message',
+            'threadId' => 10,
+            'accountId' => $this->account->id,
+        ])->and($push->title)->toBe('Laura Motelet')
+            ->and($push->body)->toBe('The plumber comes Tuesday.')
+            ->and($push->channelId)->toBe('messages');
+
+        return true;
+    });
 });
 
 test('does not email for replies that were texted or came from the chatbot', function (string $sender, string $channel) {
@@ -384,14 +451,31 @@ test('does not email for replies that were texted or came from the chatbot', fun
     'chatbot' => ['bot', 'app'],
 ]);
 
-test('does not email a client who turned reply emails off', function () {
+test('still pushes to a client who turned reply emails off', function () {
     Notification::fake();
     $this->owner->forceFill(['notification_preferences' => ['message_replies_email' => false]])->save();
 
-    hubEvent(['event' => 'message.sent', 'data' => [
-        'thread' => ['id' => 10, 'contact_id' => '500', 'subject' => 'Kitchen leak'],
-        'message' => ['sender' => 'agent', 'channel' => 'app', 'body' => 'Hello'],
-    ]])->assertNoContent();
+    hubEvent(staffReply('Hello'))->assertNoContent();
+
+    Notification::assertSentTo($this->owner, StaffRepliedNotification::class,
+        fn ($notification) => $notification->channels === [ExpoChannel::class]);
+});
+
+test('still emails a client who turned pushed replies off', function () {
+    Notification::fake();
+    $this->owner->forceFill(['notification_preferences' => ['message_replies_push' => false]])->save();
+
+    hubEvent(staffReply('Hello'))->assertNoContent();
+
+    Notification::assertSentTo($this->owner, StaffRepliedNotification::class,
+        fn ($notification) => $notification->channels === ['mail']);
+});
+
+test('says nothing at all to a client who turned both off', function () {
+    Notification::fake();
+    $this->owner->forceFill(['notification_preferences' => ['message_replies_email' => false, 'message_replies_push' => false]])->save();
+
+    hubEvent(staffReply('Hello'))->assertNoContent();
 
     Notification::assertNothingSent();
 });

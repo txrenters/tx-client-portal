@@ -24,7 +24,10 @@ test('the app reads and changes notification settings', function () {
 
     // No client account, so nothing to text: "sms" is null.
     $this->getJson(route('api.v1.notification-preferences.show'))
-        ->assertExactJson(['data' => ['message_replies_email' => true], 'meta' => ['sms' => null]]);
+        ->assertExactJson([
+            'data' => ['message_replies_email' => true, 'message_replies_push' => true],
+            'meta' => ['sms' => null],
+        ]);
 
     $this->putJson(route('api.v1.notification-preferences.update'), ['message_replies_email' => false])
         ->assertJsonPath('data.message_replies_email', false);
@@ -51,7 +54,7 @@ test('turns texted replies on through the messaging hub', function () {
     $this->put(route('notifications.update'), ['message_replies_sms' => true])->assertRedirect(route('notifications.edit'));
 
     // The hub holds it, not us: nothing about texts lands in our own settings.
-    expect($user->refresh()->notificationPreferences())->toBe(['message_replies_email' => true]);
+    expect($user->refresh()->notificationPreferences())->toBe(['message_replies_email' => true, 'message_replies_push' => true]);
 
     Http::assertSent(fn ($request) => $request->method() === 'PATCH'
         && $request->url() === 'https://support.test/api/v1/contacts/500'
@@ -64,5 +67,5 @@ test('ignores settings that do not exist', function () {
 
     $this->putJson(route('api.v1.notification-preferences.update'), ['marketing_sms' => true])->assertOk();
 
-    expect($user->refresh()->notificationPreferences())->toBe(['message_replies_email' => true]);
+    expect($user->refresh()->notificationPreferences())->toBe(['message_replies_email' => true, 'message_replies_push' => true]);
 });

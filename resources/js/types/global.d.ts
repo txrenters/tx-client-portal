@@ -1,5 +1,6 @@
 import type { Auth } from '@/types/auth';
 import type { ClientPortal } from '@/types/client';
+import type { Announcement } from '@/types/portal';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -20,6 +21,8 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             client: ClientPortal | null;
+            /** Staff notices showing for this person; empty on the admin side. */
+            announcements: Announcement[];
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import type { InertiaLinkProps } from '@inertiajs/vue3';
 import { ChevronDown, MessageSquare, Wrench } from '@lucide/vue';
+import LinkifiedText from '@/components/LinkifiedText.vue';
 import { Bubble, BubbleContent } from '@/components/ui/bubble';
 import { Card } from '@/components/ui/card';
 import {
@@ -111,11 +112,10 @@ function formatDateTime(value: string | null): string {
                                             "
                                         >
                                             <BubbleContent
-                                                class="whitespace-pre-line"
-                                                >{{
-                                                    message.text
-                                                }}</BubbleContent
-                                            >
+                                                ><LinkifiedText
+                                                    :text="message.text"
+                                                    class="whitespace-pre-line"
+                                            /></BubbleContent>
                                         </Bubble>
                                         <MessageFooter class="font-normal">
                                             <template v-if="message.author"

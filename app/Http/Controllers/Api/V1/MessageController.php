@@ -21,6 +21,28 @@ use Illuminate\Http\Request;
 class MessageController extends Controller
 {
     /**
+     * Where the app listens for live changes to this account's conversations.
+     *
+     * A Reverb set up as "localhost" is only a name on the server's own
+     * machine, so the phone is pointed at the host it reached the portal on.
+     */
+    public function realtime(Request $request, ClientAccount $account): JsonResponse
+    {
+        $reverb = config('broadcasting.connections.reverb');
+        $host = (string) ($reverb['options']['host'] ?? '');
+
+        return response()->json(['data' => [
+            'key' => $reverb['key'] ?? null,
+            'host' => in_array($host, ['', 'localhost', '127.0.0.1'], true) ? $request->getHost() : $host,
+            'port' => (int) ($reverb['options']['port'] ?? 443),
+            'tls' => ($reverb['options']['scheme'] ?? 'https') === 'https',
+            'channel' => "contacts.{$account->propertyware_id}.messages",
+            'event' => 'conversation.updated',
+            'authEndpoint' => $request->getSchemeAndHttpHost().'/api/v1/broadcasting/auth',
+        ]]);
+    }
+
+    /**
      * @throws ChatHubException
      */
     public function index(Request $request, ClientAccount $account, ClientConversations $conversations): JsonResponse

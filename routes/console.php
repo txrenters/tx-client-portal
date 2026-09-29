@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\PortalVisit;
+use App\Models\SecurityEvent;
+use App\Models\SignInEvent;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -10,3 +13,6 @@ Artisan::command('inspire', function () {
 
 // Owner approvals that could not reach Propertyware straight away.
 Schedule::command('approvals:push')->everyTenMinutes()->withoutOverlapping();
+
+// Old sign-in log entries and visits (see the models' KEEP_DAYS).
+Schedule::command('model:prune', ['--model' => [SignInEvent::class, PortalVisit::class, SecurityEvent::class]])->daily();

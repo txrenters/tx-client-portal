@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ClientAccount;
 use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Notification;
@@ -127,6 +128,19 @@ test('shows the signed-in user with their linked accounts', function () {
         ->assertOk()
         ->assertJsonPath('data.email', $user->email)
         ->assertJsonPath('data.accounts.0.role', 'resident');
+});
+
+test('gives each account the Propertyware portal for its role', function () {
+    config(['services.propertyware.discover_accounts' => false]);
+    $user = User::factory()->create();
+    ClientAccount::factory()->owner()->for($user)->create();
+    ClientAccount::factory()->resident()->for($user)->create();
+    Sanctum::actingAs($user);
+
+    $accounts = collect($this->getJson(route('api.v1.me'))->assertOk()->json('data.accounts'))->keyBy('role');
+
+    expect($accounts['owner']['propertywarePortalUrl'])->toBe('https://app.propertyware.com/pw/portals/houstonpropertymanagement/owner.action')
+        ->and($accounts['resident']['propertywarePortalUrl'])->toBe('https://app.propertyware.com/pw/portals/houstonpropertymanagement/tenant.action');
 });
 
 test('sends another verification link to an unverified login', function () {

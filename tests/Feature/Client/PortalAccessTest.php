@@ -59,3 +59,13 @@ test('shares only the portals the client holds', function () {
             ->where('client.activeRole', 'resident'),
         );
 });
+
+test('shares the Propertyware portal for the role in view, for the sidebar link', function (string $state, string $route, string $portal) {
+    $this->actingAs(User::factory()->{$state}()->create())
+        ->get(route($route))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('client.propertywarePortalUrl', "https://app.propertyware.com/pw/portals/houstonpropertymanagement/{$portal}.action"));
+})->with([
+    'resident' => ['resident', 'resident.dashboard', 'tenant'],
+    'owner' => ['owner', 'owner.dashboard', 'owner'],
+]);

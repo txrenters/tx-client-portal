@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\ImportOwnerLedgers;
+use App\Jobs\WarmPortfolioIncome;
 use App\Models\ClientAccount;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
@@ -53,6 +54,25 @@ beforeEach(function () {
             ['id' => 1000, 'name' => 'Accounts Receivable', 'accountType' => 'A/R'],
         ]),
         '*/vendors/900' => Http::response(['id' => 900, 'name' => 'Acme Plumbing']),
+        // The portfolio record, read for its reserve and its first day.
+        '*/portfolios/*' => Http::response(['id' => 2, 'targetOperatingReserve' => 0, 'createdDateTime' => '2024-01-01T00:00:00Z']),
+        // A portfolio's own ledger, which income is read from. Without this the
+        // request escapes the fake and goes looking for the real Propertyware.
+        // The ledger is read a month at a time, so this answers only for the
+        // window the one rent credit actually falls in — a fake that returned
+        // it for every chunk would count it once per month of the period.
+        '*/accounting/generalledger*' => function ($request) {
+            $posted = '2026-09-02';
+            $mine = (int) ($request->data()['portfolioID'] ?? 0) === 2
+                && ($request->data()['postDateStart'] ?? '9999') <= $posted
+                && ($request->data()['postDateEnd'] ?? '0000') >= $posted;
+
+            return Http::response($mine ? [[
+                'id' => 5001, 'postDate' => $posted, 'glentries' => [
+                    ['portfolioID' => 2, 'buildingID' => 7, 'glaccountID' => 4000, 'credit' => 1000.0, 'debit' => 0.0, 'comment' => 'Rent'],
+                ],
+            ]] : []);
+        },
         // Each lease bills a month's rent and receives most of it.
         '*/leases/adjustments*' => fn ($request) => Http::response([
             ['id' => 1, 'leaseID' => (int) ($request->data()['leaseID'] ?? 0), 'date' => '2026-05-01', 'amount' => 1000.0, 'glAccountID' => 4000],
@@ -67,7 +87,20 @@ beforeEach(function () {
                 ['id' => 70, 'startDate' => '2019-01-01', 'endDate' => '2020-01-01', 'active' => false],
             ]
             : [['id' => 81, 'startDate' => '2025-01-01', 'endDate' => '2027-01-01', 'active' => true]]),
-        '*/bills*' => fn ($request) => Http::response(match ((int) ($request->data()['portfolioID'] ?? 0)) {
+        // A bill split across two of this owner's portfolios comes back once
+        // per portfolio, exactly as Propertyware returns it. Dated 2023 so it
+        // falls outside every other test's window.
+        '*/bills*' => fn ($request) => Http::response([...match ((int) ($request->data()['portfolioID'] ?? 0)) {
+            2, 3 => [[
+                'id' => 114, 'vendorID' => 900, 'billDate' => '2023-06-15', 'comments' => 'Shared roof',
+                'billSplits' => [
+                    ['portfolioID' => 2, 'buildingID' => 7, 'glAccountID' => 4201, 'amount' => 100.0, 'amountPaid' => 0.0],
+                    ['portfolioID' => 3, 'buildingID' => 8, 'glAccountID' => 4201, 'amount' => 150.0, 'amountPaid' => 0.0],
+                ],
+                'amount' => 250.0,
+            ]],
+            default => [],
+        }, ...match ((int) ($request->data()['portfolioID'] ?? 0)) {
             2 => [[
                 'id' => 111, 'vendorID' => 900, 'billDate' => '2026-09-01', 'dueDate' => '2026-09-30', 'comments' => '19319 Hays Spring, Account#ELB 90419-419132400, Billing period 9/04/2025-10/04/2025', 'workOrderID' => '42',
                 // A bill split across this owner's portfolio and someone else's.
@@ -90,7 +123,7 @@ beforeEach(function () {
                 'amount' => 200.0,
             ]],
             default => [],
-        }),
+        }]),
     ]);
 
     $this->owner = User::factory()->create();
@@ -113,8 +146,10 @@ test('shows the owner only their share of each bill, by portfolio', function () 
         ->and($response->json('props.financials.portfolios'))->toMatchArray([
             // Each portfolio carries the same three figures as the page totals,
             // so one can be shown on its own without asking for it again.
-            ['id' => 2, 'name' => 'Elm Portfolio', 'expenses' => 300.0, 'paid' => 300.0, 'outstanding' => 0.0, 'bills' => 1],
-            ['id' => 3, 'name' => 'Oak Portfolio', 'expenses' => 200.0, 'paid' => 0.0, 'outstanding' => 200.0, 'bills' => 1],
+            // `ledger` is null on the first read: walking a general ledger per
+            // portfolio is queued, not done while the owner waits.
+            ['id' => 2, 'name' => 'Elm Portfolio', 'ledger' => null, 'expenses' => 300.0, 'paid' => 300.0, 'outstanding' => 0.0, 'bills' => 1],
+            ['id' => 3, 'name' => 'Oak Portfolio', 'ledger' => null, 'expenses' => 200.0, 'paid' => 0.0, 'outstanding' => 200.0, 'bills' => 1],
         ])
         ->and($response->json('props.financials.bills.0'))->toMatchArray([
             'vendor' => 'Acme Plumbing',
@@ -181,6 +216,98 @@ test('the app reads the same financials, and tenants have none', function () {
     $resident = ClientAccount::factory()->resident()->for($this->owner)->create(['propertyware_id' => '900']);
 
     $this->getJson(route('api.v1.accounts.financials', $resident))->assertNotFound();
+});
+
+test('a portfolio row quotes the same ledger its own card does, once it is read', function () {
+    Sanctum::actingAs($this->owner);
+    $url = route('api.v1.accounts.financials', [$this->account, 'from' => '2024-01-01', 'to' => '2026-12-31']);
+
+    // First read queues the ledger walk and shows nothing rather than zeroes.
+    $this->getJson($url)->assertOk()->assertJsonPath('meta.portfolios.0.ledger', null);
+
+    // The queue is synchronous here, so by the second read it is held.
+    $this->getJson($url)
+        ->assertOk()
+        ->assertJsonPath('meta.portfolios.0.ledger.income', 1000)
+        ->assertJsonPath('meta.portfolios.0.ledger.expense', 0)
+        // The bills figure stays alongside it, and is a different measure:
+        // what was billed in the period, not what the ledger settled.
+        ->assertJsonPath('meta.portfolios.0.expenses', 300);
+});
+
+test('the row and the card read one portfolio the same way', function () {
+    Sanctum::actingAs($this->owner);
+    $window = ['from' => '2024-01-01', 'to' => '2026-12-31'];
+
+    // Warm it, the way opening the screen does.
+    $this->getJson(route('api.v1.accounts.financials', [$this->account, ...$window]))->assertOk();
+
+    $row = collect($this->getJson(route('api.v1.accounts.financials', [$this->account, ...$window]))->json('meta.portfolios'))
+        ->firstWhere('id', 2);
+    $card = $this->getJson(route('api.v1.accounts.ledger', [$this->account, 'portfolio' => 2, ...$window]))->json('data');
+
+    expect($row['ledger']['income'])->toBe($card['income'])
+        ->and($row['ledger']['expense'])->toBe($card['expense']);
+});
+
+test('one job per portfolio and window, however often the screen is opened', function () {
+    Queue::fake();
+    Sanctum::actingAs($this->owner);
+    $url = route('api.v1.accounts.financials', [$this->account, 'from' => '2024-01-01', 'to' => '2026-12-31']);
+
+    $this->getJson($url)->assertOk();
+    $this->getJson($url)->assertOk();
+
+    // One per portfolio and no more: the job is unique per portfolio and
+    // window, so opening the screen again queues nothing new.
+    Queue::assertPushed(WarmPortfolioIncome::class, 2);
+    Queue::assertPushed(WarmPortfolioIncome::class, fn (WarmPortfolioIncome $job): bool => $job->portfolioId === 2 && $job->from === '2024-01-01');
+});
+
+test('a bill split across two of the owners portfolios is counted once, not twice', function () {
+    Sanctum::actingAs($this->owner);
+
+    $response = $this->getJson(route('api.v1.accounts.financials', [$this->account, 'from' => '2023-01-01', 'to' => '2023-12-31']))
+        ->assertOk();
+
+    // Read once per portfolio it touches, so without dedup it would be listed
+    // twice and its 250 counted as 500 — and two rows would share a key.
+    expect(collect($response->json('data'))->pluck('id')->all())->toBe(['114'])
+        ->and($response->json('meta.totals.expenses'))->toEqual(250)
+        ->and($response->json('meta.totals.bills'))->toBe(1);
+
+    // Each portfolio still reports only its own share of it.
+    $portfolios = collect($response->json('meta.portfolios'))->keyBy('id');
+    expect($portfolios[2]['expenses'])->toEqual(100)
+        ->and($portfolios[3]['expenses'])->toEqual(150)
+        ->and($portfolios[2]['bills'])->toBe(1);
+});
+
+test('the app starts the import too, so a large owner is not served zeroes for ever', function () {
+    Queue::fake();
+    $user = User::factory()->create();
+    $big = ClientAccount::factory()->owner()->for($user)->create(['propertyware_id' => '501']);
+    Sanctum::actingAs($user);
+
+    // Twenty portfolios, which is past what one request reads: every figure is
+    // zero until the import has filled the cache behind them.
+    $this->getJson(route('api.v1.accounts.financials', $big))
+        ->assertOk()
+        ->assertJsonPath('meta.importing', true)
+        ->assertJsonPath('meta.totals.expenses', 0);
+
+    Queue::assertPushed(ImportOwnerLedgers::class, fn (ImportOwnerLedgers $job): bool => $job->scope->contactId === '501');
+});
+
+test('the app is told when the import has finished, so it stops saying so', function () {
+    Queue::fake();
+    Sanctum::actingAs($this->owner);
+
+    // Two portfolios: read on the request itself, nothing left to wait for.
+    $this->getJson(route('api.v1.accounts.financials', [$this->account, 'from' => '2024-01-01', 'to' => '2026-12-31']))
+        ->assertOk()
+        ->assertJsonPath('meta.importing', false)
+        ->assertJsonPath('meta.totals.expenses', 500);
 });
 
 test('totals what each property billed and received, across every lease in the period', function () {

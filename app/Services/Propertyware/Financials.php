@@ -4,6 +4,7 @@ namespace App\Services\Propertyware;
 
 use App\Enums\ClientRole;
 use App\Jobs\ImportOwnerLedgers;
+use App\Jobs\WarmPortfolioIncome;
 use App\Services\Propertyware\Data\ClientScope;
 use App\Services\Propertyware\Data\Property;
 use Carbon\CarbonImmutable;
@@ -37,6 +38,7 @@ class Financials
         private PropertywareClient $propertyware,
         private PropertywareDirectory $directory,
         private LeaseLedgerStore $ledgers,
+        private OwnerLedger $ownerLedger,
     ) {}
 
     /**
@@ -109,7 +111,32 @@ class Financials
             unset($held);
         }
 
-        $inWindow = $inWindow->values();
+        // One bill can be split across several of this owner's portfolios, and
+        // bills are read a portfolio at a time, so the same bill arrives once
+        // per portfolio it touches. `present` works out their share across all
+        // of their portfolios at once, so every copy carries the whole figure:
+        // keeping them would count the same money again for each portfolio,
+        // and list the bill again for each one.
+        $seen = [];
+        $inWindow = $inWindow
+            ->filter(function (array $bill) use (&$seen): bool {
+                $id = (string) ($bill['id'] ?? '');
+
+                // Nothing to match a bill with no id on, and collapsing them
+                // together would drop real ones, so they are all kept.
+                if ($id === '') {
+                    return true;
+                }
+
+                if (isset($seen[$id])) {
+                    return false;
+                }
+
+                $seen[$id] = true;
+
+                return true;
+            })
+            ->values();
 
         // Only the vendors these bills name, not every vendor in thirteen months.
         $vendors = $this->vendorNames($inWindow->all());
@@ -145,6 +172,10 @@ class Financials
             ->map(fn (int $portfolioId): array => [
                 'id' => $portfolioId,
                 'name' => $names[$portfolioId] ?? 'Portfolio '.$portfolioId,
+                // The figures the portfolio's own card leads with, read from
+                // the same ledger, so the list and the card never quote one
+                // portfolio differently. Null until read; see heldSummary.
+                'ledger' => $this->heldLedger($scope, $portfolioId, $from, $to),
                 'expenses' => round($rows->sum(fn (array $bill): float => $bill['byPortfolio'][$portfolioId] ?? 0), 2),
                 'paid' => round($rows->sum(fn (array $bill): float => $bill['paidByPortfolio'][$portfolioId] ?? 0), 2),
                 'outstanding' => round($rows->sum(fn (array $bill): float => ($bill['byPortfolio'][$portfolioId] ?? 0)
@@ -288,6 +319,28 @@ class Financials
         $end = substr((string) ($lease['moveOutDate'] ?? $lease['endDate'] ?? ''), 0, 10);
 
         return ($start === '' || $start <= $to) && ($end === '' || $end >= $from);
+    }
+
+    /**
+     * A portfolio's ledger figures, if they have been read, and a job to read
+     * them if they have not.
+     *
+     * Walking a general ledger per portfolio is far too slow for a request an
+     * owner is waiting on, so the row shows dashes until they are held. The
+     * job is unique per portfolio and window, so a list of ninety-four queues
+     * each one once however often the screen is opened.
+     *
+     * @return array{income: float, expense: float, managementFee: float}|null
+     */
+    private function heldLedger(ClientScope $scope, int $portfolioId, string $from, string $to): ?array
+    {
+        $held = $this->ownerLedger->heldSummary($portfolioId, $from, $to);
+
+        if ($held === null) {
+            WarmPortfolioIncome::dispatch($scope, $portfolioId, $from, $to);
+        }
+
+        return $held;
     }
 
     /**

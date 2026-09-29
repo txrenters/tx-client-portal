@@ -63,10 +63,20 @@ const confirming = ref<'approved' | 'declined' | null>(null);
             class="border-primary/30 bg-primary/5"
         >
             <CircleAlert class="text-primary" />
-            <AlertTitle>This work order needs your approval</AlertTitle>
+            <AlertTitle>We'd love your OK on this repair</AlertTitle>
             <AlertDescription>
-                Please approve it so work can go ahead, or decline and tell us
-                why.
+                <p>
+                    Thanks for taking a look! We can't give a full estimate
+                    until we see the issue in person. If it can be fixed for
+                    less than the $300.00 set in your property management
+                    agreement, we'll take care of it on that first visit. That
+                    saves you money, and saves your tenant the time and
+                    frustration of being home for multiple trips.
+                </p>
+                <p>
+                    Approve to let us get started, or decline and let us know
+                    what you'd prefer.
+                </p>
             </AlertDescription>
         </Alert>
 

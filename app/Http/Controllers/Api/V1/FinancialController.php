@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\ClientRole;
 use App\Http\Controllers\Controller;
+use App\Jobs\ImportOwnerLedgers;
 use App\Models\ClientAccount;
 use App\Services\Propertyware\Financials;
 use App\Services\Propertyware\PropertywareDirectory;
@@ -33,7 +34,15 @@ class FinancialController extends Controller
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
         ]);
 
-        $result = $financials->forOwner($directory->scopeFor($account), $validated, (int) ($validated['page'] ?? 1), $request->url());
+        $scope = $directory->scopeFor($account);
+
+        // Opening the screen starts the import, the way the web portal does;
+        // nothing here waits on it. Without this an owner holding more than
+        // Financials::MAX_PORTFOLIOS portfolios is served from a cache nothing
+        // ever fills, so every portfolio reads zero for good.
+        ImportOwnerLedgers::dispatch($scope, ...$financials->period([]));
+
+        $result = $financials->forOwner($scope, $validated, (int) ($validated['page'] ?? 1), $request->url());
 
         abort_if($result === null, 404);
 
@@ -46,6 +55,9 @@ class FinancialController extends Controller
                 'total' => $result['results']['total'],
                 'portfolios' => $result['portfolios'],
                 'totals' => $result['totals'],
+                // True while a large owner's bills are still being fetched, so
+                // the app can say so rather than show every portfolio as zero.
+                'importing' => $result['importing'],
                 'from' => $result['from'],
                 'to' => $result['to'],
             ],

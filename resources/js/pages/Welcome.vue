@@ -4,8 +4,10 @@ import {
     ArrowRight,
     Banknote,
     Building2,
+    CalendarClock,
     CheckCircle2,
     FileText,
+    Fingerprint,
     KeyRound,
     LayoutGrid,
     Lock,
@@ -20,6 +22,7 @@ import {
     Wrench,
 } from '@lucide/vue';
 import AppStoreBadges from '@/components/marketing/AppStoreBadges.vue';
+import HouseBackdrop from '@/components/marketing/HouseBackdrop.vue';
 import PortalPreview from '@/components/marketing/PortalPreview.vue';
 import ThemeToggle from '@/components/marketing/ThemeToggle.vue';
 import { Badge } from '@/components/ui/badge';
@@ -34,12 +37,12 @@ const heroPills = [
 ];
 
 const heroTiles = [
-    { label: 'Work Orders', icon: Wrench, live: true },
-    { label: 'Documents', icon: FileText, live: true },
-    { label: 'Property', icon: Building2, live: true },
-    { label: 'Payments', icon: Banknote, live: false },
-    { label: 'Lease', icon: ScrollText, live: false },
-    { label: 'Messages', icon: MessageSquare, live: false },
+    { label: 'Work Orders', icon: Wrench, audience: 'Everyone' },
+    { label: 'Messages', icon: MessageSquare, audience: 'Everyone' },
+    { label: 'Documents', icon: FileText, audience: 'Everyone' },
+    { label: 'Lease', icon: ScrollText, audience: 'Residents' },
+    { label: 'Properties', icon: Building2, audience: 'Owners' },
+    { label: 'Meetings', icon: CalendarClock, audience: 'Owners' },
 ];
 
 const navLinks = [
@@ -54,64 +57,66 @@ const features = [
         icon: Wrench,
         title: 'Work Orders',
         description:
-            'Every work order with its status, schedule, assigned vendor and full history.',
-        tags: ['Open', 'Scheduled', 'Completed'],
-        live: true,
-    },
-    {
-        icon: FileText,
-        title: 'Documents',
-        description:
-            'Lease paperwork, statements and property files. PDFs and photos open right in the page.',
-        tags: ['View', 'Download'],
-        live: true,
-    },
-    {
-        icon: Building2,
-        title: 'Property details',
-        description:
-            'Address, unit, bedrooms, bathrooms, year built and occupancy, straight from our records.',
-        tags: ['Residents', 'Owners'],
-        live: true,
-    },
-    {
-        icon: Banknote,
-        title: 'Rent and payments',
-        description:
-            'Balance, amount due, due date and payment history for your lease.',
-        tags: ['Balance', 'History'],
-        live: false,
-    },
-    {
-        icon: ScrollText,
-        title: 'Lease and statements',
-        description:
-            'Lease dates and terms for tenants; owner statements and financial summaries.',
-        tags: ['Lease', 'Statements'],
-        live: false,
+            'Report a repair with photos and follow it from reported to finished: status, schedule, vendor and history.',
+        tags: ['Report', 'Track', 'Approve'],
+        audience: 'Residents and owners',
     },
     {
         icon: MessageSquare,
         title: 'Messages',
         description:
-            'Ask about a specific repair, or anything else, and keep the whole thread in one place.',
-        tags: ['Maintenance', 'Support'],
-        live: false,
+            'Write to our leasing, accounting or maintenance team and keep the whole conversation in one thread, with an email or app alert when we reply.',
+        tags: ['Leasing', 'Accounting', 'Maintenance'],
+        audience: 'Residents and owners',
+    },
+    {
+        icon: FileText,
+        title: 'Documents',
+        description:
+            'Your lease paperwork and property files. PDFs and photos open right in the page, and you can upload your own.',
+        tags: ['View', 'Download', 'Upload'],
+        audience: 'Residents and owners',
+    },
+    {
+        icon: ScrollText,
+        title: 'Lease',
+        description:
+            'Your lease dates, rent and terms, and when it is coming up for renewal.',
+        tags: ['Dates', 'Terms'],
+        audience: 'Residents',
+    },
+    {
+        icon: Banknote,
+        title: 'Portfolio and financials',
+        description:
+            'Every property with occupancy at a glance, and the expenses on each one, straight from our books.',
+        tags: ['Occupancy', 'Expenses'],
+        audience: 'Owners',
+    },
+    {
+        icon: CalendarClock,
+        title: 'Meetings',
+        description:
+            'Book a call with our leasing, accounting or maintenance team at a time that suits you.',
+        tags: ['Phone call', 'Book online'],
+        audience: 'Owners',
     },
 ];
 
 const residentPoints = [
-    'See the home you rent, your unit and your lease status',
-    'Follow repairs from reported to finished, with photos and invoices',
-    'Read and download your lease documents whenever you need them',
-    'Know what is due and what you have already paid',
+    'See the home you rent, your lease dates and your terms',
+    'Report a repair with photos, then follow it to finished',
+    'Message our team and get an alert when we reply',
+    'Read, download and upload your documents whenever you need them',
+    'Refer a property owner you know, and get a reward when they sign',
 ];
 
 const ownerPoints = [
     'Your whole portfolio, with occupied and vacant properties at a glance',
-    'Work orders across every property, filtered by property or status',
-    'Costs on completed work, including what was charged to you',
-    'Owner statements and property paperwork in one library',
+    'Work orders across every property, and estimates to approve or decline',
+    'Expenses on each property, including what was charged to you',
+    'Message our team, or book a call at a time that suits you',
+    'Property paperwork in one library, with room for your own files',
 ];
 
 const steps = [
@@ -131,7 +136,7 @@ const steps = [
         icon: LayoutGrid,
         title: 'Everything is waiting',
         description:
-            'We match your email to our records, so your property, work orders and documents are already there.',
+            'We match your email to our records, so your property, work orders, lease and documents are already there, on the web and in the app.',
     },
 ];
 
@@ -149,16 +154,16 @@ const securityPoints = [
             'Every page checks who you are before it loads anything. One client can never reach another client’s information.',
     },
     {
+        icon: Fingerprint,
+        title: 'Two-step sign-in and passkeys',
+        description:
+            'Add a code from an authenticator app, or sign in with your fingerprint or face instead of a password.',
+    },
+    {
         icon: FileText,
         title: 'Files stay private',
         description:
             'Documents are served through your signed-in session, never from a public link that could be forwarded.',
-    },
-    {
-        icon: Smartphone,
-        title: 'Built for your phone',
-        description:
-            'The portal is designed for mobile first, so checking a repair on the way home is easy.',
     },
 ];
 </script>
@@ -170,7 +175,7 @@ const securityPoints = [
         <Head title="Client portal">
             <meta
                 name="description"
-                content="The TexasRenters.com client portal: maintenance, documents and property information for residents and owners."
+                content="The TexasRenters.com client portal for residents and owners: work orders, messages, documents, leases and property information, on the web and in the app."
             />
         </Head>
 
@@ -189,6 +194,11 @@ const securityPoints = [
             />
             <div
                 class="bg-success/15 absolute -right-32 bottom-0 h-[48rem] w-[48rem] rounded-full blur-[100px]"
+            />
+            <!-- A faint Houston street along the bottom of the first screen,
+                 whatever its height, fading out towards the top. -->
+            <HouseBackdrop
+                class="text-foreground absolute inset-x-0 top-[calc(100svh-16rem)] h-64 opacity-[0.07] sm:top-[calc(100svh-20rem)] sm:h-80 dark:opacity-[0.1]"
             />
         </div>
         <header class="sticky top-0 z-50 px-4 pt-4 sm:px-6">
@@ -286,9 +296,10 @@ const securityPoints = [
                             class="text-muted-foreground mx-auto max-w-2xl text-lg text-pretty"
                         >
                             The resident and owner portal for TexasRenters.com
-                            property management in Houston. Work orders,
-                            documents and property information, any time, from
-                            any device.
+                            property management in Houston. Report repairs,
+                            message our team, and find your lease, documents and
+                            property information, any time, on the web or in
+                            the app.
                         </p>
                     </div>
 
@@ -296,7 +307,7 @@ const securityPoints = [
                         class="glass text-muted-foreground flex items-center gap-2 rounded-xl px-4 py-2.5 font-mono text-sm"
                     >
                         <Lock class="text-success size-3.5" />
-                        portal.texasrenters.com
+                        app.texasrenters.com
                     </div>
 
                     <div
@@ -334,14 +345,9 @@ const securityPoints = [
                                 {{ tile.label }}
                             </span>
                             <span
-                                class="text-[11px] font-medium tracking-wide uppercase"
-                                :class="
-                                    tile.live
-                                        ? 'text-success'
-                                        : 'text-muted-foreground'
-                                "
+                                class="text-muted-foreground text-[11px] font-medium tracking-wide uppercase"
                             >
-                                {{ tile.live ? 'Available' : 'Soon' }}
+                                {{ tile.audience }}
                             </span>
                         </li>
                     </ul>
@@ -395,12 +401,8 @@ const securityPoints = [
                                         class="size-5"
                                     />
                                 </span>
-                                <Badge
-                                    v-if="!feature.live"
-                                    variant="secondary"
-                                    class="text-[11px]"
-                                >
-                                    Coming soon
+                                <Badge variant="secondary" class="text-[11px]">
+                                    {{ feature.audience }}
                                 </Badge>
                             </div>
 
@@ -513,7 +515,8 @@ const securityPoints = [
                             Getting in takes a minute
                         </h2>
                         <p class="text-muted-foreground mt-3">
-                            There is nothing to install and nothing to set up.
+                            Use it in any browser, or download the app. There is
+                            nothing to set up.
                         </p>
                     </div>
 
@@ -615,7 +618,7 @@ const securityPoints = [
                             variant="outline"
                             class="border-primary/30 bg-card/50 text-foreground hover:bg-accent"
                         >
-                            <a href="mailto:info@texasrenters.com">
+                            <a href="mailto:leasing@texasrenters.com">
                                 <Mail class="size-4" />
                                 Contact us
                             </a>
@@ -625,7 +628,8 @@ const securityPoints = [
             </section>
         </main>
 
-        <footer class="border-border/60 bg-card/30 border-t">
+        <!-- Always dark, in light and dark mode alike, to close the page. -->
+        <footer class="bg-scrim text-scrim-foreground">
             <div
                 class="mx-auto grid w-full max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4"
             >
@@ -633,11 +637,11 @@ const securityPoints = [
                     <img
                         src="/texas-renters-logo.png"
                         alt="TexasRenters.com"
-                        class="h-8 w-auto self-start object-contain dark:brightness-0 dark:invert"
+                        class="h-8 w-auto self-start object-contain brightness-0 invert"
                         width="400"
                         height="111"
                     />
-                    <p class="text-muted-foreground text-sm text-pretty">
+                    <p class="text-scrim-foreground/70 text-sm text-pretty">
                         Houston property management for owners and residents.
                         Serving Houston, Katy, Sugar Land, The Woodlands,
                         Cypress, Pearland and surrounding areas.
@@ -650,25 +654,25 @@ const securityPoints = [
                     <p class="font-medium">Portal</p>
                     <Link
                         :href="register()"
-                        class="text-muted-foreground hover:text-foreground"
+                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
                     >
                         Create account
                     </Link>
                     <Link
                         :href="login()"
-                        class="text-muted-foreground hover:text-foreground"
+                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
                     >
                         Sign in
                     </Link>
                     <a
                         href="#how-it-works"
-                        class="text-muted-foreground hover:text-foreground"
+                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
                     >
                         How it works
                     </a>
                     <a
                         href="#security"
-                        class="text-muted-foreground hover:text-foreground"
+                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
                     >
                         Security
                     </a>
@@ -678,13 +682,13 @@ const securityPoints = [
                     <p class="font-medium">For clients</p>
                     <a
                         href="#tenants"
-                        class="text-muted-foreground hover:text-foreground"
+                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
                     >
                         Tenants
                     </a>
                     <a
                         href="#owners"
-                        class="text-muted-foreground hover:text-foreground"
+                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
                     >
                         Owners
                     </a>
@@ -693,23 +697,23 @@ const securityPoints = [
                 <div class="flex flex-col gap-2 text-sm">
                     <p class="font-medium">Contact</p>
                     <a
-                        href="mailto:info@texasrenters.com"
-                        class="text-muted-foreground hover:text-foreground flex items-center gap-2"
+                        href="mailto:leasing@texasrenters.com"
+                        class="text-scrim-foreground/70 hover:text-scrim-foreground flex items-center gap-2"
                     >
                         <Mail class="size-3.5" />
-                        info@texasrenters.com
+                        leasing@texasrenters.com
                     </a>
                     <a
                         href="https://www.texasrenters.com"
-                        class="text-muted-foreground hover:text-foreground flex items-center gap-2"
+                        class="text-scrim-foreground/70 hover:text-scrim-foreground flex items-center gap-2"
                         rel="noopener"
                     >
                         <Globe class="size-3.5" />
                         texasrenters.com
                     </a>
                     <a
-                        href="https://www.texasrenters.com/free-rental-analysis"
-                        class="text-muted-foreground hover:text-foreground flex items-center gap-2"
+                        href="https://www.texasrenters.com/property-management-landlord-protection"
+                        class="text-scrim-foreground/70 hover:text-scrim-foreground flex items-center gap-2"
                         rel="noopener"
                     >
                         <LineChart class="size-3.5" />
@@ -718,11 +722,24 @@ const securityPoints = [
                 </div>
             </div>
 
-            <div class="border-border/60 border-t">
+            <div class="border-scrim-foreground/15 border-t">
                 <div
-                    class="text-muted-foreground mx-auto w-full max-w-6xl px-4 py-6 text-sm sm:px-6"
+                    class="text-scrim-foreground/70 mx-auto flex w-full max-w-6xl flex-col gap-1 px-4 py-6 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6"
                 >
-                    &copy; {{ new Date().getFullYear() }} TexasRenters.com
+                    <span
+                        >&copy; {{ new Date().getFullYear() }}
+                        TexasRenters.com</span
+                    >
+                    <span>
+                        Developed and maintained by
+                        <a
+                            href="https://corepathbpo.com"
+                            target="_blank"
+                            rel="noopener"
+                            class="hover:text-scrim-foreground font-medium underline-offset-4 hover:underline"
+                            >CorePathBPO.com</a
+                        >
+                    </span>
                 </div>
             </div>
         </footer>

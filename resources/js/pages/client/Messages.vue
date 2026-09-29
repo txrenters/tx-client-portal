@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { Form, Head, InfiniteScroll, Link, router } from '@inertiajs/vue3';
+import {
+    Form,
+    Head,
+    InfiniteScroll,
+    Link,
+    router,
+    usePoll,
+} from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
 import {
     ArrowLeft,
@@ -21,6 +28,7 @@ import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import FilePreviewInput from '@/components/FilePreviewInput.vue';
 import InputError from '@/components/InputError.vue';
+import LinkifiedText from '@/components/LinkifiedText.vue';
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -381,30 +389,105 @@ function fileName(url: string): string {
 
 type Row = {
     message: ChatThreadMessage;
+    /** The message's attachments, plus those of attachment-only messages folded into it. */
+    media: string[];
     /** A date divider before this message. */
     day: string | null;
     /** First message in a run from the same person: show their name and photo. */
     startsRun: boolean;
 };
 
+/**
+ * How close an attachment must follow a message to count as the same send. The
+ * portal posts a send's extra files one after another, seconds apart; anything
+ * later was sent on its own and keeps its own bubble.
+ */
+const ATTACHMENT_FOLD_MS = 15 * 1000;
+
+/**
+ * A hub message carries one attachment, so a send with several files arrives
+ * as the text with the first file, then one message per further file. Those
+ * are shown inside the first message's bubble.
+ */
+function foldsInto(message: ChatThreadMessage, row: Row | undefined): boolean {
+    if (!row || message.body !== '' || message.mediaUrls.length === 0) {
+        return false;
+    }
+
+    const gap =
+        message.at && row.message.at
+            ? new Date(message.at).getTime() -
+              new Date(row.message.at).getTime()
+            : Infinity;
+
+    return (
+        row.message.fromClient === message.fromClient &&
+        row.message.author === message.author &&
+        gap <= ATTACHMENT_FOLD_MS
+    );
+}
+
 /** Messages with date dividers, grouped into runs from the same person. */
 const rows = computed<Row[]>(() => {
-    const messages = props.conversation?.messages ?? [];
+    const result: Row[] = [];
 
-    return messages.map((message, index) => {
-        const previous = messages[index - 1];
+    for (const message of props.conversation?.messages ?? []) {
+        const previousRow = result[result.length - 1];
+
+        if (foldsInto(message, previousRow)) {
+            previousRow.media = [...previousRow.media, ...message.mediaUrls];
+
+            continue;
+        }
+
+        const previous = previousRow?.message;
         const day = dayLabel(message.at);
         const newDay = !previous || dayLabel(previous.at) !== day;
 
-        return {
+        result.push({
             message,
+            media: message.mediaUrls,
             day: newDay ? day : null,
             startsRun:
                 newDay ||
                 previous.fromClient !== message.fromClient ||
                 previous.author !== message.author,
-        };
-    });
+        });
+    }
+
+    return result;
+});
+
+/**
+ * The list, with the open conversation showing its newest message, whoever
+ * wrote it. Opening or answering a conversation reloads only that
+ * conversation, so the list would otherwise keep the preview it was loaded with.
+ */
+const listedThreads = computed<ChatThread[]>(() => {
+    const threads = props.threads?.data ?? [];
+    const open = props.conversation;
+    const latest = open?.messages[open.messages.length - 1];
+
+    if (!open || !latest || latest.id < 0) {
+        return threads;
+    }
+
+    return threads.map((thread) =>
+        thread.id !== open.thread.id ||
+        (thread.lastMessage?.id ?? 0) >= latest.id
+            ? thread
+            : {
+                  ...thread,
+                  updatedAt: latest.at ?? thread.updatedAt,
+                  lastMessage: {
+                      id: latest.id,
+                      author: latest.author,
+                      preview: latest.body,
+                      fromClient: latest.fromClient,
+                      hasAttachment: latest.mediaUrls.length > 0,
+                  },
+              },
+    );
 });
 
 /** Conversations opened on this page; the server records them as read too. */
@@ -474,9 +557,49 @@ function attachmentError(errors: Record<string, string>): string | undefined {
     );
 }
 
+/** What was typed, kept until the hub has it so a failed send can be put back. */
+const pendingReply = ref('');
+
+/**
+ * Shows the reply in the conversation the moment it is sent. The hub can take
+ * a few seconds, and Inertia rolls this back by itself if the send fails.
+ */
+function withPendingReply(
+    conversation: ChatConversation,
+    body: unknown,
+): ChatConversation {
+    return {
+        ...conversation,
+        messages: [
+            ...conversation.messages,
+            {
+                // Negative, so it never collides with a real message and reads as pending.
+                id: -Date.now(),
+                body: String(body ?? '').trim(),
+                mediaUrls: [],
+                fromClient: true,
+                author: null,
+                authorPhotoUrl: null,
+                at: new Date().toISOString(),
+            },
+        ],
+    };
+}
+
+/** The composer clears as soon as the reply is on its way. */
+function replyStarted(): void {
+    sending.value = true;
+    pendingReply.value = replyBody.value;
+    replyBody.value = '';
+}
+
+function replyFailed(): void {
+    replyBody.value = pendingReply.value;
+}
+
 function replySent(): void {
     replyKey.value = crypto.randomUUID();
-    replyBody.value = '';
+    pendingReply.value = '';
     replyAttachments.value?.clear();
 }
 
@@ -492,11 +615,42 @@ function sendOnEnter(event: KeyboardEvent): void {
 }
 
 /** Staff replies and delivery changes arrive over Reverb; reload what they touch. */
+/**
+ * True while this page is sending a message of its own. The portal announces
+ * it before the send has finished here, and reloading then would cancel the
+ * send's own visit, which already brings the conversation back.
+ */
+const sending = ref(false);
+
+/**
+ * A fallback for the live updates: a staff reply only arrives live once the
+ * hub's webhook reaches the portal, so an open conversation is also re-read
+ * every 30 seconds. Skipped while this page is sending, like the live reload.
+ */
+const conversationPoll = usePoll(
+    30_000,
+    () => ({
+        only: ['conversation'],
+        onBefore: () => !sending.value,
+    }),
+    { autoStart: false, mode: 'rest' },
+);
+
+watch(
+    () => props.available && props.selectedThreadId !== null,
+    (open) => (open ? conversationPoll.start() : conversationPoll.stop()),
+    { immediate: true },
+);
+
 if (props.available) {
     useEcho<{ threadId: number }>(
         `contacts.${props.contactId}.messages`,
         '.conversation.updated',
-        (event) =>
+        (event) => {
+            if (sending.value) {
+                return;
+            }
+
             router.reload({
                 only:
                     event.threadId === props.selectedThreadId
@@ -504,7 +658,8 @@ if (props.available) {
                         : ['threads'],
                 // The updated conversation moves to the top, so the list starts over.
                 reset: ['threads'],
-            }),
+            });
+        },
     );
 }
 
@@ -543,6 +698,8 @@ watch(
                             :action="routes.store()"
                             class="flex flex-col gap-4"
                             v-slot="{ errors, processing }"
+                            @start="sending = true"
+                            @finish="sending = false"
                             @success="startOpen = false"
                         >
                             <div
@@ -894,7 +1051,7 @@ watch(
                         as="ul"
                         class="divide-border/60 divide-y"
                     >
-                        <li v-for="thread in threads.data" :key="thread.id">
+                        <li v-for="thread in listedThreads" :key="thread.id">
                             <button
                                 type="button"
                                 class="hover:bg-muted/50 focus-visible:ring-ring/60 flex w-full items-start gap-3 px-3 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
@@ -1189,89 +1346,113 @@ watch(
                                     >
 
                                     <Bubble
-                                        v-if="row.message.body"
+                                        v-if="
+                                            row.message.body || row.media.length
+                                        "
                                         :variant="
                                             row.message.fromClient
                                                 ? 'default'
                                                 : 'outline'
                                         "
                                         class="max-w-full"
+                                        :class="{
+                                            'opacity-60': row.message.id < 0,
+                                        }"
                                     >
                                         <BubbleContent
-                                            class="rounded-2xl px-3.5 py-2 whitespace-pre-line shadow-xs"
-                                            :class="
+                                            class="flex flex-col gap-1.5 rounded-2xl shadow-xs"
+                                            :class="[
                                                 row.message.fromClient
                                                     ? 'rounded-br-md'
-                                                    : 'bg-card rounded-bl-md'
-                                            "
+                                                    : 'bg-card rounded-bl-md',
+                                                row.media.length
+                                                    ? 'p-1.5'
+                                                    : 'px-3.5 py-2',
+                                            ]"
                                         >
-                                            {{ row.message.body }}
-                                            <span
-                                                class="mt-1 flex flex-wrap items-center justify-end gap-x-1.5 text-[10px] opacity-70"
+                                            <LinkifiedText
+                                                v-if="row.message.body"
+                                                :text="row.message.body"
+                                                class="whitespace-pre-line"
+                                                :class="{
+                                                    'px-2 pt-1':
+                                                        row.media.length,
+                                                }"
+                                            />
+
+                                            <!-- Photos and files sit inside the message they came with, below its text. -->
+                                            <template
+                                                v-for="url in row.media"
+                                                :key="url"
                                             >
-                                                <span v-if="row.message.number"
-                                                    >{{
-                                                        row.message.fromClient
-                                                            ? 'Texted from'
-                                                            : 'Texted to'
-                                                    }}
-                                                    {{ row.message.number }}
-                                                    ·</span
+                                                <a
+                                                    v-if="isImage(url)"
+                                                    :href="url"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    class="block w-56 max-w-full overflow-hidden rounded-xl"
                                                 >
-                                                <time
-                                                    :datetime="
-                                                        row.message.at ??
-                                                        undefined
-                                                    "
-                                                    >{{
-                                                        row.message.at
-                                                            ? timeFormatter.format(
-                                                                  new Date(
-                                                                      row
-                                                                          .message
-                                                                          .at,
-                                                                  ),
-                                                              )
-                                                            : ''
-                                                    }}</time
+                                                    <img
+                                                        :src="url"
+                                                        alt="Attached photo"
+                                                        loading="lazy"
+                                                        class="w-full object-cover"
+                                                    />
+                                                </a>
+                                                <a
+                                                    v-else
+                                                    :href="url"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    class="bg-card text-foreground hover:bg-muted/60 flex max-w-64 items-center gap-2 rounded-xl border px-3 py-2 text-sm"
                                                 >
-                                            </span>
+                                                    <FileText
+                                                        class="text-primary size-4 shrink-0"
+                                                    />
+                                                    <span class="truncate">{{
+                                                        fileName(url)
+                                                    }}</span>
+                                                </a>
+                                            </template>
                                         </BubbleContent>
                                     </Bubble>
 
-                                    <template
-                                        v-for="url in row.message.mediaUrls"
-                                        :key="url"
+                                    <!-- The time sits under the bubble, on the sender's side. -->
+                                    <span
+                                        class="text-muted-foreground flex flex-wrap items-center gap-x-1.5 px-1 text-[10px]"
+                                        :class="
+                                            row.message.fromClient
+                                                ? 'justify-end self-end'
+                                                : 'self-start'
+                                        "
                                     >
-                                        <a
-                                            v-if="isImage(url)"
-                                            :href="url"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            class="block w-56 overflow-hidden rounded-2xl border"
+                                        <span v-if="row.message.number"
+                                            >{{
+                                                row.message.fromClient
+                                                    ? 'Texted from'
+                                                    : 'Texted to'
+                                            }}
+                                            {{ row.message.number }} ·</span
                                         >
-                                            <img
-                                                :src="url"
-                                                alt="Attached photo"
-                                                loading="lazy"
-                                                class="w-full object-cover"
-                                            />
-                                        </a>
-                                        <a
+                                        <span v-if="row.message.id < 0"
+                                            >Sending…</span
+                                        >
+                                        <time
                                             v-else
-                                            :href="url"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            class="bg-card hover:bg-muted/60 flex max-w-64 items-center gap-2 rounded-2xl border px-3 py-2 text-sm"
+                                            :datetime="
+                                                row.message.at ?? undefined
+                                            "
+                                            >{{
+                                                row.message.at
+                                                    ? timeFormatter.format(
+                                                          new Date(
+                                                              row.message.at,
+                                                          ),
+                                                      )
+                                                    : ''
+                                            }}</time
                                         >
-                                            <FileText
-                                                class="text-primary size-4 shrink-0"
-                                            />
-                                            <span class="truncate">{{
-                                                fileName(url)
-                                            }}</span>
-                                        </a>
-                                    </template>
+                                    </span>
                                 </MessageContent>
                             </Message>
                         </template>
@@ -1292,10 +1473,26 @@ watch(
                     <Form
                         v-else
                         :action="routes.reply(conversation.thread.id)"
-                        :options="{ preserveScroll: true }"
+                        :options="{
+                            preserveScroll: true,
+                            // Only what a reply changes, so nothing else on the page reloads.
+                            only: ['conversation', 'threads'],
+                            reset: ['threads'],
+                        }"
+                        :optimistic="
+                            (current, data) => ({
+                                conversation: withPendingReply(
+                                    current.conversation as ChatConversation,
+                                    data.body,
+                                ),
+                            })
+                        "
                         reset-on-success
                         class="border-border/60 flex flex-col gap-2 border-t p-3"
                         v-slot="{ errors, processing }"
+                        @start="replyStarted"
+                        @finish="sending = false"
+                        @error="replyFailed"
                         @success="replySent"
                     >
                         <input

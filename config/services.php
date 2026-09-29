@@ -15,6 +15,13 @@ return [
     */
 
     // The messaging hub in tx-chatbot: every conversation with clients, by text or in this app.
+    // The website's owner-leads form handler (n8n). Referrals from the portal and
+    // the apps are sent there too, so they reach the same pipeline as web leads.
+    // Unset, referrals are only kept in the portal's admin list.
+    'leads' => [
+        'webhook_url' => env('LEADS_WEBHOOK_URL'),
+    ],
+
     'chat_hub' => [
         'url' => env('CHAT_HUB_URL'),
         'token' => env('CHAT_HUB_TOKEN'),
@@ -57,6 +64,12 @@ return [
     ],
 
     'propertyware' => [
+        // Propertyware's own owner and tenant portals, for anything the portal
+        // and the apps do not do themselves. Linked from the app's Account screen.
+        'portal_urls' => [
+            'owner' => env('PROPERTYWARE_OWNER_PORTAL_URL', 'https://app.propertyware.com/pw/portals/houstonpropertymanagement/owner.action'),
+            'resident' => env('PROPERTYWARE_TENANT_PORTAL_URL', 'https://app.propertyware.com/pw/portals/houstonpropertymanagement/tenant.action'),
+        ],
         'base_url' => env('PROPERTYWARE_BASE_URL', 'https://api.propertyware.com/pw/api/rest/v1'),
         'client_id' => env('PROPERTYWARE_CLIENT_ID'),
         'client_secret' => env('PROPERTYWARE_CLIENT_SECRET'),
@@ -89,6 +102,14 @@ return [
         // Testing only: shows the approve button on every owner work order. These
         // approvals stay in the portal and are never sent to Propertyware.
         'approval_test_mode' => (bool) env('PROPERTYWARE_APPROVAL_TEST_MODE', false),
+    ],
+
+    // Expo's push service, which holds our APNs key and FCM credentials and
+    // forwards notifications to Apple and Google for the mobile app.
+    'expo' => [
+        'url' => env('EXPO_PUSH_URL', 'https://exp.host'),
+        // Only needed once the Expo project has enhanced security turned on.
+        'token' => env('EXPO_ACCESS_TOKEN'),
     ],
 
     'postmark' => [

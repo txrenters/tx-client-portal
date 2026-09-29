@@ -10,9 +10,11 @@ use App\Services\Propertyware\LeaseLedger;
 use App\Services\Propertyware\LeaseLedgerSource;
 use App\Services\Propertyware\LeaseLedgerStore;
 use App\Services\Propertyware\MaintenanceSummary;
+use App\Services\Propertyware\OwnerLedger;
 use App\Services\Propertyware\PropertywareClient;
 use App\Services\Propertyware\PropertywareDirectory;
 use App\Services\Propertyware\PropertywareSoap;
+use App\Services\Push\ExpoPushClient;
 use App\Services\Scheduling\SchedulingClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Notifications\VerifyEmail;
@@ -38,6 +40,11 @@ class AppServiceProvider extends ServiceProvider
             config('services.propertyware.system_id'),
         ));
 
+        $this->app->singleton(ExpoPushClient::class, fn (): ExpoPushClient => new ExpoPushClient(
+            (string) config('services.expo.url'),
+            config('services.expo.token'),
+        ));
+
         $this->app->singleton(ChatHubClient::class, fn (): ChatHubClient => new ChatHubClient(
             config('services.chat_hub.url'),
             config('services.chat_hub.token'),
@@ -61,6 +68,7 @@ class AppServiceProvider extends ServiceProvider
             $this->app->make(PropertywareClient::class),
             $this->app->make(PropertywareDirectory::class),
             $this->app->make(LeaseLedgerStore::class),
+            $this->app->make(OwnerLedger::class),
         ));
 
         $this->app->singleton(LeaseLedgerSource::class, fn (): LeaseLedgerSource => new LeaseLedgerSource(
@@ -100,14 +108,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Gate::define('admin', fn (User $user): bool => in_array(
-            strtolower($user->email),
-            config('services.admin_emails', []),
-            strict: true,
-        ));
+        // The ADMIN_EMAILS owners, plus anyone given staff access in the admin
+        // area. A suspended login is never staff, whatever its role says.
+        Gate::define('admin', fn (User $user): bool => $user->isStaff() && ! $user->isSuspended());
+
+        // Adding and removing staff: owners and admins, not plain staff.
+        Gate::define('manage-staff', fn (User $user): bool => $user->canManageStaff() && ! $user->isSuspended());
 
         // The log viewer package authorises through its own gate; point it at
-        // the same allowlist so there is only one answer to "who is an admin".
+        // the same rule so there is only one answer to "who is an admin".
         Gate::define('viewLogViewer', fn (?User $user): bool => $user !== null && Gate::forUser($user)->allows('admin'));
 
         $this->configureDefaults();

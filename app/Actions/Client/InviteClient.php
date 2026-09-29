@@ -4,6 +4,7 @@ namespace App\Actions\Client;
 
 use App\Enums\ClientRole;
 use App\Models\ClientInvitation;
+use App\Models\User;
 use App\Notifications\ClientInvitationNotification;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
@@ -18,7 +19,7 @@ class InviteClient
     /**
      * Create an invitation for a Propertyware client and email them the setup link.
      */
-    public function handle(string $email, string $name, ClientRole $role, string $propertywareId): ClientInvitation
+    public function handle(string $email, string $name, ClientRole $role, string $propertywareId, ?User $invitedBy = null): ClientInvitation
     {
         $token = Str::random(64);
 
@@ -29,6 +30,7 @@ class InviteClient
             'propertyware_id' => $propertywareId,
             'token_hash' => ClientInvitation::hashToken($token),
             'expires_at' => now()->addDays(self::EXPIRES_AFTER_DAYS),
+            'invited_by' => $invitedBy?->id,
         ]);
 
         Notification::route('mail', $invitation->email)

@@ -2,6 +2,7 @@
 
 namespace App\Services\ChatHub;
 
+use App\Events\ClientConversationUpdated;
 use App\Models\ClientAccount;
 use App\Models\ConversationRead;
 use App\Models\User;
@@ -174,7 +175,7 @@ class ClientConversations
     public function start(ClientAccount $account, ?string $subject, string $body, array $attachments = [], ?string $category = null, ?int $propertyId = null): array
     {
         $thread = $this->hub->openThread($account->propertyware_id, $subject, $category, $propertyId);
-        $this->post((int) $thread['id'], $body, (string) Str::uuid(), $attachments);
+        $this->post($account, (int) $thread['id'], $body, (string) Str::uuid(), $attachments);
 
         return $this->presentThread($thread);
     }
@@ -193,7 +194,7 @@ class ClientConversations
             return false;
         }
 
-        $this->post($threadId, $body, $idempotencyKey, $attachments);
+        $this->post($account, $threadId, $body, $idempotencyKey, $attachments);
 
         return true;
     }
@@ -203,11 +204,14 @@ class ClientConversations
      * message, since a hub message (like a text) carries one attachment.
      * Every part has its own key, so a retry never duplicates any of them.
      *
+     * The client's other open pages and devices are told at once, rather than
+     * waiting for the hub's webhook to come back round.
+     *
      * @param  array<int, UploadedFile>  $attachments
      *
      * @throws ChatHubException
      */
-    private function post(int $threadId, ?string $body, string $idempotencyKey, array $attachments): void
+    private function post(ClientAccount $account, int $threadId, ?string $body, string $idempotencyKey, array $attachments): void
     {
         $attachments = array_values($attachments);
 
@@ -216,6 +220,8 @@ class ClientConversations
         foreach (array_slice($attachments, 1) as $index => $attachment) {
             $this->hub->postClientMessage($threadId, null, $idempotencyKey.':'.($index + 1), $attachment);
         }
+
+        ClientConversationUpdated::dispatch($account->propertyware_id, $threadId);
     }
 
     /**

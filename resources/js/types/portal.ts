@@ -526,3 +526,51 @@ export type UpcomingMeeting = {
     meetingUrl: string | null;
     manageUrl: string;
 };
+
+/** A property owner the client referred, as they see it. */
+export type Referral = {
+    id: number;
+    name: string;
+    propertyAddress: string;
+    status: 'new' | 'contacted' | 'signed' | 'not_a_fit';
+    statusLabel: string;
+    sentAt: string;
+};
+
+/** A notice from TexasRenters.com shown as a banner until the client closes it. */
+export type Announcement = {
+    id: number;
+    title: string;
+    body: string;
+    tone: 'info' | 'warning';
+    audience: 'all' | 'owner' | 'resident';
+    postedAt: string;
+};
+
+/** A request for help with the portal or the app, as the client sees it. */
+export type HelpRequest = {
+    id: number;
+    topic: string;
+    topicLabel: string;
+    message: string;
+    platform: string;
+    status: 'open' | 'resolved';
+    statusLabel: string;
+    /** What staff did about it; only set once resolved. */
+    staffNote: string | null;
+    resolvedAt: string | null;
+    sentAt: string;
+};
+
+/** A promotion popping up for the client today (the referral program first). */
+export type Promotion = {
+    id: number;
+    title: string;
+    body: string;
+    buttonLabel: string;
+    /** A name from promotionDesign.ts; older promotions are "blue". */
+    theme?: string;
+    /** A name from promotionDesign.ts; older promotions are "gift". */
+    icon?: string;
+    link: { type: 'referrals' } | { type: 'url'; url: string };
+};

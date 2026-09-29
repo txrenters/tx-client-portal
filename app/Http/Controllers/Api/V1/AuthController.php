@@ -8,6 +8,7 @@ use App\Http\Requests\Api\V1\RegisterRequest;
 use App\Http\Requests\Api\V1\ResetPasswordRequest;
 use App\Http\Resources\V1\UserResource;
 use App\Models\User;
+use App\Services\Admin\SignInLog;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,17 +40,38 @@ class AuthController extends Controller
      *
      * @throws ValidationException
      */
-    public function login(LoginRequest $request, TwoFactorAuthenticationProvider $twoFactor): JsonResponse
+    public function login(LoginRequest $request, TwoFactorAuthenticationProvider $twoFactor, SignInLog $log): JsonResponse
     {
-        $user = User::where('email', $request->validated('email'))->first();
+        $email = $request->validated('email');
+        $user = User::where('email', $email)->first();
 
         if ($user === null || ! Hash::check($request->validated('password'), $user->password)) {
+            $log->record($request, 'failed', $user, $email, 'app', 'password');
+
             throw ValidationException::withMessages(['email' => __('auth.failed')]);
         }
 
-        if ($user->hasEnabledTwoFactorAuthentication()) {
-            $this->ensureTwoFactorChallengePassed($request, $user, $twoFactor);
+        if ($user->isSuspended()) {
+            $log->record($request, 'blocked', $user, $email, 'app', 'password');
+
+            throw ValidationException::withMessages(['email' => __('This account has been suspended. Contact TexasRenters.com for help.')]);
         }
+
+        if ($user->hasEnabledTwoFactorAuthentication()) {
+            try {
+                $this->ensureTwoFactorChallengePassed($request, $user, $twoFactor);
+            } catch (ValidationException $exception) {
+                // Asking for the code is the first step of every 2FA sign-in,
+                // not a failure; only a wrong code is.
+                if (filled($request->validated('code')) || filled($request->validated('recovery_code'))) {
+                    $log->record($request, 'failed_two_factor', $user, $email, 'app', 'two_factor');
+                }
+
+                throw $exception;
+            }
+        }
+
+        $log->record($request, 'signed_in', $user, $email, 'app', $user->hasEnabledTwoFactorAuthentication() ? 'two_factor' : 'password');
 
         return $this->tokenResponse($user, $request->validated('device_name'));
     }

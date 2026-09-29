@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Owner;
 use App\Enums\ClientRole;
 use App\Http\Controllers\Concerns\ResolvesClientScope;
 use App\Http\Controllers\Controller;
+use App\Services\Scheduling\MeetingCatalog;
 use App\Services\Scheduling\SchedulingClient;
 use App\Services\Scheduling\SchedulingException;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class MeetingController extends Controller
      * rescheduling. The portal lists what is on offer and reads back what the
      * owner booked, matched on their email address.
      */
-    public function index(Request $request, SchedulingClient $scheduling): Response
+    public function index(Request $request, SchedulingClient $scheduling, MeetingCatalog $catalog): Response
     {
         $account = $this->activeClientAccount($request, ClientRole::Owner);
         abort_if($account === null, 403);
@@ -32,9 +33,10 @@ class MeetingController extends Controller
 
         return Inertia::render('owner/Meetings', [
             'available' => $scheduling->isConfigured(),
-            'eventTypes' => Inertia::defer(function () use ($scheduling): array {
+            // Only the types staff approved on the admin Meetings page.
+            'eventTypes' => Inertia::defer(function () use ($catalog): array {
                 try {
-                    return $scheduling->eventTypes();
+                    return $catalog->forClients();
                 } catch (SchedulingException) {
                     return [];
                 }

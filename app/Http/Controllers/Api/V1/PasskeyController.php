@@ -8,6 +8,7 @@ use App\Http\Requests\Api\V1\PasskeyLoginRequest;
 use App\Http\Requests\Api\V1\StorePasskeyRequest;
 use App\Http\Resources\V1\UserResource;
 use App\Models\User;
+use App\Services\Admin\SignInLog;
 use App\Support\PasskeyChallenges;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -42,7 +43,7 @@ class PasskeyController extends Controller
      *
      * @throws ValidationException
      */
-    public function login(PasskeyLoginRequest $request, VerifyPasskey $verify): JsonResponse
+    public function login(PasskeyLoginRequest $request, VerifyPasskey $verify, SignInLog $log): JsonResponse
     {
         $passkey = $verify($request->credential(), $request->verificationOptions());
 
@@ -52,6 +53,14 @@ class PasskeyController extends Controller
 
         /** @var User $user */
         $user = $passkey->user;
+
+        if ($user->isSuspended()) {
+            $log->record($request, 'blocked', $user, null, 'app', 'passkey');
+
+            throw ValidationException::withMessages(['credential' => __('This account has been suspended. Contact TexasRenters.com for help.')]);
+        }
+
+        $log->record($request, 'signed_in', $user, null, 'app', 'passkey');
 
         return response()->json([
             'token' => $user->createToken($request->validated('device_name'))->plainTextToken,

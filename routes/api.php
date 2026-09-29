@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AnnouncementController;
 use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ContactDetailsController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DocumentController;
 use App\Http\Controllers\Api\V1\EmailVerificationNotificationController;
 use App\Http\Controllers\Api\V1\FinancialController;
+use App\Http\Controllers\Api\V1\HelpRequestController;
 use App\Http\Controllers\Api\V1\InvitationController;
 use App\Http\Controllers\Api\V1\LeaseController;
 use App\Http\Controllers\Api\V1\MaintenanceController;
@@ -21,9 +23,13 @@ use App\Http\Controllers\Api\V1\PasswordController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PortfolioController;
 use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\PromotionController;
 use App\Http\Controllers\Api\V1\PropertyController;
+use App\Http\Controllers\Api\V1\PushTokenController;
+use App\Http\Controllers\Api\V1\ReferralController;
 use App\Http\Controllers\Api\V1\TwoFactorAuthenticationController;
 use App\Http\Controllers\HubEventController;
+use App\Services\Promotions\PromotionBoard;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -64,8 +70,18 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::put('me/password', [PasswordController::class, 'update'])->middleware('throttle:6,1')->name('password.update');
         Route::get('me/notifications', [NotificationPreferenceController::class, 'show'])->name('notification-preferences.show');
         Route::put('me/notifications', [NotificationPreferenceController::class, 'update'])->name('notification-preferences.update');
+        // Not behind "verified": the app registers the phone as soon as it has
+        // a session, and an unverified client still gets password and security
+        // notifications worth ringing for.
+        Route::post('me/push-tokens', [PushTokenController::class, 'store'])->middleware('throttle:30,1')->name('push-tokens.store');
+        Route::delete('me/push-tokens', [PushTokenController::class, 'destroy'])->middleware('throttle:30,1')->name('push-tokens.destroy');
+        // Also not behind "verified", for the same reason as the web Help page.
+        Route::get('me/help-requests', [HelpRequestController::class, 'index'])->name('help-requests.index');
+        Route::post('me/help-requests', [HelpRequestController::class, 'store'])->middleware('throttle:5,1')->name('help-requests.store');
 
         Route::middleware('verified')->group(function () {
+            Route::get('me/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+            Route::post('me/announcements/{announcement}/dismiss', [AnnouncementController::class, 'dismiss'])->name('announcements.dismiss');
             Route::post('invitations/{token}/accept', [InvitationController::class, 'accept'])->name('invitations.accept');
 
             Route::prefix('me/passkeys')->name('passkeys.')->group(function () {
@@ -96,6 +112,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('approvals', ApprovalController::class)->name('approvals.index');
             Route::get('contact-details', ContactDetailsController::class)->name('contact-details');
             Route::get('messages', [MessageController::class, 'index'])->name('messages.index');
+            Route::get('realtime', [MessageController::class, 'realtime'])->name('realtime');
+            Route::get('referrals', [ReferralController::class, 'index'])->name('referrals.index');
+            Route::get('promotion', [PromotionController::class, 'show'])->name('promotion.show');
+            Route::post('promotions/{promotion}/{action}', [PromotionController::class, 'record'])
+                ->whereIn('action', PromotionBoard::ACTIONS)->middleware('throttle:60,1')->name('promotions.record');
+            Route::post('referrals', [ReferralController::class, 'store'])->middleware('throttle:10,1')->name('referrals.store');
             Route::post('messages', [MessageController::class, 'store'])->middleware('throttle:10,1')->name('messages.store');
             Route::get('messages/{thread}', [MessageController::class, 'show'])->whereNumber('thread')->name('messages.show');
             Route::post('messages/{thread}/replies', [MessageController::class, 'reply'])->whereNumber('thread')->middleware('throttle:30,1')->name('messages.reply');

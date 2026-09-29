@@ -128,8 +128,20 @@ test('only offers and accepts client-facing categories', function () {
 
     $this->getJson(route('api.v1.accounts.maintenance.request-options', $account))
         ->assertOk()
-        ->assertJsonFragment(['value' => 'HVAC ', 'label' => 'HVAC'])
+        ->assertJsonFragment(['value' => 'HVAC', 'label' => 'HVAC'])
         ->assertJsonMissing(['value' => 'HOA Violation']);
+});
+
+test('a category is sent with propertyware\'s exact spelling, even though requests are trimmed', function () {
+    $account = residentAccount();
+
+    $this->postJson(route('api.v1.accounts.maintenance.store', $account), [
+        'category' => 'HVAC',
+        'description' => 'No cold air',
+        'urgency' => 'normal',
+    ])->assertCreated();
+
+    expect(workOrderCreates()[0]->data()['category'])->toBe('HVAC ');
 });
 
 test('the web form sends the tenant to their new request', function () {

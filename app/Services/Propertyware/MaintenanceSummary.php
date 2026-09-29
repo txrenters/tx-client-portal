@@ -238,7 +238,7 @@ class MaintenanceSummary
         $payload = array_filter([
             'buildingID' => $buildingId,
             'unitIDs' => $unitIds === [] ? null : $unitIds,
-            'category' => $request['category'],
+            'category' => self::propertywareCategory($request['category']),
             'description' => $description,
             'specificLocation' => filled($request['location'] ?? null) ? trim($request['location']) : null,
             'priority' => $request['urgency'] === 'urgent' ? 'HIGH' : 'MEDIUM',
@@ -262,6 +262,28 @@ class MaintenanceSummary
         ]);
 
         return $created;
+    }
+
+    /**
+     * The categories clients may choose, as they arrive in a request.
+     *
+     * Propertyware's names can carry stray spaces ("HVAC "), which Laravel trims
+     * from every request, so the form offers and validates the trimmed name.
+     *
+     * @return array<int, string>
+     */
+    public static function clientCategories(): array
+    {
+        return array_map(trim(...), config('maintenance.categories'));
+    }
+
+    /**
+     * Propertyware's exact spelling of a category chosen by a client.
+     */
+    public static function propertywareCategory(string $category): string
+    {
+        return collect(config('maintenance.categories'))
+            ->first(fn (string $candidate): bool => trim($candidate) === trim($category), $category);
     }
 
     /**

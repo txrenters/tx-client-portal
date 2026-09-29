@@ -14,6 +14,8 @@ export type Auth = {
     user: User;
     /** Whether the signed-in user may open the admin dashboard. */
     isAdmin: boolean;
+    /** Whether they may add and remove staff (owners and admins). */
+    canManageStaff: boolean;
     /** True while an admin is signed in as this user. */
     impersonating: boolean;
 };
