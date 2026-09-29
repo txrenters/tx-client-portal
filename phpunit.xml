@@ -20,6 +20,7 @@
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="PROPERTYWARE_DISCOVER_ACCOUNTS" value="false"/>
+        <env name="PROPERTYWARE_REQUIRE_CLIENT_EMAIL" value="false"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

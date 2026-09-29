@@ -82,6 +82,9 @@ return [
         // do change: work orders and documents.
         'directory_cache_seconds' => (int) env('PROPERTYWARE_DIRECTORY_CACHE_SECONDS', 1800),
         'discover_accounts' => env('PROPERTYWARE_DISCOVER_ACCOUNTS', true),
+        // Only emails on a Propertyware contact may sign up on their own;
+        // see App\Rules\RegisteredClientEmail.
+        'require_client_email' => env('PROPERTYWARE_REQUIRE_CLIENT_EMAIL', true),
         // Propertyware's SOAP API, for what its REST API can't do (approving work orders).
         'soap' => [
             'url' => env('PROPERTYWARE_SOAP_URL'),

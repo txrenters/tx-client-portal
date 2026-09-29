@@ -27,6 +27,7 @@ class SecurityController extends Controller
         'probe' => 'Scanner probe',
         'admin_denied' => 'Client tried an admin page',
         'invalid_invitation' => 'Invalid invitation link',
+        'unknown_registration' => 'Sign-up with an unknown email',
         'bad_webhook_signature' => 'Bad webhook signature',
         'blocked_request' => 'Blocked address came back',
         'auto_blocked' => 'Blocked automatically',

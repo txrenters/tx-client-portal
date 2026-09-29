@@ -231,7 +231,7 @@ class IpGuard
             ->groupBy('ip_address');
 
         $probes = SecurityEvent::query()
-            ->whereIn('type', ['probe', 'admin_denied', 'invalid_invitation', 'bad_webhook_signature'])
+            ->whereIn('type', ['probe', 'admin_denied', 'invalid_invitation', 'bad_webhook_signature', 'unknown_registration'])
             ->where('created_at', '>=', $since)
             ->whereNotNull('ip_address')
             ->get(['ip_address', 'created_at'])
