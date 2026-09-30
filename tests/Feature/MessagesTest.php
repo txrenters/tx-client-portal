@@ -287,6 +287,10 @@ test('tells the app where to listen live, reachable from the phone', function ()
             'channel' => 'contacts.500.messages',
             'event' => 'conversation.updated',
             'authEndpoint' => 'http://192.168.1.20:8000/api/v1/broadcasting/auth',
+            'meetings' => [
+                'channel' => "App.Models.User.{$this->owner->id}",
+                'event' => 'meetings.updated',
+            ],
         ]]);
 });
 

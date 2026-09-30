@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\ReferralController;
 use App\Http\Controllers\Api\V1\TwoFactorAuthenticationController;
 use App\Http\Controllers\HubEventController;
+use App\Http\Controllers\SchedulingEventController;
 use App\Services\Promotions\PromotionBoard;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -54,6 +55,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
     // Signed events from the messaging hub (tx-chatbot); checked in the controller, not by login.
     Route::post('hub/events', HubEventController::class)->middleware('throttle:600,1')->name('hub.events');
+    // Signed booking events from tx-scheduling; also checked in the controller.
+    Route::post('scheduling/events', SchedulingEventController::class)->middleware('throttle:600,1')->name('scheduling.events');
 
     Route::get('invitations/{token}', [InvitationController::class, 'show'])->middleware('throttle:30,1')->name('invitations.show');
     Route::post('invitations/{token}', [InvitationController::class, 'store'])->middleware('throttle:6,1')->name('invitations.store');

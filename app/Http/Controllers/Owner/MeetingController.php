@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Owner;
 
 use App\Enums\ClientRole;
+use App\Events\MeetingsUpdated;
 use App\Http\Controllers\Concerns\ResolvesClientScope;
 use App\Http\Controllers\Controller;
-use App\Services\Scheduling\MeetingCatalog;
 use App\Services\Scheduling\SchedulingClient;
 use App\Services\Scheduling\SchedulingException;
 use Illuminate\Http\Request;
@@ -17,14 +17,14 @@ class MeetingController extends Controller
     use ResolvesClientScope;
 
     /**
-     * The meetings staff offer, and what this owner already has booked.
+     * Where to book a meeting, and what this owner already has booked.
      *
-     * Booking itself happens on tx-scheduling's own page, which already knows
-     * about timezones, the questions each meeting asks, extra guests, and
-     * rescheduling. The portal lists what is on offer and reads back what the
-     * owner booked, matched on their email address.
+     * Choosing and booking happen on tx-scheduling's departments page, which
+     * already knows about each team, timezones, the questions each meeting
+     * asks, extra guests, and rescheduling. The portal links there and reads
+     * back what the owner booked, matched on their email address.
      */
-    public function index(Request $request, SchedulingClient $scheduling, MeetingCatalog $catalog): Response
+    public function index(Request $request, SchedulingClient $scheduling): Response
     {
         $account = $this->activeClientAccount($request, ClientRole::Owner);
         abort_if($account === null, 403);
@@ -33,14 +33,9 @@ class MeetingController extends Controller
 
         return Inertia::render('owner/Meetings', [
             'available' => $scheduling->isConfigured(),
-            // Only the types staff approved on the admin Meetings page.
-            'eventTypes' => Inertia::defer(function () use ($catalog): array {
-                try {
-                    return $catalog->forClients();
-                } catch (SchedulingException) {
-                    return [];
-                }
-            }),
+            'bookingUrl' => config('services.scheduling.booking_url'),
+            // Scheduling's webhook says here when a booking changes.
+            'channel' => MeetingsUpdated::channelFor($request->user()->id),
             'upcoming' => Inertia::defer(function () use ($scheduling, $email): array {
                 try {
                     return $scheduling->upcoming($email);

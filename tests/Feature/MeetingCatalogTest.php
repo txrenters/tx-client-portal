@@ -32,13 +32,11 @@ beforeEach(function () {
     ]);
 });
 
-test('owners only see the approved meeting types, starting with the four phone calls', function () {
+test('the web page leaves choosing a meeting to the departments page', function () {
     $this->actingAs($this->owner)->get(route('owner.meetings.index'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->loadDeferredProps(fn (AssertableInertia $reload) => $reload
-                ->has('eventTypes', 2)
-                ->where('eventTypes.0.slug', 'accounting-team-meeting')
-                ->where('eventTypes.1.slug', 'leasing-team-meeting-phone-call')));
+            ->has('bookingUrl')
+            ->loadDeferredProps(fn (AssertableInertia $reload) => $reload->missing('eventTypes')));
 });
 
 test('the app only gets the approved meeting types too', function () {

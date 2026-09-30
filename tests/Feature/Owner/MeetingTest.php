@@ -44,26 +44,24 @@ function fakeScheduling(array $bookings = []): void
     ]);
 }
 
-test('an owner sees the meetings on offer, each with somewhere to book it', function () {
+test('an owner is sent to the departments page to choose a meeting', function () {
     fakeScheduling();
+    config(['services.scheduling.booking_url' => 'https://scheduling.test/book/texas-renters/departments/abc']);
 
     $this->actingAs($this->owner)
         ->get(route('owner.meetings.index'))
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->component('owner/Meetings')->where('available', true));
-
-    // The list itself is deferred, so it arrives on the follow-up request.
-    partialGet(route('owner.meetings.index'), 'owner/Meetings', 'eventTypes')
-        ->assertOk()
-        ->assertJsonPath('props.eventTypes.0.url', 'https://scheduling.test/book/texas-renters/owner-meeting');
+        ->assertInertia(fn ($page) => $page->component('owner/Meetings')
+            ->where('available', true)
+            ->where('bookingUrl', 'https://scheduling.test/book/texas-renters/departments/abc')
+            ->where('channel', "App.Models.User.{$this->owner->id}"));
 });
 
 test('the meetings come from the whole organization, not one page', function () {
     fakeScheduling();
+    Sanctum::actingAs($this->owner);
 
-    $this->actingAs($this->owner);
-
-    partialGet(route('owner.meetings.index'), 'owner/Meetings', 'eventTypes')->assertOk();
+    $this->getJson(route('api.v1.accounts.meetings.index', $this->account))->assertOk();
 
     // Meetings live on several pages within an organization, so asking one
     // page would quietly hide the rest.
@@ -107,9 +105,9 @@ test('a scheduling outage leaves the page standing', function () {
 
     $this->actingAs($this->owner);
 
-    partialGet(route('owner.meetings.index'), 'owner/Meetings', 'eventTypes')
+    partialGet(route('owner.meetings.index'), 'owner/Meetings', 'upcoming')
         ->assertOk()
-        ->assertJsonPath('props.eventTypes', []);
+        ->assertJsonPath('props.upcoming', []);
 });
 
 test('a resident cannot reach the owner meetings page', function () {
@@ -121,12 +119,23 @@ test('a resident cannot reach the owner meetings page', function () {
 
 test('the apps read the same meetings', function () {
     fakeScheduling();
+    config(['services.scheduling.booking_url' => 'https://scheduling.test/book/texas-renters/departments/abc']);
     Sanctum::actingAs($this->owner);
 
     $this->getJson(route('api.v1.accounts.meetings.index', $this->account))
         ->assertOk()
         ->assertJsonPath('data.0.slug', 'owner-meeting')
-        ->assertJsonPath('meta.available', true);
+        ->assertJsonPath('meta.available', true)
+        ->assertJsonPath('meta.bookingUrl', 'https://scheduling.test/book/texas-renters/departments/abc');
+});
+
+test('the apps cannot read meetings for a resident account', function () {
+    fakeScheduling();
+    $resident = User::factory()->create();
+    $account = ClientAccount::factory()->resident()->for($resident)->create();
+    Sanctum::actingAs($resident);
+
+    $this->getJson(route('api.v1.accounts.meetings.index', $account))->assertNotFound();
 });
 
 test('the apps cannot read meetings for another client account', function () {
@@ -146,10 +155,9 @@ test('the page comes from the key, so it need not be configured twice', function
         '*/bookings*' => Http::response(['data' => []]),
     ]);
 
-    $this->actingAs($this->owner);
+    Sanctum::actingAs($this->owner);
 
-    // The lists are deferred, so the call only happens once they are asked for.
-    partialGet(route('owner.meetings.index'), 'owner/Meetings', 'eventTypes')->assertOk();
+    $this->getJson(route('api.v1.accounts.meetings.index', $this->account))->assertOk();
 
     Http::assertSent(fn ($request) => str_contains($request->url(), '/api/v1/me'));
 });
@@ -164,10 +172,9 @@ test('a key tied to no organization says the page must be configured', function 
         '*' => Http::response(['data' => []]),
     ]);
 
-    $this->actingAs($this->owner);
+    Sanctum::actingAs($this->owner);
 
-    // The page still renders; the list comes back empty rather than erroring.
-    partialGet(route('owner.meetings.index'), 'owner/Meetings', 'eventTypes')
-        ->assertOk()
-        ->assertJsonPath('props.eventTypes', []);
+    $this->getJson(route('api.v1.accounts.meetings.index', $this->account))
+        ->assertServiceUnavailable()
+        ->assertJsonPath('message', 'This key is not tied to an organization, so a booking page must be configured.');
 });

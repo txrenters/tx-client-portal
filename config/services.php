@@ -59,6 +59,12 @@ return [
         'token' => env('SCHEDULING_TOKEN'),
         // Whose booking page owners are offered.
         'page' => env('SCHEDULING_PAGE'),
+        // Where owners pick a meeting: the departments page lists each team
+        // and its ways to meet, so the portal links there instead of listing them.
+        'booking_url' => env('SCHEDULING_BOOKING_URL', 'https://scheduling.texasrenters.com/book/texasrenterscom-llc/departments/rzs7sj1p'),
+        // Signs the booking webhooks scheduling sends to /api/v1/scheduling/events;
+        // issued on the API key's settings in scheduling.
+        'webhook_secret' => env('SCHEDULING_WEBHOOK_SECRET'),
         // TLS check: true by default, or a CA bundle path for local .test sites.
         'verify' => env('SCHEDULING_VERIFY', true),
     ],

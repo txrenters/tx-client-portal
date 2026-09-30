@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\ClientRole;
+use App\Events\MeetingsUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Client\ReplyMessageRequest;
 use App\Http\Requests\Client\StartConversationRequest;
@@ -39,6 +41,11 @@ class MessageController extends Controller
             'channel' => "contacts.{$account->propertyware_id}.messages",
             'event' => 'conversation.updated',
             'authEndpoint' => $request->getSchemeAndHttpHost().'/api/v1/broadcasting/auth',
+            // Booked meetings, owners only: scheduling's webhook says when they change.
+            'meetings' => $account->role === ClientRole::Owner ? [
+                'channel' => MeetingsUpdated::channelFor($request->user()->id),
+                'event' => 'meetings.updated',
+            ] : null,
         ]]);
     }
 

@@ -20,8 +20,11 @@ class MeetingController extends Controller
     {
         abort_unless($account->role === ClientRole::Owner, 404);
 
+        // The departments page where owners choose and book a meeting.
+        $bookingUrl = config('services.scheduling.booking_url');
+
         if (! $scheduling->isConfigured()) {
-            return response()->json(['data' => [], 'meta' => ['available' => false]]);
+            return response()->json(['data' => [], 'meta' => ['available' => false, 'bookingUrl' => $bookingUrl]]);
         }
 
         try {
@@ -30,6 +33,7 @@ class MeetingController extends Controller
                 'data' => $catalog->forClients(),
                 'meta' => [
                     'available' => true,
+                    'bookingUrl' => $bookingUrl,
                     'upcoming' => $scheduling->upcoming((string) $request->user()->email),
                 ],
             ]);

@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { Head, router, usePoll } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
+import { useEcho } from '@laravel/echo-vue';
 import { CalendarClock, ExternalLink } from '@lucide/vue';
-import { computed, onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted } from 'vue';
 import AppCard from '@/components/AppCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { appDateFormatter } from '@/lib/timezone';
 import { dashboard } from '@/routes/owner';
 import { index } from '@/routes/owner/meetings';
-import type { MeetingType, UpcomingMeeting } from '@/types';
+import type { UpcomingMeeting } from '@/types';
 
 defineOptions({
     layout: {
@@ -20,38 +22,32 @@ defineOptions({
     },
 });
 
-/** How often the booked list is re-read while the page is open. */
-const POLL_MS = 30_000;
-
 const props = defineProps<{
     available: boolean;
+    /** tx-scheduling's departments page, where the meeting is chosen and booked. */
+    bookingUrl: string | null;
+    /** This login's private channel, where booking changes are announced. */
+    channel: string;
     /** Undefined while loading. */
-    eventTypes?: MeetingType[];
     upcoming?: UpcomingMeeting[];
 }>();
 
 /**
  * Pick up a booking made in the other tab.
  *
- * Booking happens on scheduling's own page, so this tab has no way of knowing
- * it happened and would otherwise sit there stale until someone thought to
- * reload. Only the booked list is refetched, so the meeting cards never
- * flicker.
- *
- * Polling covers the case of the two windows side by side. `rest` keeps the
- * requests from stacking up: each one goes on to the scheduling app, so a
- * slow answer should delay the next tick rather than overlap it.
+ * Booking happens on scheduling's own page, and scheduling's webhook tells
+ * the portal the moment one is booked, moved or cancelled. Only the booked
+ * list is refetched, so nothing else on the page flickers.
  */
-usePoll(
-    POLL_MS,
-    { only: ['upcoming'] },
-    { autoStart: props.available, mode: 'rest' },
-);
+if (props.available) {
+    useEcho(props.channel, '.meetings.updated', () =>
+        router.reload({ only: ['upcoming'] }),
+    );
+}
 
 /**
- * Coming back to the tab is the moment someone wants an answer, and waiting
- * out the rest of the interval is the stale page all over again, so that case
- * asks straight away rather than waiting for the next tick.
+ * Coming back to the tab also asks, in case an announcement was missed while
+ * the connection was down.
  */
 function refreshBooked(): void {
     if (document.visibilityState !== 'visible' || !props.available) {
@@ -73,107 +69,6 @@ const when = appDateFormatter({
     hour: 'numeric',
     minute: '2-digit',
 });
-
-/**
- * What a meeting is about, from its name.
- *
- * Scheduling names meetings after the team that takes them — "Leasing Team
- * Meeting" — so the portal marks them with the same three categories it uses
- * for messages, each carrying that category's colour. Anything it cannot
- * place falls back to the brand gradient rather than being guessed into the
- * wrong team.
- */
-const CATEGORIES = [
-    {
-        match: /leasing|lease|renewal|move.?in|move.?out/i,
-        label: 'Leasing',
-        blurb: 'Renewals, move-ins and move-outs.',
-        wash: 'from-category-leasing to-category-leasing-deep',
-    },
-    {
-        match: /maintenance|repair|work order/i,
-        label: 'Maintenance',
-        blurb: 'Repairs and work order questions.',
-        wash: 'from-category-maintenance to-category-maintenance-deep',
-    },
-    {
-        match: /account|statement|payment|financial/i,
-        label: 'Accounting',
-        blurb: 'Statements, rent, fees and payments.',
-        wash: 'from-category-accounting to-category-accounting-deep',
-    },
-] as const;
-
-/**
- * The card's shape, in one place.
- *
- * The placeholder below wears these same classes: a skeleton that is not laid
- * out like the thing it stands in for makes the page jump when the meetings
- * arrive, which is the one job it has.
- */
-const CARD = 'flex flex-col gap-2 rounded-2xl p-5 sm:p-6';
-
-/** How to meet, when the name does not spell it out. */
-const FALLBACK_FORMAT: Record<string, string> = {
-    phone: 'Phone call',
-    in_person: 'In person',
-};
-
-/**
- * Staff offer the same conversation two ways — "Leasing Team Meeting - Phone
- * Call" and "- Screen Share" — and listing those as separate cards makes the
- * page twice as long while hiding what is actually being chosen. One card per
- * subject, with the ways to meet as the buttons on it.
- */
-const subjects = computed(() => {
-    const grouped = new Map<
-        string,
-        {
-            name: string;
-            label: string;
-            blurb: string | null;
-            wash: string;
-            durations: number[];
-            ways: { label: string; url: string }[];
-        }
-    >();
-
-    for (const type of props.eventTypes ?? []) {
-        const [name, ...rest] = type.name.split(/\s+[–-]\s+/);
-        const subject = name.trim();
-        const category = CATEGORIES.find((entry) =>
-            entry.match.test(type.name),
-        );
-
-        const row = grouped.get(subject) ?? {
-            name: subject,
-            label: category?.label ?? 'General',
-            blurb: category?.blurb ?? type.description,
-            wash: category?.wash ?? 'from-ring to-primary',
-            durations: [],
-            ways: [],
-        };
-
-        row.durations.push(type.durationMinutes);
-        row.ways.push({
-            label:
-                rest.join(' - ').trim() ||
-                FALLBACK_FORMAT[type.locationType] ||
-                'Book',
-            url: type.url,
-        });
-
-        grouped.set(subject, row);
-    }
-
-    return [...grouped.values()].map((row) => ({
-        ...row,
-        length:
-            Math.min(...row.durations) === Math.max(...row.durations)
-                ? `${row.durations[0]} minutes`
-                : `${Math.min(...row.durations)} or ${Math.max(...row.durations)} minutes`,
-    }));
-});
 </script>
 
 <template>
@@ -182,17 +77,43 @@ const subjects = computed(() => {
 
         <PageHeader
             title="Meetings"
-            description="Pick a subject and a time that suits you. Booking opens on our scheduling page."
+            description="Meet with our leasing, maintenance or accounting team."
         />
 
+        <AppCard v-if="bookingUrl">
+            <div
+                class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <div class="flex items-start gap-3">
+                    <CalendarClock class="text-primary mt-0.5 size-5 shrink-0" />
+                    <div class="flex flex-col gap-1">
+                        <h2 class="font-heading font-semibold">
+                            Book a meeting
+                        </h2>
+                        <p class="text-muted-foreground text-sm text-pretty">
+                            Choose a department, how you'd like to meet and a
+                            time that suits you. Booking opens on our scheduling
+                            page.
+                        </p>
+                    </div>
+                </div>
+                <Button as-child class="shrink-0">
+                    <a :href="bookingUrl" target="_blank" rel="noreferrer">
+                        Choose a department
+                        <ExternalLink />
+                    </a>
+                </Button>
+            </div>
+        </AppCard>
+
         <EmptyState
-            v-if="!available"
+            v-else
             :icon="CalendarClock"
             title="Booking isn't switched on yet"
             description="Meetings will appear here once scheduling is connected."
         />
 
-        <template v-else>
+        <template v-if="available">
             <AppCard
                 v-if="upcoming === undefined || upcoming.length > 0"
                 title="Booked"
@@ -248,76 +169,6 @@ const subjects = computed(() => {
                 </ul>
             </AppCard>
 
-            <div
-                v-if="eventTypes === undefined"
-                class="grid gap-4 sm:grid-cols-2"
-                aria-busy="true"
-            >
-                <div
-                    v-for="card in 4"
-                    :key="card"
-                    class="bg-muted/40"
-                    :class="CARD"
-                >
-                    <Skeleton class="h-4 w-20" />
-                    <Skeleton class="h-7 w-52" />
-                    <Skeleton class="h-5 w-full max-w-64" />
-                    <Skeleton class="h-5 w-28" />
-                    <div class="mt-auto flex gap-2 pt-4">
-                        <Skeleton class="h-8 w-28 rounded-lg" />
-                        <Skeleton class="h-8 w-32 rounded-lg" />
-                    </div>
-                </div>
-            </div>
-
-            <EmptyState
-                v-else-if="subjects.length === 0"
-                :icon="CalendarClock"
-                title="No meetings on offer"
-                description="Nobody has published a meeting type yet."
-            />
-
-            <ul v-else class="grid gap-4 sm:grid-cols-2">
-                <li
-                    v-for="subject in subjects"
-                    :key="subject.name"
-                    class="text-category-foreground bg-gradient-to-br"
-                    :class="[CARD, subject.wash]"
-                >
-                    <!-- The category is named as well as coloured. -->
-                    <p
-                        class="text-xs font-medium tracking-wide uppercase opacity-80"
-                    >
-                        {{ subject.label }}
-                    </p>
-
-                    <h2 class="font-heading text-xl font-semibold text-balance">
-                        {{ subject.name }}
-                    </h2>
-
-                    <p
-                        v-if="subject.blurb"
-                        class="text-sm text-pretty opacity-90"
-                    >
-                        {{ subject.blurb }}
-                    </p>
-
-                    <p class="text-sm opacity-75">{{ subject.length }}</p>
-
-                    <div class="mt-auto flex flex-wrap gap-2 pt-4">
-                        <a
-                            v-for="way in subject.ways"
-                            :key="way.url"
-                            :href="way.url"
-                            target="_blank"
-                            rel="noreferrer"
-                            class="bg-category-foreground/15 hover:bg-category-foreground/25 focus-visible:ring-category-foreground/60 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
-                        >
-                            {{ way.label }}
-                        </a>
-                    </div>
-                </li>
-            </ul>
         </template>
     </div>
 </template>
