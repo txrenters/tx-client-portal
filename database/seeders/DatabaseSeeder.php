@@ -7,6 +7,7 @@ use App\Enums\StaffRole;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,9 +16,17 @@ class DatabaseSeeder extends Seeder
     /**
      * Seed the application's database with a client of each portal type, and a
      * staff admin for the admin area, for local development.
+     *
+     * Every account here signs in with the password "password", and one is a
+     * staff admin, so the seeder refuses to run in production: a stray
+     * `db:seed --force` on the server would otherwise open the admin area.
      */
     public function run(): void
     {
+        if (app()->isProduction()) {
+            throw new RuntimeException('The development seeder must not run in production: it creates accounts with known passwords.');
+        }
+
         $this->createClient('resident@example.com', 'Taylor Tenant', [ClientRole::Resident]);
         $this->createClient('owner@example.com', 'Olivia Owner', [ClientRole::Owner]);
         $this->createClient('both@example.com', 'Blake Both', [ClientRole::Resident, ClientRole::Owner]);
