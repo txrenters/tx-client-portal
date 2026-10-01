@@ -416,7 +416,7 @@ watch(
             <div
                 ref="stage"
                 v-reveal.zoom="120"
-                class="relative mt-14 overflow-hidden px-4 py-6 outline-none select-none [perspective:1600px] [touch-action:pan-y] focus-visible:ring-ring/50 focus-visible:ring-4 focus-visible:ring-inset"
+                class="focus-visible:ring-ring/50 relative mt-14 [touch-action:pan-y] overflow-hidden px-4 py-6 outline-none select-none [perspective:1600px] focus-visible:ring-4 focus-visible:ring-inset"
                 :class="isDragging ? 'cursor-grabbing' : 'cursor-grab'"
                 role="region"
                 aria-roledescription="carousel"
@@ -449,7 +449,7 @@ watch(
                     <li
                         v-for="(item, index) in tour.screens"
                         :key="`${audience}-${item.screen}`"
-                        class="[grid-area:1/1] transition-[transform,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+                        class="transition-[transform,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] [grid-area:1/1] motion-reduce:transition-none"
                         :style="coverflowStyle(index)"
                         :aria-hidden="index !== activeIndex"
                         :aria-label="`${index + 1} of ${tour.screens.length}`"
