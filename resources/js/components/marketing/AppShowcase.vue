@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { ChevronLeft, ChevronRight, Play } from '@lucide/vue';
+import {
+    useIntersectionObserver,
+    useIntervalFn,
+    usePreferredReducedMotion,
+} from '@vueuse/core';
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
 import PhoneFrame from '@/components/marketing/PhoneFrame.vue';
 import { Button } from '@/components/ui/button';
@@ -111,92 +116,188 @@ const playVideo = async (): Promise<void> => {
     video.value?.play();
 };
 
-const track = useTemplateRef<HTMLElement>('track');
-const canScrollBack = ref(false);
-const canScrollForward = ref(true);
+const activeIndex = ref(0);
+const activeScreen = computed(() => tour.value.screens[activeIndex.value]);
+const lastIndex = computed(() => tour.value.screens.length - 1);
 
-const updateScrollEnds = (): void => {
-    const element = track.value;
+const reducedMotion = usePreferredReducedMotion();
 
-    if (element === null) {
-        return;
-    }
+/** How long each screen stays in front while the row plays by itself. */
+const autoplayInterval = 4000;
 
-    canScrollBack.value = element.scrollLeft > 4;
-    canScrollForward.value =
-        element.scrollLeft + element.clientWidth < element.scrollWidth - 4;
+/**
+ * The row plays by itself while it is on screen, and pauses while the pointer
+ * or keyboard focus is on it. Once a visitor moves it themselves it stays where
+ * they put it. Visitors who ask for reduced motion only move it by hand.
+ */
+const stage = useTemplateRef<HTMLElement>('stage');
+const isStageVisible = ref(false);
+const isPaused = ref(false);
+const hasTakenControl = ref(false);
+
+useIntersectionObserver(
+    stage,
+    ([entry]) => {
+        isStageVisible.value = entry?.isIntersecting ?? false;
+    },
+    { threshold: 0.4 },
+);
+
+const isAutoplaying = computed(
+    () =>
+        isStageVisible.value &&
+        !isPaused.value &&
+        !hasTakenControl.value &&
+        reducedMotion.value !== 'reduce',
+);
+
+const { pause: stopAutoplay, resume: startAutoplay } = useIntervalFn(
+    () => {
+        activeIndex.value =
+            activeIndex.value >= lastIndex.value ? 0 : activeIndex.value + 1;
+    },
+    autoplayInterval,
+    { immediate: false },
+);
+
+watch(
+    [isAutoplaying, activeIndex],
+    ([autoplaying]) => {
+        // Restarting on every change keeps each screen up for the full interval.
+        stopAutoplay();
+
+        if (autoplaying) {
+            startAutoplay();
+        }
+    },
+    { immediate: true },
+);
+
+/** Bring a screen to the front, from the arrows, dots, keys, a drag or a click. */
+const goTo = (index: number): void => {
+    hasTakenControl.value = true;
+    activeIndex.value = Math.min(Math.max(index, 0), lastIndex.value);
 };
 
-const prefersReducedMotion = (): boolean =>
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-/** Move the row by most of its visible width, so the next screens come into view. */
-const scrollByPage = (direction: 1 | -1): void => {
-    track.value?.scrollBy({
-        left: direction * track.value.clientWidth * 0.8,
-        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-    });
-};
-
-watch(audience, async () => {
-    await nextTick();
-    track.value?.scrollTo({ left: 0 });
-    updateScrollEnds();
+watch(audience, () => {
+    activeIndex.value = 0;
 });
 
 /**
- * Touch screens and trackpads already swipe the row; this lets a mouse drag
- * it too. Snapping is paused while dragging so the row follows the pointer,
- * then the browser settles it on the nearest screen.
+ * Where each phone sits around the one in front: neighbours step aside, turn
+ * toward the middle and fall back, and anything further than two away is gone.
+ */
+const coverflowStyle = (index: number): Record<string, string> => {
+    const offset = index - activeIndex.value;
+    const distance = Math.abs(offset);
+    const side = Math.sign(offset);
+
+    return {
+        transform: [
+            `translateX(${offset * 68}%)`,
+            `translateZ(${-distance * 140}px)`,
+            `rotateY(${-side * Math.min(distance, 1) * 42}deg)`,
+            `scale(${1 - Math.min(distance, 2) * 0.08})`,
+        ].join(' '),
+        opacity: String(
+            distance === 0
+                ? 1
+                : distance === 1
+                  ? 0.7
+                  : distance === 2
+                    ? 0.3
+                    : 0,
+        ),
+        zIndex: String(10 - distance),
+        pointerEvents: distance > 2 ? 'none' : 'auto',
+    };
+};
+
+/**
+ * A swipe or a mouse drag moves one screen per swipe. touch-action keeps
+ * vertical swipes scrolling the page.
  */
 const isDragging = ref(false);
-let dragStartX = 0;
-let dragStartScroll = 0;
+const dragOffset = ref(0);
+let dragStartX: number | null = null;
 let hasDragged = false;
 
 const startDrag = (event: PointerEvent): void => {
-    if (event.pointerType !== 'mouse' || event.button !== 0 || !track.value) {
+    if (event.pointerType === 'mouse' && event.button !== 0) {
         return;
     }
 
+    dragStartX = event.clientX;
     isDragging.value = true;
     hasDragged = false;
-    dragStartX = event.clientX;
-    dragStartScroll = track.value.scrollLeft;
-    track.value.setPointerCapture(event.pointerId);
+    isPaused.value = true;
 };
 
 const moveDrag = (event: PointerEvent): void => {
-    if (!isDragging.value || !track.value) {
+    if (dragStartX === null) {
         return;
     }
 
-    const distance = event.clientX - dragStartX;
+    dragOffset.value = event.clientX - dragStartX;
 
-    if (Math.abs(distance) > 4) {
+    if (Math.abs(dragOffset.value) > 6 && !hasDragged) {
         hasDragged = true;
+        stage.value?.setPointerCapture(event.pointerId);
     }
-
-    track.value.scrollLeft = dragStartScroll - distance;
 };
 
-const endDrag = (event: PointerEvent): void => {
-    if (!isDragging.value) {
+const endDrag = (): void => {
+    if (dragStartX === null) {
         return;
     }
 
+    if (dragOffset.value < -40) {
+        goTo(activeIndex.value + 1);
+    } else if (dragOffset.value > 40) {
+        goTo(activeIndex.value - 1);
+    }
+
+    dragStartX = null;
     isDragging.value = false;
-    track.value?.releasePointerCapture(event.pointerId);
+    dragOffset.value = 0;
+    isPaused.value = false;
 };
 
-/** A drag should never also count as a click on what it started over. */
-const swallowClickAfterDrag = (event: MouseEvent): void => {
+/** A click on a side phone brings it forward; a drag never counts as a click. */
+const selectScreen = (index: number): void => {
     if (hasDragged) {
-        event.preventDefault();
-        event.stopPropagation();
         hasDragged = false;
+
+        return;
     }
+
+    goTo(index);
 };
+
+/** The active dot fills up while the row plays, as a countdown to the next screen. */
+// A ref inside v-for is always a list, even though only one dot has a fill.
+const progress = useTemplateRef<HTMLElement[]>('progress');
+
+watch(
+    [isAutoplaying, activeIndex, progress],
+    async () => {
+        await nextTick();
+        const fill = progress.value?.[0];
+        fill?.getAnimations().forEach((animation) => animation.cancel());
+
+        if (isAutoplaying.value && fill) {
+            fill.animate(
+                [{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }],
+                {
+                    duration: autoplayInterval,
+                    easing: 'linear',
+                    fill: 'forwards',
+                },
+            );
+        }
+    },
+    { flush: 'post' },
+);
 </script>
 
 <template>
@@ -310,77 +411,128 @@ const swallowClickAfterDrag = (event: MouseEvent): void => {
                 </ul>
             </div>
 
+            <!-- Coverflow: the screen in front is flat and full size, its
+                 neighbours turn toward it in 3D and fade back. -->
             <div
-                class="mx-auto mt-12 flex w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6"
-            >
-                <p class="text-muted-foreground text-sm">
-                    <span class="hidden sm:inline">Drag or use the arrows</span>
-                    <span class="sm:hidden">Swipe</span>
-                    to see each screen.
-                </p>
-                <div class="hidden gap-2 sm:flex">
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        aria-label="Previous screens"
-                        :disabled="!canScrollBack"
-                        @click="scrollByPage(-1)"
-                    >
-                        <ChevronLeft class="size-4" />
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        aria-label="Next screens"
-                        :disabled="!canScrollForward"
-                        @click="scrollByPage(1)"
-                    >
-                        <ChevronRight class="size-4" />
-                    </Button>
-                </div>
-            </div>
-
-            <!-- Starts in line with the page content and runs off the right
-                 edge, so it reads as a row to swipe through. -->
-            <ul
-                ref="track"
-                class="mt-6 flex scroll-px-4 [scrollbar-width:none] gap-6 overflow-x-auto px-4 pb-4 sm:scroll-px-6 sm:gap-8 sm:px-6 lg:scroll-px-[max(1.5rem,calc((100vw-72rem)/2+1.5rem))] lg:px-[max(1.5rem,calc((100vw-72rem)/2+1.5rem))] [&::-webkit-scrollbar]:hidden"
-                :class="
-                    isDragging
-                        ? 'cursor-grabbing snap-none'
-                        : 'cursor-grab snap-x snap-mandatory'
-                "
+                ref="stage"
+                v-reveal.zoom="120"
+                class="relative mt-14 overflow-hidden px-4 py-6 outline-none select-none [perspective:1600px] [touch-action:pan-y] focus-visible:ring-ring/50 focus-visible:ring-4 focus-visible:ring-inset"
+                :class="isDragging ? 'cursor-grabbing' : 'cursor-grab'"
+                role="region"
+                aria-roledescription="carousel"
                 :aria-label="
                     audience === 'residents'
                         ? 'App screens for residents'
                         : 'App screens for owners'
                 "
-                @scroll.passive="updateScrollEnds"
+                tabindex="0"
+                @keydown.left.prevent="goTo(activeIndex - 1)"
+                @keydown.right.prevent="goTo(activeIndex + 1)"
+                @pointerenter="isPaused = $event.pointerType === 'mouse'"
+                @pointerleave="isPaused = false"
+                @focusin="isPaused = true"
+                @focusout="isPaused = false"
                 @pointerdown="startDrag"
                 @pointermove="moveDrag"
                 @pointerup="endDrag"
                 @pointercancel="endDrag"
-                @click.capture="swallowClickAfterDrag"
             >
-                <li
-                    v-for="(item, index) in tour.screens"
-                    :key="`${audience}-${item.screen}`"
-                    v-reveal="Math.min(index, 4) * 90"
-                    class="flex w-[64vw] max-w-60 shrink-0 snap-start flex-col gap-4 sm:w-60"
+                <!-- A soft glow behind the phone in front. -->
+                <div
+                    class="bg-primary/25 pointer-events-none absolute top-1/2 left-1/2 -z-10 size-72 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl sm:size-96"
+                    aria-hidden="true"
+                ></div>
+
+                <ul
+                    class="mx-auto grid w-[58vw] max-w-64 [transform-style:preserve-3d] sm:w-64"
                 >
-                    <PhoneFrame :screen="item.screen" :alt="item.title" />
-                    <div>
-                        <h3 class="font-heading font-medium">
-                            {{ item.title }}
-                        </h3>
-                        <p
-                            class="text-muted-foreground mt-1 text-sm text-pretty"
+                    <li
+                        v-for="(item, index) in tour.screens"
+                        :key="`${audience}-${item.screen}`"
+                        class="[grid-area:1/1] transition-[transform,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+                        :style="coverflowStyle(index)"
+                        :aria-hidden="index !== activeIndex"
+                        :aria-label="`${index + 1} of ${tour.screens.length}`"
+                        role="group"
+                        aria-roledescription="slide"
+                        @click="selectScreen(index)"
+                    >
+                        <PhoneFrame
+                            :screen="item.screen"
+                            :alt="item.title"
+                            :class="index !== activeIndex && 'cursor-pointer'"
+                        />
+                    </li>
+                </ul>
+            </div>
+
+            <div
+                class="mx-auto flex w-full max-w-md flex-col items-center gap-5 px-4 text-center"
+            >
+                <div class="min-h-20" aria-live="polite">
+                    <Transition
+                        mode="out-in"
+                        enter-active-class="transition duration-300 ease-out motion-reduce:transition-none"
+                        enter-from-class="translate-y-2 opacity-0"
+                        leave-active-class="transition duration-150 ease-in motion-reduce:transition-none"
+                        leave-to-class="-translate-y-1 opacity-0"
+                    >
+                        <div :key="`${audience}-${activeScreen.screen}`">
+                            <h3
+                                class="font-heading text-xl font-semibold tracking-tight"
+                            >
+                                {{ activeScreen.title }}
+                            </h3>
+                            <p class="text-muted-foreground mt-1 text-pretty">
+                                {{ activeScreen.description }}
+                            </p>
+                        </div>
+                    </Transition>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        class="rounded-full"
+                        aria-label="Previous screen"
+                        :disabled="activeIndex === 0"
+                        @click="goTo(activeIndex - 1)"
+                    >
+                        <ChevronLeft class="size-4" />
+                    </Button>
+
+                    <div class="flex items-center gap-1.5">
+                        <button
+                            v-for="(item, index) in tour.screens"
+                            :key="`${audience}-dot-${item.screen}`"
+                            type="button"
+                            class="focus-visible:ring-ring/50 bg-foreground/15 hover:bg-foreground/30 relative h-2 overflow-hidden rounded-full transition-[width,background-color] duration-300 outline-none focus-visible:ring-4"
+                            :class="index === activeIndex ? 'w-8' : 'w-2'"
+                            :aria-label="`Show ${item.title}`"
+                            :aria-current="index === activeIndex"
+                            @click="goTo(index)"
                         >
-                            {{ item.description }}
-                        </p>
+                            <span
+                                v-if="index === activeIndex"
+                                ref="progress"
+                                class="bg-primary absolute inset-0 origin-left rounded-full"
+                            ></span>
+                        </button>
                     </div>
-                </li>
-            </ul>
+
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        class="rounded-full"
+                        aria-label="Next screen"
+                        :disabled="activeIndex === lastIndex"
+                        @click="goTo(activeIndex + 1)"
+                    >
+                        <ChevronRight class="size-4" />
+                    </Button>
+                </div>
+            </div>
         </section>
     </div>
 </template>
