@@ -30,9 +30,13 @@
             }
         </style>
 
+        {{-- The app's house-and-star mark, from tx-mobile's assets: the tab icon,
+             the home-screen icon on iPhone and Android, and the browser chrome colour. --}}
         <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <link rel="manifest" href="/site.webmanifest">
+        <meta name="theme-color" content="#183c90">
 
         @fonts
 
