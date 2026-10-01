@@ -19,7 +19,11 @@ const props = withDefaults(
     { unit: '', height: 'h-40' },
 );
 
-const longDate = appDateFormatter({ weekday: 'short', month: 'short', day: 'numeric' });
+const longDate = appDateFormatter({
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+});
 const shortDate = appDateFormatter({ month: 'short', day: 'numeric' });
 
 /** Noon, so the calendar date never slips across a timezone boundary. */

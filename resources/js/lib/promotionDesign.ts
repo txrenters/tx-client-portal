@@ -108,5 +108,6 @@ export function themeFor(name: string | null | undefined) {
 
 /** The icon to draw, falling back to the gift for anything unknown. */
 export function iconFor(name: string | null | undefined): Component {
-    return (promotionIcons[name as PromotionIcon] ?? promotionIcons.gift).component;
+    return (promotionIcons[name as PromotionIcon] ?? promotionIcons.gift)
+        .component;
 }

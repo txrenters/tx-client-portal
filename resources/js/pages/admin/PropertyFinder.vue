@@ -90,7 +90,11 @@ function inviteLink(person: AdminPropertyPerson) {
         </AppCard>
 
         <div v-else-if="found === undefined" class="flex flex-col gap-4">
-            <Skeleton v-for="row in 3" :key="row" class="h-32 w-full rounded-xl" />
+            <Skeleton
+                v-for="row in 3"
+                :key="row"
+                class="h-32 w-full rounded-xl"
+            />
         </div>
 
         <template v-else-if="found">
@@ -119,9 +123,15 @@ function inviteLink(person: AdminPropertyPerson) {
                 <AppCard
                     v-for="property in found.results"
                     :key="property.id"
-                    :title="property.address || property.name || `Property ${property.id}`"
+                    :title="
+                        property.address ||
+                        property.name ||
+                        `Property ${property.id}`
+                    "
                     :description="
-                        property.name && property.address ? property.name : undefined
+                        property.name && property.address
+                            ? property.name
+                            : undefined
                     "
                 >
                     <Badge
@@ -175,7 +185,10 @@ function inviteLink(person: AdminPropertyPerson) {
                                         variant="outline"
                                         size="sm"
                                     >
-                                        <Link :href="showUser(person.linkedUserId)"
+                                        <Link
+                                            :href="
+                                                showUser(person.linkedUserId)
+                                            "
                                             >On the portal</Link
                                         >
                                     </Button>

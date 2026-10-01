@@ -199,7 +199,6 @@ const activityTiles = [
     },
 ];
 
-
 function share(part: number): string {
     return props.adoption.clients === 0
         ? '0%'
@@ -294,361 +293,413 @@ const lists = [
                         >{{ signIns.repeated.length }}</Badge
                     ></TabsTrigger
                 >
-                <TabsTrigger value="adoption">Adoption &amp; follow-ups</TabsTrigger>
+                <TabsTrigger value="adoption"
+                    >Adoption &amp; follow-ups</TabsTrigger
+                >
             </TabsList>
 
             <TabsContent value="activity" class="flex flex-col gap-6">
-
-            <p
-                class="text-muted-foreground -mb-2 text-xs font-medium tracking-wider uppercase"
-            >
-                Last {{ activityDays }} days
-            </p>
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <AppCard v-for="tile in activityTiles" :key="tile.label">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="space-y-1">
-                            <p
-                                class="text-muted-foreground text-xs font-medium tracking-wider uppercase"
-                            >
-                                {{ tile.label }}
-                            </p>
-                            <p class="text-3xl font-semibold tabular-nums">
-                                {{ tile.value }}
-                            </p>
-                            <p class="text-muted-foreground text-sm">
-                                {{ tile.detail }}
-                            </p>
+                <p
+                    class="text-muted-foreground -mb-2 text-xs font-medium tracking-wider uppercase"
+                >
+                    Last {{ activityDays }} days
+                </p>
+                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <AppCard v-for="tile in activityTiles" :key="tile.label">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="space-y-1">
+                                <p
+                                    class="text-muted-foreground text-xs font-medium tracking-wider uppercase"
+                                >
+                                    {{ tile.label }}
+                                </p>
+                                <p class="text-3xl font-semibold tabular-nums">
+                                    {{ tile.value }}
+                                </p>
+                                <p class="text-muted-foreground text-sm">
+                                    {{ tile.detail }}
+                                </p>
+                            </div>
+                            <component
+                                :is="tile.icon"
+                                class="text-primary size-5 shrink-0"
+                            />
                         </div>
-                        <component
-                            :is="tile.icon"
-                            class="text-primary size-5 shrink-0"
-                        />
-                    </div>
-                </AppCard>
-            </div>
+                    </AppCard>
+                </div>
 
-            <div class="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-                <AppCard
-                    title="Visits per day"
-                    description="A visit is a signed-in client or staff member coming back after half an hour or more away. Hover a day for its numbers."
+                <div
+                    class="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
                 >
-                    <DailyBarChart
-                        :days="visits.daily"
-                        :series="[
-                            { key: 'web', label: 'Web', colorClass: 'bg-chart-1' },
-                            { key: 'app', label: 'App', colorClass: 'bg-chart-2' },
-                        ]"
-                        unit="visit"
-                    />
-                    <p class="text-muted-foreground mt-3 text-xs text-pretty">
-                        Counts the portal and the app only. Visits to the public
-                        texasrenters.com website are not tracked here.
-                    </p>
-                </AppCard>
-
-                <AppCard
-                    title="Repeated failed sign-ins"
-                    description="Addresses with three or more failures this week: someone who forgot their password, or someone guessing."
-                >
-                    <p
-                        v-if="signIns.repeated.length === 0"
-                        class="text-muted-foreground text-sm"
+                    <AppCard
+                        title="Visits per day"
+                        description="A visit is a signed-in client or staff member coming back after half an hour or more away. Hover a day for its numbers."
                     >
-                        Nothing unusual this week.
-                    </p>
-                    <ul v-else class="divide-border/60 divide-y">
-                        <li
-                            v-for="entry in signIns.repeated"
-                            :key="entry.email"
-                            class="flex items-center justify-between gap-3 py-2"
+                        <DailyBarChart
+                            :days="visits.daily"
+                            :series="[
+                                {
+                                    key: 'web',
+                                    label: 'Web',
+                                    colorClass: 'bg-chart-1',
+                                },
+                                {
+                                    key: 'app',
+                                    label: 'App',
+                                    colorClass: 'bg-chart-2',
+                                },
+                            ]"
+                            unit="visit"
+                        />
+                        <p
+                            class="text-muted-foreground mt-3 text-xs text-pretty"
                         >
-                            <div class="min-w-0">
-                                <p class="truncate text-sm font-medium">
-                                    {{ entry.email }}
-                                </p>
-                                <p class="text-muted-foreground text-xs">
-                                    {{ entry.attempts }} failures from
-                                    {{ entry.addresses }} IP address(es) · last
-                                    {{ stamped.format(new Date(entry.lastAt)) }}
-                                    <template v-if="!entry.userId">
-                                        · no such login</template
+                            Counts the portal and the app only. Visits to the
+                            public texasrenters.com website are not tracked
+                            here.
+                        </p>
+                    </AppCard>
+
+                    <AppCard
+                        title="Repeated failed sign-ins"
+                        description="Addresses with three or more failures this week: someone who forgot their password, or someone guessing."
+                    >
+                        <p
+                            v-if="signIns.repeated.length === 0"
+                            class="text-muted-foreground text-sm"
+                        >
+                            Nothing unusual this week.
+                        </p>
+                        <ul v-else class="divide-border/60 divide-y">
+                            <li
+                                v-for="entry in signIns.repeated"
+                                :key="entry.email"
+                                class="flex items-center justify-between gap-3 py-2"
+                            >
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-medium">
+                                        {{ entry.email }}
+                                    </p>
+                                    <p class="text-muted-foreground text-xs">
+                                        {{ entry.attempts }} failures from
+                                        {{ entry.addresses }} IP address(es) ·
+                                        last
+                                        {{
+                                            stamped.format(
+                                                new Date(entry.lastAt),
+                                            )
+                                        }}
+                                        <template v-if="!entry.userId">
+                                            · no such login</template
+                                        >
+                                    </p>
+                                </div>
+                                <div class="flex shrink-0 gap-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        @click="showAddress(entry.email)"
+                                        >Log</Button
                                     >
-                                </p>
-                            </div>
-                            <div class="flex shrink-0 gap-1">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    @click="showAddress(entry.email)"
-                                    >Log</Button
-                                >
-                                <Button
-                                    v-if="entry.userId"
-                                    as-child
-                                    variant="outline"
-                                    size="sm"
-                                >
-                                    <Link :href="showUser(entry.userId)"
-                                        >Open</Link
+                                    <Button
+                                        v-if="entry.userId"
+                                        as-child
+                                        variant="outline"
+                                        size="sm"
                                     >
-                                </Button>
-                            </div>
-                        </li>
-                    </ul>
-                </AppCard>
-            </div>
+                                        <Link :href="showUser(entry.userId)"
+                                            >Open</Link
+                                        >
+                                    </Button>
+                                </div>
+                            </li>
+                        </ul>
+                    </AppCard>
+                </div>
             </TabsContent>
 
             <TabsContent value="log" class="flex flex-col gap-6">
-            <AppCard
-                id="sign-in-log"
-                title="Sign-in log"
-                description="Every sign-in and failed attempt on the web and in the app, newest first. Kept for 180 days."
-            >
-                <div class="mb-4 flex flex-wrap items-center gap-3">
-                    <Tabs v-model="logFilter">
-                        <TabsList>
-                            <TabsTrigger value="all">All</TabsTrigger>
-                            <TabsTrigger value="signed_in">Signed in</TabsTrigger>
-                            <TabsTrigger value="failed">Failed</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                    <Badge v-if="logEmail" variant="secondary" class="gap-1">
-                        {{ logEmail }}
-                        <button
-                            type="button"
-                            class="hover:text-foreground"
-                            aria-label="Show every address"
-                            @click="clearAddress"
-                        >
-                            ×
-                        </button>
-                    </Badge>
-                </div>
-
-                <p
-                    v-if="signInLog.data.length === 0"
-                    class="text-muted-foreground text-sm"
+                <AppCard
+                    id="sign-in-log"
+                    title="Sign-in log"
+                    description="Every sign-in and failed attempt on the web and in the app, newest first. Kept for 180 days."
                 >
-                    No sign-ins recorded yet.
-                </p>
-                <Table v-else>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>When</TableHead>
-                            <TableHead>Who</TableHead>
-                            <TableHead>Result</TableHead>
-                            <TableHead>Device and IP</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow v-for="event in signInLog.data" :key="event.id">
-                            <TableCell class="text-sm whitespace-nowrap">
-                                {{ stamped.format(new Date(event.at)) }}
-                            </TableCell>
-                            <TableCell>
-                                <Link
-                                    v-if="event.user"
-                                    :href="showUser(event.user.id)"
-                                    class="text-sm font-medium hover:underline"
-                                    >{{ event.user.name }}</Link
+                    <div class="mb-4 flex flex-wrap items-center gap-3">
+                        <Tabs v-model="logFilter">
+                            <TabsList>
+                                <TabsTrigger value="all">All</TabsTrigger>
+                                <TabsTrigger value="signed_in"
+                                    >Signed in</TabsTrigger
                                 >
-                                <p
-                                    v-else
-                                    class="text-muted-foreground text-sm font-medium"
-                                >
-                                    No such login
-                                </p>
-                                <p class="text-muted-foreground text-xs">
-                                    {{ event.email }}
-                                </p>
-                            </TableCell>
-                            <TableCell>
-                                <Badge
-                                    :variant="
-                                        event.event === 'signed_in'
-                                            ? 'secondary'
-                                            : 'destructive'
-                                    "
-                                    >{{ eventLabels[event.event] }}</Badge
-                                >
-                                <p class="text-muted-foreground mt-1 text-xs">
-                                    {{ event.channel === 'app' ? 'App' : 'Web' }}
-                                    <template v-if="event.method">
-                                        ·
-                                        {{
-                                            methodLabels[event.method] ??
-                                            event.method
-                                        }}</template
-                                    >
-                                </p>
-                            </TableCell>
-                            <TableCell class="text-sm">
-                                {{ event.device ?? '—' }}
-                                <p class="text-muted-foreground text-xs">
-                                    {{ event.ipAddress ?? '' }}
-                                </p>
-                            </TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
+                                <TabsTrigger value="failed">Failed</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+                        <Badge
+                            v-if="logEmail"
+                            variant="secondary"
+                            class="gap-1"
+                        >
+                            {{ logEmail }}
+                            <button
+                                type="button"
+                                class="hover:text-foreground"
+                                aria-label="Show every address"
+                                @click="clearAddress"
+                            >
+                                ×
+                            </button>
+                        </Badge>
+                    </div>
 
-                <ResultsPagination
-                    :results="signInLog"
-                    class="mt-4"
-                    @change="(page) => reloadLog(page)"
-                />
-            </AppCard>
+                    <p
+                        v-if="signInLog.data.length === 0"
+                        class="text-muted-foreground text-sm"
+                    >
+                        No sign-ins recorded yet.
+                    </p>
+                    <Table v-else>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>When</TableHead>
+                                <TableHead>Who</TableHead>
+                                <TableHead>Result</TableHead>
+                                <TableHead>Device and IP</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow
+                                v-for="event in signInLog.data"
+                                :key="event.id"
+                            >
+                                <TableCell class="text-sm whitespace-nowrap">
+                                    {{ stamped.format(new Date(event.at)) }}
+                                </TableCell>
+                                <TableCell>
+                                    <Link
+                                        v-if="event.user"
+                                        :href="showUser(event.user.id)"
+                                        class="text-sm font-medium hover:underline"
+                                        >{{ event.user.name }}</Link
+                                    >
+                                    <p
+                                        v-else
+                                        class="text-muted-foreground text-sm font-medium"
+                                    >
+                                        No such login
+                                    </p>
+                                    <p class="text-muted-foreground text-xs">
+                                        {{ event.email }}
+                                    </p>
+                                </TableCell>
+                                <TableCell>
+                                    <Badge
+                                        :variant="
+                                            event.event === 'signed_in'
+                                                ? 'secondary'
+                                                : 'destructive'
+                                        "
+                                        >{{ eventLabels[event.event] }}</Badge
+                                    >
+                                    <p
+                                        class="text-muted-foreground mt-1 text-xs"
+                                    >
+                                        {{
+                                            event.channel === 'app'
+                                                ? 'App'
+                                                : 'Web'
+                                        }}
+                                        <template v-if="event.method">
+                                            ·
+                                            {{
+                                                methodLabels[event.method] ??
+                                                event.method
+                                            }}</template
+                                        >
+                                    </p>
+                                </TableCell>
+                                <TableCell class="text-sm">
+                                    {{ event.device ?? '—' }}
+                                    <p class="text-muted-foreground text-xs">
+                                        {{ event.ipAddress ?? '' }}
+                                    </p>
+                                </TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+
+                    <ResultsPagination
+                        :results="signInLog"
+                        class="mt-4"
+                        @change="(page) => reloadLog(page)"
+                    />
+                </AppCard>
             </TabsContent>
 
             <TabsContent value="adoption" class="flex flex-col gap-6">
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <AppCard v-for="tile in tiles" :key="tile.label">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="space-y-1">
-                            <p
-                                class="text-muted-foreground text-xs font-medium tracking-wider uppercase"
-                            >
-                                {{ tile.label }}
-                            </p>
-                            <p class="text-3xl font-semibold tabular-nums">
-                                {{ tile.value }}
-                            </p>
-                            <p class="text-muted-foreground text-sm">
-                                {{ tile.detail }}
-                            </p>
-                        </div>
-                        <component
-                            :is="tile.icon"
-                            class="text-primary size-5 shrink-0"
-                        />
-                    </div>
-                </AppCard>
-            </div>
-
-            <div class="grid gap-4 xl:grid-cols-2">
-                <AppCard
-                    v-for="section in lists"
-                    :key="section.key"
-                    :title="`${section.title} (${section.list.total})`"
-                    :description="section.description"
-                >
-                    <p
-                        v-if="section.list.total === 0"
-                        class="text-muted-foreground text-sm"
-                    >
-                        Nobody. Nice.
-                    </p>
-                    <ul v-else class="divide-border/60 divide-y">
-                        <li
-                            v-for="person in section.list.people"
-                            :key="person.id"
-                            class="flex items-center justify-between gap-3 py-2"
-                        >
-                            <div class="min-w-0">
-                                <Link
-                                    :href="showUser(person.id)"
-                                    class="truncate text-sm font-medium hover:underline"
-                                    >{{ person.name }}</Link
+                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <AppCard v-for="tile in tiles" :key="tile.label">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="space-y-1">
+                                <p
+                                    class="text-muted-foreground text-xs font-medium tracking-wider uppercase"
                                 >
-                                <p class="text-muted-foreground truncate text-xs">
-                                    {{ person.email }} · {{ section.dateLabel }}
-                                    {{ when(section.date(person)) }}
+                                    {{ tile.label }}
+                                </p>
+                                <p class="text-3xl font-semibold tabular-nums">
+                                    {{ tile.value }}
+                                </p>
+                                <p class="text-muted-foreground text-sm">
+                                    {{ tile.detail }}
                                 </p>
                             </div>
-                            <div class="flex shrink-0 items-center gap-1">
-                                <Badge
-                                    v-for="role in person.roles"
-                                    :key="role"
-                                    variant="outline"
-                                    class="capitalize"
-                                    >{{ role }}</Badge
-                                >
-                                <Button
-                                    as-child
-                                    variant="ghost"
-                                    size="icon"
-                                    class="size-7"
-                                >
+                            <component
+                                :is="tile.icon"
+                                class="text-primary size-5 shrink-0"
+                            />
+                        </div>
+                    </AppCard>
+                </div>
+
+                <div class="grid gap-4 xl:grid-cols-2">
+                    <AppCard
+                        v-for="section in lists"
+                        :key="section.key"
+                        :title="`${section.title} (${section.list.total})`"
+                        :description="section.description"
+                    >
+                        <p
+                            v-if="section.list.total === 0"
+                            class="text-muted-foreground text-sm"
+                        >
+                            Nobody. Nice.
+                        </p>
+                        <ul v-else class="divide-border/60 divide-y">
+                            <li
+                                v-for="person in section.list.people"
+                                :key="person.id"
+                                class="flex items-center justify-between gap-3 py-2"
+                            >
+                                <div class="min-w-0">
                                     <Link
                                         :href="showUser(person.id)"
-                                        :aria-label="`Open ${person.name}`"
+                                        class="truncate text-sm font-medium hover:underline"
+                                        >{{ person.name }}</Link
                                     >
-                                        <ChevronRight class="size-4" />
-                                    </Link>
-                                </Button>
-                            </div>
-                        </li>
-                    </ul>
-                    <p
-                        v-if="section.list.total > section.list.people.length"
-                        class="text-muted-foreground mt-2 text-xs"
-                    >
-                        And {{ section.list.total - section.list.people.length }}
-                        more.
-                    </p>
-                    <Button
-                        v-if="section.key === 'unlinked' && section.list.total > 0"
-                        as-child
-                        variant="outline"
-                        size="sm"
-                        class="mt-3"
-                    >
-                        <Link :href="properties()">Find by property</Link>
-                    </Button>
-                </AppCard>
+                                    <p
+                                        class="text-muted-foreground truncate text-xs"
+                                    >
+                                        {{ person.email }} ·
+                                        {{ section.dateLabel }}
+                                        {{ when(section.date(person)) }}
+                                    </p>
+                                </div>
+                                <div class="flex shrink-0 items-center gap-1">
+                                    <Badge
+                                        v-for="role in person.roles"
+                                        :key="role"
+                                        variant="outline"
+                                        class="capitalize"
+                                        >{{ role }}</Badge
+                                    >
+                                    <Button
+                                        as-child
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-7"
+                                    >
+                                        <Link
+                                            :href="showUser(person.id)"
+                                            :aria-label="`Open ${person.name}`"
+                                        >
+                                            <ChevronRight class="size-4" />
+                                        </Link>
+                                    </Button>
+                                </div>
+                            </li>
+                        </ul>
+                        <p
+                            v-if="
+                                section.list.total > section.list.people.length
+                            "
+                            class="text-muted-foreground mt-2 text-xs"
+                        >
+                            And
+                            {{
+                                section.list.total - section.list.people.length
+                            }}
+                            more.
+                        </p>
+                        <Button
+                            v-if="
+                                section.key === 'unlinked' &&
+                                section.list.total > 0
+                            "
+                            as-child
+                            variant="outline"
+                            size="sm"
+                            class="mt-3"
+                        >
+                            <Link :href="properties()">Find by property</Link>
+                        </Button>
+                    </AppCard>
 
-                <AppCard
-                    :title="`Invitations never used (${unaccepted.length})`"
-                    description="The link expired and they have not signed up another way. Send them a fresh one."
-                >
-                    <p
-                        v-if="unaccepted.length === 0"
-                        class="text-muted-foreground text-sm"
+                    <AppCard
+                        :title="`Invitations never used (${unaccepted.length})`"
+                        description="The link expired and they have not signed up another way. Send them a fresh one."
                     >
-                        Nobody. Nice.
-                    </p>
-                    <ul v-else class="divide-border/60 divide-y">
-                        <li
-                            v-for="invitation in unaccepted"
-                            :key="invitation.id"
-                            class="flex items-center justify-between gap-3 py-2"
+                        <p
+                            v-if="unaccepted.length === 0"
+                            class="text-muted-foreground text-sm"
                         >
-                            <div class="min-w-0">
-                                <p class="truncate text-sm font-medium">
-                                    {{ invitation.name }}
-                                </p>
-                                <p class="text-muted-foreground truncate text-xs">
-                                    {{ invitation.email }} · expired
-                                    {{ when(invitation.expiredAt) }}
-                                </p>
-                            </div>
-                            <ConfirmAction
-                                title="Send a new invitation link?"
-                                :description="`A fresh link goes to ${invitation.email}, valid for 7 days.`"
-                                confirm-label="Resend"
-                                :action="resend(invitation.id)"
+                            Nobody. Nice.
+                        </p>
+                        <ul v-else class="divide-border/60 divide-y">
+                            <li
+                                v-for="invitation in unaccepted"
+                                :key="invitation.id"
+                                class="flex items-center justify-between gap-3 py-2"
                             >
-                                <Button variant="outline" size="sm">
-                                    <MailX class="size-4" />
-                                    Resend
-                                </Button>
-                            </ConfirmAction>
-                        </li>
-                    </ul>
-                    <Button
-                        as-child
-                        variant="outline"
-                        size="sm"
-                        class="mt-3"
-                    >
-                        <Link :href="invitationsRoute({ query: { status: 'expired' } })"
-                            >All expired invitations</Link
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-medium">
+                                        {{ invitation.name }}
+                                    </p>
+                                    <p
+                                        class="text-muted-foreground truncate text-xs"
+                                    >
+                                        {{ invitation.email }} · expired
+                                        {{ when(invitation.expiredAt) }}
+                                    </p>
+                                </div>
+                                <ConfirmAction
+                                    title="Send a new invitation link?"
+                                    :description="`A fresh link goes to ${invitation.email}, valid for 7 days.`"
+                                    confirm-label="Resend"
+                                    :action="resend(invitation.id)"
+                                >
+                                    <Button variant="outline" size="sm">
+                                        <MailX class="size-4" />
+                                        Resend
+                                    </Button>
+                                </ConfirmAction>
+                            </li>
+                        </ul>
+                        <Button
+                            as-child
+                            variant="outline"
+                            size="sm"
+                            class="mt-3"
                         >
-                    </Button>
-                </AppCard>
-            </div>
+                            <Link
+                                :href="
+                                    invitationsRoute({
+                                        query: { status: 'expired' },
+                                    })
+                                "
+                                >All expired invitations</Link
+                            >
+                        </Button>
+                    </AppCard>
+                </div>
             </TabsContent>
         </Tabs>
     </div>

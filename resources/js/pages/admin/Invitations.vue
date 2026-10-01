@@ -283,12 +283,14 @@ function when(value: string | null): string {
                                 >{{ invitation.status }}</Badge
                             >
                             <p class="text-muted-foreground mt-1 text-xs">
-                                <template v-if="invitation.status === 'accepted'"
+                                <template
+                                    v-if="invitation.status === 'accepted'"
                                     >{{ when(invitation.acceptedAt) }}</template
                                 >
                                 <template
                                     v-else-if="invitation.status === 'pending'"
-                                    >Until {{ when(invitation.expiresAt) }}</template
+                                    >Until
+                                    {{ when(invitation.expiresAt) }}</template
                                 >
                             </p>
                         </TableCell>
@@ -344,8 +346,8 @@ function when(value: string | null): string {
                     <DialogTitle>Invite a client</DialogTitle>
                     <DialogDescription>
                         Enter their email and pick the Propertyware record it
-                        belongs to. They get a link to set up their login,
-                        valid for 7 days.
+                        belongs to. They get a link to set up their login, valid
+                        for 7 days.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -411,11 +413,16 @@ function when(value: string | null): string {
                                         class="text-muted-foreground block text-xs"
                                     >
                                         #{{ contact.id }} ·
-                                        <template v-if="contact.role === 'owner'"
-                                            >{{ contact.portfolios }}
+                                        <template
+                                            v-if="contact.role === 'owner'"
+                                            >{{
+                                                contact.portfolios
+                                            }}
                                             portfolio(s)</template
                                         ><template v-else
-                                            >{{ contact.leases }}
+                                            >{{
+                                                contact.leases
+                                            }}
                                             lease(s)</template
                                         >
                                     </span>

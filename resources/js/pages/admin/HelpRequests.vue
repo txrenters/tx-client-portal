@@ -149,8 +149,7 @@ const sent = appDateFormatter({ dateStyle: 'medium', timeStyle: 'short' });
                     </div>
                     <div class="flex flex-wrap gap-1">
                         <Badge variant="outline">{{
-                            platformLabels[request.platform] ??
-                            request.platform
+                            platformLabels[request.platform] ?? request.platform
                         }}</Badge>
                         <Badge
                             :variant="

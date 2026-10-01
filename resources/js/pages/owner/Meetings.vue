@@ -85,7 +85,9 @@ const when = appDateFormatter({
                 class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
             >
                 <div class="flex items-start gap-3">
-                    <CalendarClock class="text-primary mt-0.5 size-5 shrink-0" />
+                    <CalendarClock
+                        class="text-primary mt-0.5 size-5 shrink-0"
+                    />
                     <div class="flex flex-col gap-1">
                         <h2 class="font-heading font-semibold">
                             Book a meeting
@@ -168,7 +170,6 @@ const when = appDateFormatter({
                     </li>
                 </ul>
             </AppCard>
-
         </template>
     </div>
 </template>

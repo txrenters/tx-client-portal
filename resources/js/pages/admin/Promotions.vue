@@ -398,7 +398,7 @@ function toggle(promotion: AdminPromotion): void {
                                 :aria-checked="form.theme === name"
                                 :aria-label="theme.label"
                                 :title="theme.label"
-                                class="ring-offset-background focus-visible:ring-ring flex size-9 items-center justify-center rounded-full bg-gradient-to-br ring-offset-2 outline-none focus-visible:ring-2 aria-checked:ring-2 aria-checked:ring-foreground"
+                                class="ring-offset-background focus-visible:ring-ring aria-checked:ring-foreground flex size-9 items-center justify-center rounded-full bg-gradient-to-br ring-offset-2 outline-none focus-visible:ring-2 aria-checked:ring-2"
                                 :class="[theme.header, theme.text]"
                                 @click="form.theme = name"
                             >
@@ -439,7 +439,10 @@ function toggle(promotion: AdminPromotion): void {
                                 "
                                 @click="form.icon = name"
                             >
-                                <component :is="icon.component" class="size-5" />
+                                <component
+                                    :is="icon.component"
+                                    class="size-5"
+                                />
                             </button>
                         </div>
                     </div>

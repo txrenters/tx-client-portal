@@ -162,17 +162,14 @@ function when(value: string | null): string {
             />
         </AppCard>
 
-        <AppCard
-            v-for="announcement in announcements"
-            :key="announcement.id"
-        >
+        <AppCard v-for="announcement in announcements" :key="announcement.id">
             <div class="flex flex-col gap-3">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div class="min-w-0">
                         <p class="font-medium">{{ announcement.title }}</p>
                         <p class="text-muted-foreground text-xs">
-                            {{ audienceLabels[announcement.audience] }} ·
-                            posted {{ when(announcement.postedAt) }}
+                            {{ audienceLabels[announcement.audience] }} · posted
+                            {{ when(announcement.postedAt) }}
                             <span v-if="announcement.createdBy">
                                 by {{ announcement.createdBy }}</span
                             >
@@ -294,7 +291,9 @@ function when(value: string | null): string {
 
                     <div class="grid grid-cols-2 gap-4">
                         <div class="grid gap-2">
-                            <Label for="announcement-audience">Who sees it</Label>
+                            <Label for="announcement-audience"
+                                >Who sees it</Label
+                            >
                             <Select v-model="form.audience">
                                 <SelectTrigger
                                     id="announcement-audience"
@@ -303,8 +302,12 @@ function when(value: string | null): string {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Everyone</SelectItem>
-                                    <SelectItem value="owner">Owners</SelectItem>
+                                    <SelectItem value="all"
+                                        >Everyone</SelectItem
+                                    >
+                                    <SelectItem value="owner"
+                                        >Owners</SelectItem
+                                    >
                                     <SelectItem value="resident"
                                         >Residents</SelectItem
                                     >

@@ -36,12 +36,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import {
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger,
-} from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { appDateFormatter } from '@/lib/timezone';
 import { dashboard as adminHome, security } from '@/routes/admin';
 import { destroy, store } from '@/routes/admin/security/blocks';
@@ -201,9 +196,12 @@ const activeBlocks = props.blocks.filter((item) => item.active).length;
                 >
                 <TabsTrigger value="blocked"
                     >Blocked
-                    <Badge v-if="activeBlocks" variant="secondary" class="ml-1">{{
-                        activeBlocks
-                    }}</Badge></TabsTrigger
+                    <Badge
+                        v-if="activeBlocks"
+                        variant="secondary"
+                        class="ml-1"
+                        >{{ activeBlocks }}</Badge
+                    ></TabsTrigger
                 >
                 <TabsTrigger value="events">Event log</TabsTrigger>
             </TabsList>
@@ -215,11 +213,16 @@ const activeBlocks = props.blocks.filter((item) => item.active).length;
                 >
                     <div class="mb-4">
                         <Select v-model="timeWindow">
-                            <SelectTrigger class="w-44" aria-label="Time window">
+                            <SelectTrigger
+                                class="w-44"
+                                aria-label="Time window"
+                            >
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="24">Last 24 hours</SelectItem>
+                                <SelectItem value="24"
+                                    >Last 24 hours</SelectItem
+                                >
                                 <SelectItem value="168">Last 7 days</SelectItem>
                             </SelectContent>
                         </Select>
@@ -246,7 +249,9 @@ const activeBlocks = props.blocks.filter((item) => item.active).length;
                         <TableBody>
                             <TableRow v-for="row in suspicious" :key="row.ip">
                                 <TableCell>
-                                    <p class="font-mono text-sm">{{ row.ip }}</p>
+                                    <p class="font-mono text-sm">
+                                        {{ row.ip }}
+                                    </p>
                                     <Badge
                                         v-if="row.blocked"
                                         variant="secondary"
@@ -286,7 +291,10 @@ const activeBlocks = props.blocks.filter((item) => item.active).length;
                                             >Events</Button
                                         >
                                         <Button
-                                            v-if="!row.blocked && row.ip !== yourIp"
+                                            v-if="
+                                                !row.blocked &&
+                                                row.ip !== yourIp
+                                            "
                                             variant="outline"
                                             size="sm"
                                             class="text-destructive"
@@ -318,20 +326,18 @@ const activeBlocks = props.blocks.filter((item) => item.active).length;
                             passwords).
                         </li>
                         <li>
-                            {{ thresholds.bruteForceFailures }}+ failed
-                            sign-ins in an hour from one address.
+                            {{ thresholds.bruteForceFailures }}+ failed sign-ins
+                            in an hour from one address.
                         </li>
                         <li>
                             {{ thresholds.probes }}+ requests for files only a
-                            scanner looks for, such as /.env or
-                            /wp-login.php.
+                            scanner looks for, such as /.env or /wp-login.php.
                         </li>
                         <li>
                             Blocks last {{ thresholds.autoBlockHours }} hours,
                             and owners and admins are emailed. Addresses staff
-                            have signed in from in the last 30 days, and
-                            private network addresses, are never blocked
-                            automatically.
+                            have signed in from in the last 30 days, and private
+                            network addresses, are never blocked automatically.
                         </li>
                     </ul>
                 </AppCard>
@@ -363,10 +369,14 @@ const activeBlocks = props.blocks.filter((item) => item.active).length;
                         <TableBody>
                             <TableRow v-for="item in blocks" :key="item.id">
                                 <TableCell>
-                                    <p class="font-mono text-sm">{{ item.ip }}</p>
+                                    <p class="font-mono text-sm">
+                                        {{ item.ip }}
+                                    </p>
                                     <Badge
                                         :variant="
-                                            item.active ? 'destructive' : 'outline'
+                                            item.active
+                                                ? 'destructive'
+                                                : 'outline'
                                         "
                                         class="mt-1"
                                         >{{
@@ -374,7 +384,9 @@ const activeBlocks = props.blocks.filter((item) => item.active).length;
                                         }}</Badge
                                     >
                                 </TableCell>
-                                <TableCell class="max-w-72 text-sm whitespace-normal">
+                                <TableCell
+                                    class="max-w-72 text-sm whitespace-normal"
+                                >
                                     {{ item.reason }}
                                     <p class="text-muted-foreground text-xs">
                                         {{
@@ -410,7 +422,11 @@ const activeBlocks = props.blocks.filter((item) => item.active).length;
                                     >
                                         <Button variant="outline" size="sm">
                                             <Unlock class="size-4" />
-                                            {{ item.active ? 'Unblock' : 'Remove' }}
+                                            {{
+                                                item.active
+                                                    ? 'Unblock'
+                                                    : 'Remove'
+                                            }}
                                         </Button>
                                     </ConfirmAction>
                                 </TableCell>
@@ -469,7 +485,10 @@ const activeBlocks = props.blocks.filter((item) => item.active).length;
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <TableRow v-for="event in events.data" :key="event.id">
+                            <TableRow
+                                v-for="event in events.data"
+                                :key="event.id"
+                            >
                                 <TableCell class="text-sm whitespace-nowrap">{{
                                     when(event.at)
                                 }}</TableCell>

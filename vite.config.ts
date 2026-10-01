@@ -70,6 +70,8 @@ export default defineConfig({
         htmlWhitespaceSensitivity: 'css',
         ignorePatterns: [
             '.github/**',
+            // Ops files (docker compose, nginx); they keep their own style.
+            'deploy/**',
             'composer.json',
             'resources/js/components/ui/*',
             'resources/views/mail/*',

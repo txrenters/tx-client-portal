@@ -304,8 +304,8 @@ const securityPoints = [
                             The resident and owner portal for TexasRenters.com
                             property management in Houston. Report repairs,
                             message our team, and find your lease, documents and
-                            property information, any time, on the web or in
-                            the app.
+                            property information, any time, on the web or in the
+                            app.
                         </p>
                     </div>
 
@@ -734,8 +734,8 @@ const securityPoints = [
                     class="text-scrim-foreground/70 mx-auto flex w-full max-w-6xl flex-col gap-1 px-4 py-6 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6"
                 >
                     <span
-                        >&copy; {{ new Date().getFullYear() }}
-                        TexasRenters.com</span
+                        >&copy;
+                        {{ new Date().getFullYear() }} TexasRenters.com</span
                     >
                     <span>
                         Developed and maintained by

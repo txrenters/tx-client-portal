@@ -83,7 +83,11 @@ function add(): void {
 }
 
 function changeRole(member: AdminStaffMember, role: unknown): void {
-    if (member.id === null || typeof role !== 'string' || role === member.role) {
+    if (
+        member.id === null ||
+        typeof role !== 'string' ||
+        role === member.role
+    ) {
         return;
     }
 
@@ -146,7 +150,9 @@ const dated = appDateFormatter({ dateStyle: 'medium' });
                         </TableCell>
                         <TableCell>
                             <Select
-                                v-if="!member.fixed && member.id !== currentUserId"
+                                v-if="
+                                    !member.fixed && member.id !== currentUserId
+                                "
                                 :model-value="member.role"
                                 @update:model-value="changeRole(member, $event)"
                             >
@@ -163,7 +169,9 @@ const dated = appDateFormatter({ dateStyle: 'medium' });
                             </Select>
                             <Badge
                                 v-else
-                                :variant="member.fixed ? 'default' : 'secondary'"
+                                :variant="
+                                    member.fixed ? 'default' : 'secondary'
+                                "
                                 >{{ roleLabels[member.role] }}</Badge
                             >
                             <p

@@ -25,7 +25,10 @@ const props = withDefaults(
         title: string;
         description: string;
         confirmLabel: string;
-        action: { url: string; method: 'get' | 'post' | 'put' | 'patch' | 'delete' };
+        action: {
+            url: string;
+            method: 'get' | 'post' | 'put' | 'patch' | 'delete';
+        };
         destructive?: boolean;
         /** Ask for an optional reason, sent as "reason". */
         withReason?: boolean;
@@ -60,7 +63,9 @@ function confirm(): void {
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>{{ title }}</AlertDialogTitle>
-                <AlertDialogDescription>{{ description }}</AlertDialogDescription>
+                <AlertDialogDescription>{{
+                    description
+                }}</AlertDialogDescription>
             </AlertDialogHeader>
 
             <div v-if="withReason" class="grid gap-2">
@@ -79,7 +84,9 @@ function confirm(): void {
             </div>
 
             <AlertDialogFooter>
-                <AlertDialogCancel :disabled="processing">Cancel</AlertDialogCancel>
+                <AlertDialogCancel :disabled="processing"
+                    >Cancel</AlertDialogCancel
+                >
                 <Button
                     :variant="destructive ? 'destructive' : 'default'"
                     :disabled="processing"

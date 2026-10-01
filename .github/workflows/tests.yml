@@ -13,6 +13,28 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
+    # composer setup migrates against .env.example, which is Postgres as in
+    # production (deploy/docker-compose.yml runs postgres:17). The real env
+    # vars below win over the copied .env. The tests themselves use SQLite
+    # in memory (phpunit.xml); this proves the migrations run on Postgres.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: client_portal
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DB_PASSWORD: postgres
+
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -236,7 +236,9 @@ const sent = appDateFormatter({
                                 >Not in leads yet</Badge
                             >
                             <Form
-                                v-if="!referral.leadSentAt && referral.leadError"
+                                v-if="
+                                    !referral.leadSentAt && referral.leadError
+                                "
                                 v-bind="resendLead.form(referral.id)"
                                 :options="{ preserveScroll: true }"
                                 class="mt-1"

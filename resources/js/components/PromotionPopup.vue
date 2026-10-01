@@ -132,38 +132,38 @@ function hideForGood(): void {
                 <!-- Soft shapes, so the header reads as a card rather than a flat block. -->
                 <span
                     aria-hidden="true"
-                    class="bg-current/10 absolute -top-16 -right-12 -z-10 size-48 rounded-full"
+                    class="absolute -top-16 -right-12 -z-10 size-48 rounded-full bg-current/10"
                 />
                 <span
                     aria-hidden="true"
-                    class="bg-current/10 absolute -bottom-20 -left-16 -z-10 size-52 rounded-full"
+                    class="absolute -bottom-20 -left-16 -z-10 size-52 rounded-full bg-current/10"
                 />
 
                 <DialogClose
-                    class="text-current/80 hover:bg-current/15 hover:text-current focus-visible:ring-current/60 absolute top-3 right-3 rounded-full p-1.5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    class="absolute top-3 right-3 rounded-full p-1.5 text-current/80 transition-colors hover:bg-current/15 hover:text-current focus-visible:ring-2 focus-visible:ring-current/60 focus-visible:outline-none"
                 >
                     <X class="size-5" />
                     <span class="sr-only">Close</span>
                 </DialogClose>
 
                 <span
-                    class="bg-current/15 inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-[0.12em] uppercase"
+                    class="inline-flex items-center rounded-full bg-current/15 px-3 py-1 text-[11px] font-semibold tracking-[0.12em] uppercase"
                     >TexasRenters.com</span
                 >
 
                 <div
-                    class="bg-current/15 ring-current/25 mx-auto mt-5 flex size-16 items-center justify-center rounded-2xl ring-1"
+                    class="mx-auto mt-5 flex size-16 items-center justify-center rounded-2xl bg-current/15 ring-1 ring-current/25"
                 >
                     <component :is="icon" class="size-8" />
                 </div>
 
                 <DialogHeader class="mt-5 items-center gap-3 text-center">
                     <DialogTitle
-                        class="text-current text-3xl leading-tight font-bold tracking-tight"
+                        class="text-3xl leading-tight font-bold tracking-tight text-current"
                         >{{ promotion.title }}</DialogTitle
                     >
                     <DialogDescription
-                        class="text-current/90 max-w-xs text-base leading-relaxed whitespace-pre-line"
+                        class="max-w-xs text-base leading-relaxed whitespace-pre-line text-current/90"
                         >{{ promotion.body }}</DialogDescription
                     >
                 </DialogHeader>

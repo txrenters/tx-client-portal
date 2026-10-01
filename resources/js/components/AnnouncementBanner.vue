@@ -31,7 +31,9 @@ function close(id: number): void {
         <Alert
             v-for="announcement in announcements"
             :key="announcement.id"
-            :variant="announcement.tone === 'warning' ? 'destructive' : 'default'"
+            :variant="
+                announcement.tone === 'warning' ? 'destructive' : 'default'
+            "
             class="pr-12"
         >
             <TriangleAlert v-if="announcement.tone === 'warning'" />

@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
-import { CircleAlert, RefreshCw, RotateCcw, ScrollText, Trash2 } from '@lucide/vue';
+import {
+    CircleAlert,
+    RefreshCw,
+    RotateCcw,
+    ScrollText,
+    Trash2,
+} from '@lucide/vue';
 import AppCard from '@/components/AppCard.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import ConfirmAction from '@/components/admin/ConfirmAction.vue';
@@ -124,7 +130,9 @@ const failedAt = appDateFormatter({ dateStyle: 'medium', timeStyle: 'short' });
                             {{ job.job }}
                             <span class="text-muted-foreground font-normal"
                                 >on {{ job.queue }} ·
-                                {{ failedAt.format(new Date(job.failedAt)) }}</span
+                                {{
+                                    failedAt.format(new Date(job.failedAt))
+                                }}</span
                             >
                         </p>
                         <p

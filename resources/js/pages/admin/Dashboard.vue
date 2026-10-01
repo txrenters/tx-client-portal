@@ -32,9 +32,7 @@ import { dashboard as adminHome } from '@/routes/admin';
 /** The trail in the header beside the sidebar's collapse button. */
 defineOptions({
     layout: {
-        breadcrumbs: [
-            { title: 'Admin', href: adminHome() },
-        ],
+        breadcrumbs: [{ title: 'Admin', href: adminHome() }],
     },
 });
 
@@ -141,7 +139,11 @@ const tiles = [
             <DailyBarChart
                 :days="stats.signups"
                 :series="[
-                    { key: 'count', label: 'Sign-ups', colorClass: 'bg-chart-1' },
+                    {
+                        key: 'count',
+                        label: 'Sign-ups',
+                        colorClass: 'bg-chart-1',
+                    },
                 ]"
                 unit="sign-up"
             />
@@ -218,6 +220,5 @@ const tiles = [
                 <ActivityFeed :events="activity" :limit="12" />
             </AppCard>
         </div>
-
     </div>
 </template>

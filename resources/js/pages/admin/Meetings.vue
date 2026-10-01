@@ -112,7 +112,8 @@ function save(): void {
             </div>
 
             <p v-else-if="meetingTypes.error" class="text-destructive text-sm">
-                The scheduling app could not be reached: {{ meetingTypes.error }}
+                The scheduling app could not be reached:
+                {{ meetingTypes.error }}
             </p>
 
             <EmptyState
@@ -129,7 +130,9 @@ function save(): void {
                     class="flex items-center justify-between gap-4 py-3"
                 >
                     <div class="min-w-0">
-                        <p class="flex flex-wrap items-center gap-2 font-medium">
+                        <p
+                            class="flex flex-wrap items-center gap-2 font-medium"
+                        >
                             {{ type.name }}
                             <Badge
                                 v-if="chosen.includes(type.slug)"

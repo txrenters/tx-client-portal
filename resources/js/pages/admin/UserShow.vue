@@ -107,7 +107,9 @@ setLayoutProps({
 
         <Alert v-if="user.suspendedAt" variant="destructive">
             <Ban />
-            <AlertTitle>Suspended {{ when(user.suspendedAt, stamped) }}</AlertTitle>
+            <AlertTitle
+                >Suspended {{ when(user.suspendedAt, stamped) }}</AlertTitle
+            >
             <AlertDescription>
                 They cannot sign in to the portal or the apps until the
                 suspension is lifted.
@@ -153,8 +155,8 @@ setLayoutProps({
                                 </p>
                                 <p class="text-muted-foreground text-xs">
                                     Propertyware
-                                    {{ account.propertywareId ?? '—' }} ·
-                                    linked {{ when(account.linkedAt) }}
+                                    {{ account.propertywareId ?? '—' }} · linked
+                                    {{ when(account.linkedAt) }}
                                 </p>
                             </div>
                             <Badge variant="outline" class="capitalize">{{
@@ -201,10 +203,7 @@ setLayoutProps({
                     title="Staff history"
                     description="What staff have done to this login, newest first."
                 >
-                    <ActivityFeed
-                        v-if="history.length > 0"
-                        :events="history"
-                    />
+                    <ActivityFeed v-if="history.length > 0" :events="history" />
                     <p v-else class="text-muted-foreground text-sm">
                         Nothing yet.
                     </p>

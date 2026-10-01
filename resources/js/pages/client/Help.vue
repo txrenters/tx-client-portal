@@ -97,15 +97,15 @@ const sentFormatter = appDateFormatter({ dateStyle: 'medium' });
             <AlertTitle>About your property, lease or payments?</AlertTitle>
             <AlertDescription>
                 <span>
-                    This page is for problems with the portal and the app.
-                    For anything else,
+                    This page is for problems with the portal and the app. For
+                    anything else,
                     <Link
                         v-if="messagesRoute"
                         :href="messagesRoute"
                         class="text-primary hover:underline"
                         >send us a message</Link
-                    ><template v-else>send us a message</template> and the
-                    right team will answer.
+                    ><template v-else>send us a message</template> and the right
+                    team will answer.
                 </span>
             </AlertDescription>
         </Alert>
@@ -214,9 +214,7 @@ const sentFormatter = appDateFormatter({ dateStyle: 'medium' });
                                 >{{ request.statusLabel }}</Badge
                             >
                         </div>
-                        <p
-                            class="text-muted-foreground line-clamp-2 text-sm"
-                        >
+                        <p class="text-muted-foreground line-clamp-2 text-sm">
                             {{ request.message }}
                         </p>
                         <p

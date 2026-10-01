@@ -23,8 +23,7 @@
         focusable="false"
         class="pointer-events-none w-full"
         :style="{
-            maskImage:
-                'linear-gradient(to top, black 35%, transparent 100%)',
+            maskImage: 'linear-gradient(to top, black 35%, transparent 100%)',
             WebkitMaskImage:
                 'linear-gradient(to top, black 35%, transparent 100%)',
         }"
@@ -73,7 +72,9 @@
         />
 
         <!-- Townhouse row -->
-        <path d="M860 300 V170 L900 140 L940 170 L980 140 L1020 170 L1060 140 L1100 170 V300" />
+        <path
+            d="M860 300 V170 L900 140 L940 170 L980 140 L1020 170 L1060 140 L1100 170 V300"
+        />
         <path d="M940 170 V300 M1020 170 V300" />
         <rect x="880" y="186" width="24" height="24" />
         <rect x="960" y="186" width="24" height="24" />
