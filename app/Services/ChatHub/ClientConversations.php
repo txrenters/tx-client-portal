@@ -77,7 +77,7 @@ class ClientConversations
 
         $read = ConversationRead::firstOrNew(['user_id' => $reader->id, 'thread_id' => $conversation['thread']['id']]);
 
-        if ($read->last_read_message_id === null || $read->last_read_message_id < $lastId) {
+        if (! $read->exists || $read->last_read_message_id < $lastId) {
             $read->fill(['last_read_message_id' => $lastId])->save();
         }
     }

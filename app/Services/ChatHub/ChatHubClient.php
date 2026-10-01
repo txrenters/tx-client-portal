@@ -66,7 +66,7 @@ class ChatHubClient
      * A contact's threads, most recent activity first.
      *
      * @param  array{search?: ?string, status?: ?string, category?: ?string, from?: ?string, to?: ?string}  $filters  Status "open" or "closed"; category is the thread's department; dates as Y-m-d, matching message activity.
-     * @return array{data: array<int, array<string, mixed>>, meta: array<string, mixed>}
+     * @return array{data?: array<int, array<string, mixed>>, meta?: array<string, mixed>}
      *
      * @throws ChatHubException
      */

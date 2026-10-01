@@ -50,7 +50,7 @@ class HelpDesk
     /**
      * The person's own requests, newest first.
      *
-     * @return LengthAwarePaginator<int, array<string, mixed>>
+     * @return LengthAwarePaginator<int, array{id: int, topic: string, topicLabel: string, message: string, platform: string, status: string, statusLabel: string, staffNote: ?string, resolvedAt: ?string, sentAt: string}>
      */
     public function forUser(User $user, int $page = 1): LengthAwarePaginator
     {
@@ -64,7 +64,7 @@ class HelpDesk
     /**
      * One request as the client sees it.
      *
-     * @return array<string, mixed>
+     * @return array{id: int, topic: string, topicLabel: string, message: string, platform: string, status: string, statusLabel: string, staffNote: ?string, resolvedAt: ?string, sentAt: string}
      */
     public function present(HelpRequest $request): array
     {
@@ -87,7 +87,7 @@ class HelpDesk
     /**
      * Every request, for staff, optionally narrowed to one status or a search.
      *
-     * @return LengthAwarePaginator<int, array<string, mixed>>
+     * @return LengthAwarePaginator<int, array{id: int, topic: string, topicLabel: string, message: string, platform: string, status: string, statusLabel: string, staffNote: ?string, resolvedAt: ?string, sentAt: string, appVersion: ?string, userAgent: ?string, resolvedBy: ?string, user: array{id: int, name: string, email: string}}>
      */
     public function forStaff(?HelpRequestStatus $status = null, ?string $search = null): LengthAwarePaginator
     {

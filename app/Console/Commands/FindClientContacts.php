@@ -43,7 +43,7 @@ class FindClientContacts extends Command
 
             return [
                 $contact->id,
-                $contact->role?->value ?? '-',
+                $contact->role->value ?? '-',
                 $contact->fullName(),
                 $record['company'] ?: '-',
                 count($contact->portfolioIds),

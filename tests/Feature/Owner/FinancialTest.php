@@ -340,7 +340,8 @@ test('hands the page numeric ids, so picking a portfolio still lists its propert
 test('keeps utility account numbers out of a bills note', function () {
     $this->actingAs($this->owner);
 
-    $response = partialGet(route('owner.financials'), 'owner/Financials', 'financials')->assertOk();
+    // The page defaults to this month; the bill is dated September 2026.
+    $response = partialGet(route('owner.financials', ['from' => '2024-01-01', 'to' => '2026-12-31']), 'owner/Financials', 'financials')->assertOk();
 
     expect($response->json('props.financials.bills.0.description'))->toBe('19319 Hays Spring, Billing period 9/04/2025-10/04/2025');
 });

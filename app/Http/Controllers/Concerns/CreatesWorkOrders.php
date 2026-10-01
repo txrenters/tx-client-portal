@@ -47,7 +47,7 @@ trait CreatesWorkOrders
         $scope = $this->clientScope($request, $role, $directory);
 
         try {
-            $created = $maintenance->create($scope, $request->validated());
+            $created = $maintenance->create($scope, $request->workOrder());
         } catch (PropertywareException) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('We could not send your request right now. Please try again.')]);
 

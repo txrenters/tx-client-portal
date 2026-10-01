@@ -69,7 +69,7 @@ class MaintenanceSummary
      * Propertyware cannot filter or sort on our behalf, so the full list is
      * read from the cache and only the requested page is sent to the browser.
      *
-     * @param  array{status?: ?string, search?: ?string, property?: ?string}  $filters
+     * @param  array{status?: ?string, search?: ?string, property?: ?string, ids?: ?array<int, string>}  $filters
      * @return array{status: string, counts: array<string, int>, total: int, properties: array<int, string>, workOrders: array<string, mixed>|null}
      */
     public function paginate(ClientScope $scope, array $filters, int $page = 1, int $perPage = 25, string $path = '/'): array
@@ -224,10 +224,10 @@ class MaintenanceSummary
         $buildingId = $this->requestBuilding($scope, $request['property_id'] ?? null);
 
         // A tenant's own unit in that building, so staff know exactly where to go.
-        $unitIds = $isOwner ? [] : array_values(array_keys(array_filter(
+        $unitIds = $isOwner ? [] : array_keys(array_filter(
             $this->directory->propertyLocations($scope)['units'],
             fn (int $unitBuilding): bool => $unitBuilding === $buildingId,
-        )));
+        ));
 
         $description = trim($request['description']);
 
@@ -282,7 +282,7 @@ class MaintenanceSummary
      */
     public static function propertywareCategory(string $category): string
     {
-        return collect(config('maintenance.categories'))
+        return collect(config()->array('maintenance.categories'))
             ->first(fn (string $candidate): bool => trim($candidate) === trim($category), $category);
     }
 

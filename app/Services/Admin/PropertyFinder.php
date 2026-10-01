@@ -124,8 +124,11 @@ class PropertyFinder
     /**
      * Read records by id through the cache, fetching the missing ones at once.
      *
+     * Whatever comes back from the cache is only known to be an array, so the
+     * records are typed no tighter than that.
+     *
      * @param  Collection<int, int>  $ids
-     * @return Collection<int, array<string, mixed>>
+     * @return Collection<int, array<array-key, mixed>>
      *
      * @throws PropertywareException
      */

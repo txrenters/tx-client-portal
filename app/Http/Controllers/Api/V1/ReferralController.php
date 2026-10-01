@@ -34,7 +34,7 @@ class ReferralController extends Controller
 
     public function store(StoreReferralRequest $request, ClientAccount $account, ReferralProgram $program): JsonResponse
     {
-        $referral = $program->submit($request->user(), $account, $request->validated());
+        $referral = $program->submit($request->user(), $account, $request->details());
 
         return response()->json(['data' => $program->present($referral)], 201);
     }

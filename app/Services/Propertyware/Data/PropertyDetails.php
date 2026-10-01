@@ -67,7 +67,7 @@ class PropertyDetails
      */
     public static function for(array $building, ClientRole $viewer): array
     {
-        $custom = collect($building['customFields'] ?? [])
+        $custom = collect(is_array($building['customFields'] ?? null) ? $building['customFields'] : [])
             ->filter(fn (mixed $field): bool => is_array($field) && filled($field['value'] ?? null))
             ->mapWithKeys(fn (array $field): array => [(string) $field['fieldName'] => self::formatValue($field['value'], $field['dataType'] ?? null)]);
 
@@ -103,8 +103,8 @@ class PropertyDetails
 
         return [
             'sections' => array_values(array_filter($sections, fn (array $section): bool => $section['items'] !== [])),
-            'amenities' => collect($building['amenities'] ?? [])->pluck('name')->filter()->values()->all(),
-            'managers' => collect($building['propertyManagerList'] ?? [])
+            'amenities' => collect(is_array($building['amenities'] ?? null) ? $building['amenities'] : [])->pluck('name')->filter()->values()->all(),
+            'managers' => collect(is_array($building['propertyManagerList'] ?? null) ? $building['propertyManagerList'] : [])
                 ->filter(fn (mixed $manager): bool => is_array($manager) && filled($manager['name'] ?? null))
                 ->map(fn (array $manager): array => ['name' => $manager['name'], 'email' => $manager['email'] ?? null])
                 ->values()

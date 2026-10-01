@@ -4,9 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * How much of a lease's ledger we already hold, and when we last looked.
+ *
+ * @property string $lease_id
+ * @property Carbon $synced_from
+ * @property Carbon $synced_to
+ * @property Carbon $synced_at
  */
 #[Fillable(['lease_id', 'synced_from', 'synced_to', 'synced_at'])]
 class LeaseLedgerSync extends Model

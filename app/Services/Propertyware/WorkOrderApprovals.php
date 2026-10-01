@@ -127,7 +127,7 @@ class WorkOrderApprovals
             ...$row,
             'awaitingApproval' => ! ($row['approved'] ?? false)
                 && in_array($row['status'] ?? null, ['open', 'scheduled'], true)
-                && ($latest->get((string) $row['id'])?->decision ?? 'declined') === 'declined',
+                && ($latest->get((string) $row['id'])->decision ?? 'declined') === 'declined',
         ], $rows);
     }
 

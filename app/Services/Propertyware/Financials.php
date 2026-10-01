@@ -62,7 +62,7 @@ class Financials
     /**
      * The owner's expenses for the period, by portfolio and as a list of bills.
      *
-     * @param  array{portfolios?: array<int, int|string>|null, portfolio?: int|string|null, from?: ?string, to?: ?string}  $filters
+     * @param  array{portfolios?: array<int, int|string>|null, portfolio?: int|string|null, properties?: array<int, int|string>|null, status?: ?string, range?: ?string, from?: ?string, to?: ?string}  $filters
      * @return array{importing: bool, portfolios: array<int, array<string, mixed>>, bills: array<int, array<string, mixed>>, results: array<string, mixed>, totals: array<string, float|int>, from: string, to: string}|null
      *
      * @throws PropertywareException
@@ -648,7 +648,7 @@ class Financials
         $cacheKey = 'propertyware:vendors:'.md5($ids->sort()->implode(','));
 
         return Cache::remember($cacheKey, (int) config('services.propertyware.cache_seconds'), fn (): array => collect($this->propertyware->getMany($ids->map(fn ($id): string => "vendors/{$id}")->all()))
-            ->filter(fn ($vendor): bool => is_array($vendor) && filled($vendor['id'] ?? null))
+            ->filter(fn (array $vendor): bool => filled($vendor['id'] ?? null))
             ->mapWithKeys(fn (array $vendor): array => [(int) $vendor['id'] => (string) ($vendor['name'] ?? 'Vendor')])
             ->all());
     }

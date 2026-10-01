@@ -81,7 +81,7 @@ class MaintenanceController extends Controller
     public function store(CreateWorkOrderRequest $request, ClientAccount $account, PropertywareDirectory $directory, MaintenanceSummary $maintenance, DocumentLibrary $documents): JsonResponse
     {
         $scope = $directory->scopeFor($account);
-        $created = $maintenance->create($scope, $request->validated());
+        $created = $maintenance->create($scope, $request->workOrder());
         $failedPhotos = $this->attachPhotos($scope, $documents, (int) $created['id'], $request->file('photos', []));
 
         return response()->json([

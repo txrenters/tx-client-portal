@@ -128,13 +128,13 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureEmails(): void
     {
-        VerifyEmail::createUrlUsing(fn (object $notifiable): string => URL::temporarySignedRoute(
+        VerifyEmail::createUrlUsing(fn (User $notifiable): string => URL::temporarySignedRoute(
             'verification.confirm',
             now()->addMinutes(config('auth.verification.expire', 60)),
             ['id' => $notifiable->getKey(), 'hash' => sha1($notifiable->getEmailForVerification())],
         ));
 
-        VerifyEmail::toMailUsing(fn (object $notifiable, string $url): MailMessage => (new MailMessage)
+        VerifyEmail::toMailUsing(fn (User $notifiable, string $url): MailMessage => (new MailMessage)
             ->subject(__('Confirm your email for the :app client portal', ['app' => config('app.name')]))
             ->greeting(__('Hi :name,', ['name' => $notifiable->name]))
             ->line(__('Thanks for signing up. Confirm this is your email address so we can connect your account to your property records.'))

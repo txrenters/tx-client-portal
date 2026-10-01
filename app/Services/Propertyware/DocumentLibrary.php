@@ -63,7 +63,7 @@ class DocumentLibrary
         $cached = Cache::get($this->cacheKey($scope));
 
         if (is_array($cached)) {
-            if (now()->timestamp - (int) ($cached['fetchedAt'] ?? 0) > $this->cacheSeconds) {
+            if (now()->getTimestamp() - (int) ($cached['fetchedAt'] ?? 0) > $this->cacheSeconds) {
                 $this->importInBackground($scope);
             }
 
@@ -597,8 +597,8 @@ class DocumentLibrary
     {
         return match ($document->entityType) {
             'BUILDING' => $document->entityId,
-            'UNIT' => $locations['units'][$document->entityId ?? 0] ?? null,
-            'LEASE' => $locations['leases'][$document->entityId ?? 0] ?? null,
+            'UNIT' => ($locations['units'] ?? [])[$document->entityId ?? 0] ?? null,
+            'LEASE' => ($locations['leases'] ?? [])[$document->entityId ?? 0] ?? null,
             default => $this->workOrderFor($document, $workOrders)?->buildingId,
         };
     }

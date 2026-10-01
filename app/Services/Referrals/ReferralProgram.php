@@ -72,7 +72,7 @@ class ReferralProgram
     /**
      * The referrals sent from this account, newest first.
      *
-     * @return LengthAwarePaginator<int, array<string, mixed>>
+     * @return LengthAwarePaginator<int, array{id: int, name: string, propertyAddress: string, status: string, statusLabel: string, sentAt: string}>
      */
     public function forAccount(ClientAccount $account, int $page = 1): LengthAwarePaginator
     {
@@ -104,7 +104,7 @@ class ReferralProgram
     /**
      * Every referral, for staff, optionally narrowed to one status or a search.
      *
-     * @return LengthAwarePaginator<int, array<string, mixed>>
+     * @return LengthAwarePaginator<int, array{id: int, name: string, propertyAddress: string, status: string, statusLabel: string, sentAt: string, firstName: string, lastName: string, email: string, phone: string, propertyDetails: ?string, source: string, referrerName: string, referrerRole: string, statusChangedAt: ?string, leadSentAt: ?string, leadError: ?string}>
      */
     public function forStaff(?ReferralStatus $status = null, ?string $search = null): LengthAwarePaginator
     {

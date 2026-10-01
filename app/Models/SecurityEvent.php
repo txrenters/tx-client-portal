@@ -32,7 +32,7 @@ class SecurityEvent extends Model
     public const KEEP_DAYS = 180;
 
     /**
-     * @return Builder<self>
+     * @return Builder<static>
      */
     public function prunable(): Builder
     {

@@ -249,6 +249,6 @@ class ConversationLibrary
             ->filter()
             ->map(fn (string $login): string => strtolower($login));
 
-        return $managers->merge(config('services.propertyware.staff_logins', []))->unique()->values()->all();
+        return $managers->merge(config()->array('services.propertyware.staff_logins', []))->unique()->values()->all();
     }
 }

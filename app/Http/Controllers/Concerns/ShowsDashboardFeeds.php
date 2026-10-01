@@ -162,7 +162,7 @@ trait ShowsDashboardFeeds
             return null;
         }
 
-        $entries = collect($summary['recent'] ?? [])
+        $entries = collect($summary['recent'])
             ->map(fn (array $workOrder): array => [
                 'type' => 'maintenance',
                 'id' => (string) $workOrder['id'],

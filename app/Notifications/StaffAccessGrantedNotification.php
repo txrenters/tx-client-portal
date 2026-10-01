@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Enums\StaffRole;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -26,7 +27,7 @@ class StaffAccessGrantedNotification extends Notification
         return ['mail'];
     }
 
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(User $notifiable): MailMessage
     {
         $message = (new MailMessage)
             ->subject(__('You have staff access to the TexasRenters.com portal'))

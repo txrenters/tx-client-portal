@@ -32,6 +32,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property Carbon|null $last_seen_at When they last used the portal or the apps; see TrackLastSeen.
  * @property StaffRole|null $staff_role Staff access granted in the admin area; see isOwner() for the config owners.
  * @property Carbon|null $suspended_at Set by staff to shut the login out; see isSuspended().
+ * @property array<string, bool>|null $notification_preferences What the client turned on or off; see notificationPreferences().
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -115,10 +116,10 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      */
     public function clientRoles(): Collection
     {
-        $roles = $this->clientAccounts->pluck('role');
-
-        return collect(ClientRole::cases())
-            ->filter(fn (ClientRole $role): bool => $roles->contains($role))
+        return $this->clientAccounts
+            ->map(fn (ClientAccount $account): ClientRole => $account->role)
+            ->unique()
+            ->sortBy(fn (ClientRole $role): int|false => array_search($role, ClientRole::cases(), true))
             ->values();
     }
 

@@ -35,7 +35,7 @@ trait ShowsReferrals
         $account = $this->activeClientAccount($request, $role);
         abort_if($account === null, 403);
 
-        $program->submit($request->user(), $account, $request->validated());
+        $program->submit($request->user(), $account, $request->details());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Thank you! We will reach out to them soon.')]);
 

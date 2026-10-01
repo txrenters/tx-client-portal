@@ -74,7 +74,7 @@ class WorkOrder
             maintenanceNotice: $record['maintenanceNotice'] ?? null,
             approved: (bool) ($record['approved'] ?? false),
             hourEstimate: isset($record['hourEstimate']) ? (float) $record['hourEstimate'] : null,
-            vendors: collect($record['assignedVendors'] ?? [])
+            vendors: collect(is_array($record['assignedVendors'] ?? null) ? $record['assignedVendors'] : [])
                 ->filter(fn ($vendor): bool => is_array($vendor))
                 ->map(fn (array $vendor): array => [
                     'name' => $vendor['companyName'] ?? $vendor['name'] ?? null,
@@ -214,7 +214,7 @@ class WorkOrder
             ['label' => 'Last updated', 'date' => $this->updatedAt],
         ])
             ->filter(fn (array $event): bool => $event['date'] !== null)
-            ->sortBy(fn (array $event): int => $event['date']->timestamp)
+            ->sortBy(fn (array $event): int => $event['date']->getTimestamp())
             ->map(fn (array $event): array => [
                 'label' => $event['label'],
                 'at' => $event['date']->toIso8601String(),

@@ -265,8 +265,10 @@ class PropertywareClient
     /**
      * Fetch several single resources at the same time.
      *
-     * @param  array<int|string, string>  $paths
-     * @return array<int|string, array<string, mixed>>
+     * @template TKey of array-key
+     *
+     * @param  array<TKey, string>  $paths
+     * @return array<TKey, array<string, mixed>>
      *
      * @throws PropertywareException
      */
@@ -302,7 +304,8 @@ class PropertywareClient
                 throw new PropertywareException("Propertyware returned {$response->status()} for [{$path}].");
             }
 
-            $records[$key] = $response->json() ?? [];
+            $record = $response->json();
+            $records[$key] = is_array($record) ? $record : [];
         }
 
         return $records;

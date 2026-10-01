@@ -32,6 +32,28 @@ class CreateWorkOrderRequest extends FormRequest
     }
 
     /**
+     * Get the work order the client asked for, as MaintenanceSummary::create() takes it.
+     *
+     * @return array{property_id: ?int, category: string, description: string, location: ?string, urgency: string, entry: ?string, entry_date: ?string, entry_time: ?string, access_notes: ?string}
+     */
+    public function workOrder(): array
+    {
+        $propertyId = $this->validated('property_id');
+
+        return [
+            'property_id' => $propertyId === null ? null : (int) $propertyId,
+            'category' => $this->validated('category'),
+            'description' => $this->validated('description'),
+            'location' => $this->validated('location'),
+            'urgency' => $this->validated('urgency'),
+            'entry' => $this->validated('entry'),
+            'entry_date' => $this->validated('entry_date'),
+            'entry_time' => $this->validated('entry_time'),
+            'access_notes' => $this->validated('access_notes'),
+        ];
+    }
+
+    /**
      * Get custom messages for validator errors.
      *
      * @return array<string, string>

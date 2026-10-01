@@ -9,6 +9,7 @@ use App\Models\Referral;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
+use InvalidArgumentException;
 
 /**
  * Which promotion, if any, pops up for a client today, and what they did
@@ -85,6 +86,7 @@ class PromotionBoard
             ]),
             'click' => $view->fill(['clicked_at' => $view->clicked_at ?? now()]),
             'hide' => $view->fill(['hidden_at' => $view->hidden_at ?? now()]),
+            default => throw new InvalidArgumentException("Unknown promotion action [{$action}]."),
         };
 
         $view->save();
@@ -93,7 +95,7 @@ class PromotionBoard
     /**
      * Every promotion with how it has done, newest first, for staff.
      *
-     * @return Collection<int, array<string, mixed>>
+     * @return Collection<int, array{id: int, title: string, body: string, buttonLabel: string, theme: string, icon: string, link: array{type: string, url?: string}, buttonLink: string, audience: string, startsAt: ?string, endsAt: ?string, isActive: bool, priority: int, stopAfterReferral: bool, stats: array{shown: int, clicked: int, hidden: int}}>
      */
     public function forStaff(): Collection
     {
@@ -124,7 +126,7 @@ class PromotionBoard
     }
 
     /**
-     * @return array{id: int, title: string, body: string, buttonLabel: string, link: array{type: string, url?: string}}
+     * @return array{id: int, title: string, body: string, buttonLabel: string, theme: string, icon: string, link: array{type: string, url?: string}}
      */
     public function present(Promotion $promotion): array
     {

@@ -112,7 +112,7 @@ class PortalInsights
     /**
      * The sign-in log, newest first: everyone, only failures, or one address.
      *
-     * @return LengthAwarePaginator<int, array<string, mixed>>
+     * @return LengthAwarePaginator<int, array{id: int, event: string, email: ?string, user: array{id: int, name: string}|null, channel: string, method: ?string, ipAddress: ?string, device: ?string, at: string}>
      */
     public function signInLog(string $filter = 'all', ?string $email = null): LengthAwarePaginator
     {

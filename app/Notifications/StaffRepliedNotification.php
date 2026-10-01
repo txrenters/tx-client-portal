@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Enums\ClientRole;
+use App\Models\User;
 use App\Services\Push\PushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -44,7 +45,7 @@ class StaffRepliedNotification extends Notification implements ShouldQueue
         return $this->channels;
     }
 
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(User $notifiable): MailMessage
     {
         return (new MailMessage)
             ->subject(__('New reply: :subject', ['subject' => Str::limit($this->subject, 60)]))

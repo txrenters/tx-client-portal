@@ -26,7 +26,7 @@ class StaffDirectory
      */
     public function all(): array
     {
-        $owners = collect(config('services.admin_emails', []))
+        $owners = collect(config()->array('services.admin_emails'))
             ->map(function (string $email): array {
                 $user = User::query()->whereRaw('lower(email) = ?', [$email])->first();
 
@@ -140,7 +140,7 @@ class StaffDirectory
     {
         return [
             'id' => $user?->id,
-            'name' => $user?->name ?? $email,
+            'name' => $user->name ?? $email,
             'email' => $email,
             'role' => $role,
             // Owners come from config; an owner with no login yet has no id.

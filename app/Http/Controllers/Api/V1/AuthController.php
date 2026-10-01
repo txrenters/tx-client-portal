@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Fortify\CreateNewUser;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\LoginRequest;
 use App\Http\Requests\Api\V1\RegisterRequest;
@@ -16,7 +17,6 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
-use Laravel\Fortify\Contracts\CreatesNewUsers;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Laravel\Fortify\Fortify;
@@ -26,7 +26,7 @@ class AuthController extends Controller
     /**
      * Create a login and send the email verification link.
      */
-    public function register(RegisterRequest $request, CreatesNewUsers $creator): JsonResponse
+    public function register(RegisterRequest $request, CreateNewUser $creator): JsonResponse
     {
         $user = $creator->create($request->only('name', 'email', 'password', 'password_confirmation'));
 

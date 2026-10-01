@@ -85,7 +85,9 @@ class ListingPhotos
             return [];
         }
 
-        return collect($response->json('listing.photos') ?? [])
+        $photos = $response->json('listing.photos');
+
+        return collect(is_array($photos) ? $photos : [])
             ->filter(fn (mixed $photo): bool => is_array($photo) && filled($photo['url'] ?? null))
             ->sortBy(fn (array $photo): int => (int) ($photo['order'] ?? PHP_INT_MAX))
             ->map(fn (array $photo): array => ['url' => (string) $photo['url'], 'description' => $photo['description'] ?? null])

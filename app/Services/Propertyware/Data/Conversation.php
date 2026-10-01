@@ -27,7 +27,7 @@ class Conversation
      */
     public static function fromArray(array $record): self
     {
-        $comments = collect($record['comments'] ?? [])
+        $comments = collect(is_array($record['comments'] ?? null) ? $record['comments'] : [])
             ->filter(fn (mixed $comment): bool => is_array($comment) && filled($comment['text'] ?? null))
             ->map(fn (array $comment): array => [
                 'id' => (string) ($comment['id'] ?? ''),

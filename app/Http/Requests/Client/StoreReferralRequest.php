@@ -27,6 +27,23 @@ class StoreReferralRequest extends FormRequest
     }
 
     /**
+     * Get the referred owner's details, as ReferralProgram::submit() takes them.
+     *
+     * @return array{first_name: string, last_name: string, email: string, phone: string, property_address: string, property_details: ?string}
+     */
+    public function details(): array
+    {
+        return [
+            'first_name' => $this->validated('first_name'),
+            'last_name' => $this->validated('last_name'),
+            'email' => $this->validated('email'),
+            'phone' => $this->validated('phone'),
+            'property_address' => $this->validated('property_address'),
+            'property_details' => $this->validated('property_details'),
+        ];
+    }
+
+    /**
      * @return array<string, string>
      */
     public function messages(): array

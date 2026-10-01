@@ -37,7 +37,7 @@ class RecordSignInEvents
 
     public function handleTwoFactorFailed(TwoFactorAuthenticationFailed $event): void
     {
-        $this->log->record(request(), 'failed_two_factor', $event->user instanceof User ? $event->user : null, null, 'web', 'two_factor');
+        $this->log->record(request(), 'failed_two_factor', $event->user, null, 'web', 'two_factor');
     }
 
     /**

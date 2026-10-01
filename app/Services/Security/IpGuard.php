@@ -102,7 +102,7 @@ class IpGuard
         $event = SecurityEvent::create([
             'type' => $type,
             'ip_address' => $request->ip(),
-            'user_id' => $user?->id ?? $request->user()?->id,
+            'user_id' => $user->id ?? $request->user()?->id,
             'path' => Str::limit('/'.ltrim($request->path(), '/'), 500, ''),
             'user_agent' => $request->userAgent() === null ? null : Str::limit($request->userAgent(), 500, ''),
             'details' => $details === [] ? null : $details,
@@ -303,7 +303,7 @@ class IpGuard
      */
     private function alert(string $subject, string $message): void
     {
-        $emails = collect(config('services.admin_emails', []))
+        $emails = collect(config()->array('services.admin_emails'))
             ->merge(User::query()->where('staff_role', 'admin')->whereNull('suspended_at')->pluck('email'))
             ->map(fn (string $email): string => mb_strtolower($email))
             ->unique()

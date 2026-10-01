@@ -53,7 +53,7 @@ class MeetingCatalog
      */
     public function setAllowed(array $slugs): void
     {
-        Setting::put(self::SETTING, json_encode(array_values(array_unique($slugs))));
+        Setting::put(self::SETTING, json_encode(array_values(array_unique($slugs)), JSON_THROW_ON_ERROR));
     }
 
     /**

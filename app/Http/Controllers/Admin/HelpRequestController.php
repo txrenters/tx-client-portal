@@ -38,7 +38,7 @@ class HelpRequestController extends Controller
         $search = trim((string) ($validated['search'] ?? ''));
 
         return Inertia::render('admin/HelpRequests', [
-            'status' => $status?->value ?? 'all',
+            'status' => $status->value ?? 'all',
             'search' => $search,
             'openCount' => $desk->openCount(),
             'requests' => $desk->forStaff($status, $search === '' ? null : $search),

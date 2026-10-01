@@ -27,7 +27,7 @@ class PortalVisit extends Model
     public const KEEP_DAYS = 400;
 
     /**
-     * @return Builder<self>
+     * @return Builder<static>
      */
     public function prunable(): Builder
     {

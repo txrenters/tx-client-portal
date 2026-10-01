@@ -29,11 +29,7 @@ class EnsureUserIsNotSuspended
         }
 
         if ($request->is('api/*') || $request->expectsJson()) {
-            $token = $user->currentAccessToken();
-
-            if ($token instanceof PersonalAccessToken) {
-                $token->delete();
-            }
+            $this->revokeBearerToken($request, $user);
 
             return response()->json(['message' => __('This account has been suspended. Contact TexasRenters.com for help.')], 403);
         }
@@ -54,5 +50,21 @@ class EnsureUserIsNotSuspended
         $request->session()->regenerateToken();
 
         return redirect()->route('login')->with('status', __('This account has been suspended. Contact TexasRenters.com for help.'));
+    }
+
+    /**
+     * Revoke the app token the request came in with, so it stops working for good.
+     *
+     * Read from the request rather than currentAccessToken(): a browser
+     * session carries no token there, or only Sanctum's transient one.
+     */
+    private function revokeBearerToken(Request $request, User $user): void
+    {
+        $bearer = $request->bearerToken();
+        $token = $bearer === null ? null : PersonalAccessToken::findToken($bearer);
+
+        if ($token !== null) {
+            $user->tokens()->whereKey($token->getKey())->delete();
+        }
     }
 }
