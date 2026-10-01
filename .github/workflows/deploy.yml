@@ -1,0 +1,64 @@
+name: deploy
+
+# Deploys main to production (app.texasrenters.com) once the tests workflow
+# has passed for it, using the same zero-downtime script as a deploy from a
+# workstation (deploy/bin/push.sh): rsync to the VPS, build beside the running
+# containers, migrate, and swap only once the new ones are healthy.
+#
+# Off until the repository variable AUTO_DEPLOY is set to "true" (Settings ›
+# Secrets and variables › Actions › Variables). Needs two secrets:
+#   DEPLOY_SSH_KEY      a private key authorised for root on the VPS, used only by this workflow
+#   DEPLOY_KNOWN_HOSTS  the VPS's host keys (ssh-keyscan 45.90.109.176)
+# Can also be run by hand from the Actions tab.
+
+on:
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time; a newer one waits rather than cutting in.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Only a push to main whose tests passed, or a manual run.
+    if: >-
+      vars.AUTO_DEPLOY == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://app.texasrenters.com
+
+    steps:
+      - name: Checkout the tested commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up SSH to the VPS
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          VPS: root@45.90.109.176
+        run: deploy/bin/push.sh
+
+      - name: Check the site answers
+        run: curl --fail --silent --show-error --retry 5 --retry-delay 3 https://app.texasrenters.com/up > /dev/null
