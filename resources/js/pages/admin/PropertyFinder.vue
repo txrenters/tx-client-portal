@@ -152,7 +152,7 @@ function inviteLink(person: AdminPropertyPerson) {
                             :key="group.label"
                         >
                             <p
-                                class="text-muted-foreground mb-2 text-xs font-medium tracking-wider uppercase"
+                                class="text-muted-foreground mb-2 text-sm font-medium"
                             >
                                 {{ group.label }}
                             </p>

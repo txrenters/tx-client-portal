@@ -26,10 +26,9 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
 
 <template>
     <SidebarGroup v-if="items.length > 0" class="px-2 py-0">
-        <SidebarGroupLabel
-            class="text-muted-foreground/80 text-[11px] font-semibold tracking-wider uppercase"
-            >{{ label }}</SidebarGroupLabel
-        >
+        <SidebarGroupLabel class="text-muted-foreground text-xs font-medium">{{
+            label
+        }}</SidebarGroupLabel>
         <SidebarMenu>
             <SidebarMenuItem v-for="item in items" :key="item.title">
                 <SidebarMenuButton

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { describePasswordRules } from '@/lib/passwordRules';
 import { login } from '@/routes';
 import { store } from '@/routes/invitations';
 
@@ -99,12 +100,13 @@ defineProps<{
                         required
                         autocomplete="new-password"
                         placeholder="Create a password"
+                        :passwordrules="passwordRules"
                     />
                     <p
                         v-if="passwordRules"
                         class="text-muted-foreground text-xs"
                     >
-                        {{ passwordRules }}
+                        {{ describePasswordRules(passwordRules) }}
                     </p>
                     <InputError :message="errors.password" />
                 </div>
@@ -117,6 +119,7 @@ defineProps<{
                         required
                         autocomplete="new-password"
                         placeholder="Confirm your password"
+                        :passwordrules="passwordRules"
                     />
                     <InputError :message="errors.password_confirmation" />
                 </div>

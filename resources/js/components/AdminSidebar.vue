@@ -19,9 +19,9 @@ import {
     Users,
 } from '@lucide/vue';
 import { computed } from 'vue';
-import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
+import SidebarBrand from '@/components/SidebarBrand.vue';
 import {
     Sidebar,
     SidebarContent,
@@ -90,24 +90,7 @@ const systemItems = computed<NavItem[]>(() => [
 <template>
     <Sidebar collapsible="icon" variant="sidebar">
         <SidebarHeader>
-            <SidebarMenu>
-                <SidebarMenuItem>
-                    <SidebarMenuButton
-                        size="lg"
-                        class="h-auto justify-center p-0 hover:bg-transparent active:bg-transparent"
-                        as-child
-                    >
-                        <Link :href="dashboard()" class="justify-center p-0">
-                            <AppLogo />
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarMenu>
-            <p
-                class="text-muted-foreground px-2 text-xs font-medium tracking-wider uppercase group-data-[collapsible=icon]:hidden"
-            >
-                Staff
-            </p>
+            <SidebarBrand :href="dashboard()" label="Staff" />
         </SidebarHeader>
 
         <SidebarContent>

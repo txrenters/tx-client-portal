@@ -299,9 +299,7 @@ const lists = [
             </TabsList>
 
             <TabsContent value="activity" class="flex flex-col gap-6">
-                <p
-                    class="text-muted-foreground -mb-2 text-xs font-medium tracking-wider uppercase"
-                >
+                <p class="text-muted-foreground -mb-2 text-sm font-medium">
                     Last {{ activityDays }} days
                 </p>
                 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -309,7 +307,7 @@ const lists = [
                         <div class="flex items-start justify-between gap-3">
                             <div class="space-y-1">
                                 <p
-                                    class="text-muted-foreground text-xs font-medium tracking-wider uppercase"
+                                    class="text-muted-foreground text-sm font-medium"
                                 >
                                     {{ tile.label }}
                                 </p>
@@ -541,7 +539,7 @@ const lists = [
                         <div class="flex items-start justify-between gap-3">
                             <div class="space-y-1">
                                 <p
-                                    class="text-muted-foreground text-xs font-medium tracking-wider uppercase"
+                                    class="text-muted-foreground text-sm font-medium"
                                 >
                                     {{ tile.label }}
                                 </p>

@@ -54,9 +54,7 @@ const presentation = {
             <div class="min-w-0 flex-1">
                 <p class="flex flex-wrap items-center gap-2 font-medium">
                     {{ integration.name }}
-                    <span
-                        class="text-muted-foreground text-xs font-normal tracking-wider uppercase"
-                    >
+                    <span class="text-muted-foreground text-xs font-normal">
                         {{ presentation[integration.status].label }}
                     </span>
                 </p>

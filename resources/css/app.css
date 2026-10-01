@@ -209,6 +209,10 @@
     input[type='reset']:not(:disabled) {
         cursor: pointer;
     }
+    /* Page titles share the landing page's Lexend headings. */
+    h1 {
+        font-family: var(--font-heading);
+    }
     body {
         @apply bg-background text-foreground;
         @apply font-sans;

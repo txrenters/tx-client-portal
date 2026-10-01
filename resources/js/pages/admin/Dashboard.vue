@@ -112,9 +112,7 @@ const tiles = [
             <AppCard v-for="tile in tiles" :key="tile.label">
                 <div class="flex items-start justify-between gap-3">
                     <div class="space-y-1">
-                        <p
-                            class="text-muted-foreground text-xs font-medium tracking-wider uppercase"
-                        >
+                        <p class="text-muted-foreground text-sm font-medium">
                             {{ tile.label }}
                         </p>
                         <p class="text-3xl font-semibold tabular-nums">

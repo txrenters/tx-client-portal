@@ -65,7 +65,7 @@ defineProps<{
             >
                 <div
                     v-if="metric.caption"
-                    class="text-muted-foreground text-xs tracking-wide wrap-anywhere uppercase"
+                    class="text-muted-foreground text-xs wrap-anywhere"
                 >
                     {{ metric.caption }}
                 </div>

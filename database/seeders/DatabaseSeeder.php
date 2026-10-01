@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\ClientRole;
+use App\Enums\StaffRole;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -12,13 +13,19 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * Seed the application's database with a client of each portal type for local development.
+     * Seed the application's database with a client of each portal type, and a
+     * staff admin for the admin area, for local development.
      */
     public function run(): void
     {
         $this->createClient('resident@example.com', 'Taylor Tenant', [ClientRole::Resident]);
         $this->createClient('owner@example.com', 'Olivia Owner', [ClientRole::Owner]);
         $this->createClient('both@example.com', 'Blake Both', [ClientRole::Resident, ClientRole::Owner]);
+
+        User::firstOrCreate(
+            ['email' => 'staff@example.com'],
+            ['name' => 'Sam Staff', 'password' => 'password'],
+        )->forceFill(['email_verified_at' => now(), 'staff_role' => StaffRole::Admin])->save();
     }
 
     /**
