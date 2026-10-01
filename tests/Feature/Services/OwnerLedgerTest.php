@@ -268,6 +268,7 @@ test('charts the biggest five accounts and adds the rest together', function () 
                 ]))
                 ->all(),
         ),
+        '*/portfolios/*' => Http::response(['id' => 7, 'createdDateTime' => '2026-08-01T00:00:00Z']),
     ]);
 
     $accounts = app(OwnerLedger::class)->forPortfolio($this->scope, 7, '2026-09-01', '2026-09-30')['expenseAccounts'];

@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
@@ -18,6 +19,10 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
+    // No test may reach a real service. A request no Http::fake() matches
+    // otherwise goes out for real, which once sent a test to the live
+    // Propertyware API with a developer's credentials from .env.
+    ->beforeEach(fn () => Http::preventStrayRequests())
     ->in('Feature');
 
 /*

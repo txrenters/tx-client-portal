@@ -12,6 +12,8 @@ beforeEach(function () {
         '*/contacts/*' => Http::response(['id' => '500', 'type' => 'OWNER', 'attachedLeases' => [], 'attachedPortfolios' => [['id' => 2, 'name' => 'Portfolio']]]),
         '*/buildings*' => Http::response([['id' => 7, 'portfolioID' => 2, 'address' => ['address' => '12 Elm St']]]),
         '*/units*' => Http::response([]),
+        // The import also reads the account's work orders for their documents.
+        '*/workorders*' => Http::response([]),
         '*/docs*' => Http::response([
             ['id' => 60, 'fileName' => 'August statement.pdf', 'fileType' => 'application/pdf', 'entityType' => 'BUILDING', 'entityId' => 7, 'publishToOwnerPortal' => true, 'createdDateTime' => '2026-08-15T10:00:00.000Z'],
             ['id' => 61, 'fileName' => 'Roof photo.jpg', 'fileType' => 'image/jpeg', 'entityType' => 'BUILDING', 'entityId' => 7, 'publishToOwnerPortal' => true, 'createdDateTime' => '2026-09-05T10:00:00.000Z'],
