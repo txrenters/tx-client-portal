@@ -1,0 +1,42 @@
+# BuildKit reads <Dockerfile>.dockerignore beside the Dockerfile, so the
+# context (the repository root) needs no .dockerignore of its own.
+.git
+.github
+.claude
+.agents
+.codex
+.idea
+.vscode
+node_modules
+vendor
+public/build
+public/hot
+public/storage
+bootstrap/ssr
+resources/js/actions
+resources/js/routes
+resources/js/wayfinder
+storage/app/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+storage/pail
+storage/inertia-devtools
+bootstrap/cache/*.php
+graphify-out
+tests
+.env
+.env.*
+!.env.example
+*.backup
+.phpunit.result.cache
+.phpunit.cache
+.DS_Store
+*.log
+*.sql
+database/database.sqlite
+xfJT89hFs#Ix
+# Only the files the Dockerfile copies are needed from deploy/.
+deploy/*
+!deploy/docker
