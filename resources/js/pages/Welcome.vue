@@ -16,6 +16,7 @@ import HouseBackdrop from '@/components/marketing/HouseBackdrop.vue';
 import PhoneFrame from '@/components/marketing/PhoneFrame.vue';
 import ThemeToggle from '@/components/marketing/ThemeToggle.vue';
 import { Button } from '@/components/ui/button';
+import { vReveal } from '@/lib/reveal';
 import { login, register } from '@/routes';
 
 const navLinks = [
@@ -157,11 +158,13 @@ const securityPoints = [
                 >
                     <div class="flex flex-col items-start gap-7 lg:py-16">
                         <h1
+                            v-reveal="0"
                             class="font-heading text-5xl leading-[1.02] font-semibold tracking-tight text-balance sm:text-7xl"
                         >
                             Your rental, handled.
                         </h1>
                         <p
+                            v-reveal="120"
                             class="text-scrim-foreground/80 max-w-lg text-lg text-pretty"
                         >
                             The client portal for TexasRenters.com residents and
@@ -170,7 +173,10 @@ const securityPoints = [
                             web or in the app.
                         </p>
 
-                        <div class="flex flex-wrap items-center gap-3">
+                        <div
+                            v-reveal="240"
+                            class="flex flex-wrap items-center gap-3"
+                        >
                             <Button
                                 as-child
                                 size="lg"
@@ -192,6 +198,7 @@ const securityPoints = [
                         </div>
 
                         <p
+                            v-reveal="360"
                             class="text-scrim-foreground/65 max-w-md text-sm text-pretty"
                         >
                             Sign up with the email on your lease or ownership
@@ -199,7 +206,7 @@ const securityPoints = [
                             the email.
                         </p>
 
-                        <AppStoreBadges />
+                        <AppStoreBadges v-reveal="460" />
                     </div>
 
                     <!-- One resident screen in front, one owner screen behind:
@@ -235,6 +242,7 @@ const securityPoints = [
                     class="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-28"
                 >
                     <div
+                        v-reveal
                         class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
                     >
                         <h2
@@ -252,6 +260,7 @@ const securityPoints = [
                         <li
                             v-for="(step, index) in steps"
                             :key="step.title"
+                            v-reveal="index * 140"
                             class="border-foreground flex flex-col gap-3 border-t-2 pt-6"
                         >
                             <span
@@ -277,7 +286,7 @@ const securityPoints = [
                 id="security"
                 class="mx-auto grid w-full max-w-6xl scroll-mt-16 gap-10 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[1fr_1.4fr] lg:gap-16"
             >
-                <div>
+                <div v-reveal.left>
                     <h2
                         class="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl"
                     >
@@ -291,7 +300,8 @@ const securityPoints = [
 
                 <ul class="grid gap-x-10 gap-y-8 sm:grid-cols-2">
                     <li
-                        v-for="point in securityPoints"
+                        v-for="(point, index) in securityPoints"
+                        v-reveal.zoom="index * 110"
                         :key="point.title"
                         class="flex flex-col gap-2"
                     >
@@ -316,7 +326,7 @@ const securityPoints = [
             <div
                 class="border-scrim-foreground/15 mx-auto flex w-full max-w-6xl flex-col gap-8 border-b px-4 py-20 sm:px-6 lg:flex-row lg:items-end lg:justify-between"
             >
-                <div class="max-w-xl">
+                <div v-reveal class="max-w-xl">
                     <h2
                         class="font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl"
                     >
@@ -328,7 +338,7 @@ const securityPoints = [
                         sort it out.
                     </p>
                 </div>
-                <div class="flex flex-wrap items-center gap-3">
+                <div v-reveal="150" class="flex flex-wrap items-center gap-3">
                     <Button
                         as-child
                         size="lg"

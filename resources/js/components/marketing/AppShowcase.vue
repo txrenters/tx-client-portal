@@ -4,6 +4,7 @@ import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
 import PhoneFrame from '@/components/marketing/PhoneFrame.vue';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { vReveal } from '@/lib/reveal';
 
 type Audience = 'residents' | 'owners';
 
@@ -208,6 +209,7 @@ const swallowClickAfterDrag = (event: MouseEvent): void => {
             class="mx-auto w-full max-w-6xl scroll-mt-24 px-4 pt-20 sm:px-6 sm:pt-28"
         >
             <div
+                v-reveal
                 class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
             >
                 <h2
@@ -222,6 +224,7 @@ const swallowClickAfterDrag = (event: MouseEvent): void => {
             </div>
 
             <div
+                v-reveal.zoom="120"
                 class="bg-muted ring-border relative mx-auto mt-10 aspect-[9/16] max-w-sm overflow-hidden rounded-3xl ring-1 md:aspect-video md:max-w-none"
             >
                 <video
@@ -276,7 +279,7 @@ const swallowClickAfterDrag = (event: MouseEvent): void => {
             <div
                 class="mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[1fr_1.1fr] lg:gap-16"
             >
-                <div class="flex flex-col items-start gap-6">
+                <div v-reveal.left class="flex flex-col items-start gap-6">
                     <h2
                         id="app-heading"
                         class="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl"
@@ -297,8 +300,9 @@ const swallowClickAfterDrag = (event: MouseEvent): void => {
 
                 <ul class="flex flex-col lg:pt-2">
                     <li
-                        v-for="point in tour.points"
+                        v-for="(point, index) in tour.points"
                         :key="point"
+                        v-reveal="index * 70"
                         class="border-border border-b py-3 text-pretty first:pt-0 last:border-b-0"
                     >
                         {{ point }}
@@ -359,8 +363,9 @@ const swallowClickAfterDrag = (event: MouseEvent): void => {
                 @click.capture="swallowClickAfterDrag"
             >
                 <li
-                    v-for="item in tour.screens"
+                    v-for="(item, index) in tour.screens"
                     :key="`${audience}-${item.screen}`"
+                    v-reveal="Math.min(index, 4) * 90"
                     class="flex w-[64vw] max-w-60 shrink-0 snap-start flex-col gap-4 sm:w-60"
                 >
                     <PhoneFrame :screen="item.screen" :alt="item.title" />
