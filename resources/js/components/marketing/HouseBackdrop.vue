@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
  * A faint line drawing of a Houston street — two-storey homes, a ranch, a
- * townhouse row and live oaks, under a sun by day and a moon by night (it
- * follows the light and dark theme) — for behind the landing page hero.
+ * townhouse row and live oaks — for behind the landing page hero. The sun and
+ * moon above it are SkyBackdrop.
  *
  * Drawn in currentColor so it follows the theme in light and dark mode, and
  * faded out towards the top so it reads as texture, never as a picture
@@ -29,23 +29,6 @@
                 'linear-gradient(to top, black 35%, transparent 100%)',
         }"
     >
-        <!-- Sun, in light mode -->
-        <g class="dark:hidden">
-            <circle cx="575" cy="112" r="22" />
-            <path
-                d="M575 76 V66 M575 148 V158 M539 112 H529 M611 112 H621 M550 87 L543 80 M600 87 L607 80 M550 137 L543 144 M600 137 L607 144"
-            />
-        </g>
-
-        <!-- Moon and a few stars, in dark mode -->
-        <g class="hidden dark:inline">
-            <path d="M590 92 A26 26 0 1 0 598 132 A20 20 0 1 1 590 92 Z" />
-            <path d="M650 84 V94 M645 89 H655" />
-            <path d="M505 70 V78 M501 74 H509" />
-            <path d="M688 128 V134 M685 131 H691" />
-            <path d="M470 110 V116 M467 113 H473" />
-        </g>
-
         <!-- Street -->
         <path d="M0 300 H1440" />
         <path d="M0 312 H1440" stroke-dasharray="18 22" />

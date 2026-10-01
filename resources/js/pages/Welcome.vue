@@ -21,9 +21,10 @@ import {
     Smartphone,
     Wrench,
 } from '@lucide/vue';
+import AppShowcase from '@/components/marketing/AppShowcase.vue';
 import AppStoreBadges from '@/components/marketing/AppStoreBadges.vue';
 import HouseBackdrop from '@/components/marketing/HouseBackdrop.vue';
-import PortalPreview from '@/components/marketing/PortalPreview.vue';
+import SkyBackdrop from '@/components/marketing/SkyBackdrop.vue';
 import ThemeToggle from '@/components/marketing/ThemeToggle.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -200,6 +201,11 @@ const securityPoints = [
             <HouseBackdrop
                 class="text-foreground absolute inset-x-0 top-[calc(100svh-16rem)] h-64 opacity-[0.07] sm:top-[calc(100svh-20rem)] sm:h-80 dark:opacity-[0.1]"
             />
+            <!-- A large sun (or moon) on the right, centred on the first
+                 screen. -->
+            <SkyBackdrop
+                class="text-foreground absolute top-[50svh] -right-24 size-60 -translate-y-1/2 opacity-[0.08] sm:-right-16 sm:size-[24rem] lg:right-[4%] lg:size-[28rem] dark:opacity-[0.12]"
+            />
         </div>
         <header class="sticky top-0 z-50 px-4 pt-4 sm:px-6">
             <div
@@ -363,10 +369,11 @@ const securityPoints = [
                             How it works
                         </a>
                     </p>
-
-                    <PortalPreview class="mt-6 w-full max-w-3xl text-left" />
                 </div>
             </section>
+
+            <!-- The mobile app, in its store screenshots -->
+            <AppShowcase />
 
             <!-- Features -->
             <section class="border-border/50 bg-card/20 border-y">
