@@ -13,6 +13,9 @@ Route::get('/', fn () => Auth::check()
     : Inertia::render('Welcome'),
 )->name('home');
 
+Route::inertia('privacy', 'Privacy')->name('privacy');
+Route::inertia('support', 'Support')->name('support');
+
 Route::get('invitations/{token}', [InvitationController::class, 'show'])->name('invitations.show');
 Route::post('invitations/{token}', [InvitationController::class, 'store'])
     ->middleware('throttle:6,1')

@@ -17,7 +17,7 @@ import PhoneFrame from '@/components/marketing/PhoneFrame.vue';
 import ThemeToggle from '@/components/marketing/ThemeToggle.vue';
 import { Button } from '@/components/ui/button';
 import { vReveal } from '@/lib/reveal';
-import { login, register } from '@/routes';
+import { login, privacy, register, support } from '@/routes';
 
 const navLinks = [
     { label: 'The app', href: '#tour' },
@@ -448,6 +448,18 @@ const securityPoints = [
                         <LineChart class="size-3.5" />
                         Free rental analysis
                     </a>
+                    <Link
+                        :href="support()"
+                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
+                    >
+                        Support
+                    </Link>
+                    <Link
+                        :href="privacy()"
+                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
+                    >
+                        Privacy policy
+                    </Link>
                 </div>
             </div>
 

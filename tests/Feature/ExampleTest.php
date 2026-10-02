@@ -14,3 +14,12 @@ test('sends a signed-in client to their dashboard', function () {
         ->get(route('home'))
         ->assertRedirect(route('dashboard'));
 });
+
+test('shows the privacy policy and support pages to visitors', function (string $route, string $component) {
+    $this->get(route($route))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page->component($component));
+})->with([
+    ['privacy', 'Privacy'],
+    ['support', 'Support'],
+]);
