@@ -61,6 +61,8 @@ export type AdminUser = {
     twoFactor: boolean;
     /** Set while staff have shut the login out. */
     suspendedAt: string | null;
+    /** Staff logins, which cannot be impersonated. */
+    isStaff: boolean;
     joinedAt: string | null;
     accounts: { id: number; role: string; propertywareId: string | null }[];
     appSessions: number;

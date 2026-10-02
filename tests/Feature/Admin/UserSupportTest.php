@@ -30,6 +30,16 @@ test('the user page shows their accounts, app sessions and what staff have done'
             ->where('history.0.actor', 'staff@texasrenters.com'));
 });
 
+test('the user list marks staff logins so they are not offered for impersonation', function () {
+    $this->actingAs($this->admin)->get(route('admin.users.index', ['search' => 'texasrenters']))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('users.data.0.email', 'staff@texasrenters.com')
+            ->where('users.data.0.isStaff', true));
+
+    $this->actingAs($this->admin)->get(route('admin.users.index', ['search' => 'dana']))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('users.data.0.isStaff', false));
+});
+
 test('the user list narrows to suspended or unconfirmed people', function () {
     User::factory()->unverified()->create(['email' => 'new@example.com']);
     $this->client->forceFill(['suspended_at' => now()])->save();

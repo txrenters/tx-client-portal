@@ -201,7 +201,7 @@ const joined = appDateFormatter({
                         <TableCell>
                             <div class="flex flex-wrap justify-end gap-2">
                                 <ConfirmAction
-                                    v-if="!user.suspendedAt"
+                                    v-if="!user.isStaff && !user.suspendedAt"
                                     :title="`Sign in as ${user.name}?`"
                                     description="You will see exactly what they see, and anything you do is recorded against them. Leave again from the banner as soon as you are done."
                                     confirm-label="Sign in as them"
