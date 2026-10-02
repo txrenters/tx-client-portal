@@ -18,20 +18,15 @@ import { request } from '@/routes/password';
         <h2>Contact us</h2>
         <ul>
             <li>
-                Email
-                <a href="mailto:info@texasrenters.com">info@texasrenters.com</a>
+                Text us at
+                <a href="sms:+12812488018">(281) 248-8018</a>
             </li>
-            <li>Call <a href="tel:+12814073818">(281) 407-3818</a></li>
             <li>
                 Already signed in? Use <strong>Help</strong> in the portal or
                 <strong>Message us</strong> in the app to reach your property
                 team directly.
             </li>
         </ul>
-        <p>
-            For an emergency at your home, such as a flood, gas leak or fire,
-            call 911 first, then call us.
-        </p>
 
         <h2>Common questions</h2>
 
@@ -44,8 +39,9 @@ import { request } from '@/routes/password';
 
         <p><strong>My confirmation email never arrived.</strong></p>
         <p>
-            Check your spam folder, then email us from the same address and we
-            will sort it out.
+            Check your spam folder, then text us at
+            <a href="sms:+12812488018">(281) 248-8018</a> with the email you
+            signed up with and we will sort it out.
         </p>
 
         <p><strong>I forgot my password.</strong></p>
@@ -58,15 +54,16 @@ import { request } from '@/routes/password';
         <p><strong>I signed in but don't see my property.</strong></p>
         <p>
             Your account matches our records by email address. If you signed up
-            with a different email, contact us and we will link it.
+            with a different email, text us and we will link it.
         </p>
 
         <p><strong>How do I delete my account?</strong></p>
         <p>
-            Go to your profile settings and choose Delete account, or email
-            <a href="mailto:info@texasrenters.com">info@texasrenters.com</a>.
-            See our <Link :href="privacy()">privacy policy</Link> for what is
-            kept after deletion.
+            In the app, go to Account, then Delete account. On the web, go to
+            your profile settings. You can also text us at
+            <a href="sms:+12812488018">(281) 248-8018</a>. See our
+            <Link :href="privacy()">privacy policy</Link> for what is kept after
+            deletion.
         </p>
     </PublicPageLayout>
 </template>

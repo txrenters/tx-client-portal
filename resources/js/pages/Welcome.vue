@@ -4,27 +4,18 @@ import {
     ArrowRight,
     FileText,
     Fingerprint,
-    Globe,
-    LineChart,
     Lock,
     Mail,
     ShieldCheck,
 } from '@lucide/vue';
 import AppShowcase from '@/components/marketing/AppShowcase.vue';
-import AppStoreBadges from '@/components/marketing/AppStoreBadges.vue';
 import HouseBackdrop from '@/components/marketing/HouseBackdrop.vue';
 import PhoneFrame from '@/components/marketing/PhoneFrame.vue';
-import ThemeToggle from '@/components/marketing/ThemeToggle.vue';
+import SiteFooter from '@/components/marketing/SiteFooter.vue';
+import SiteHeader from '@/components/marketing/SiteHeader.vue';
 import { Button } from '@/components/ui/button';
 import { vReveal } from '@/lib/reveal';
-import { login, privacy, register, support } from '@/routes';
-
-const navLinks = [
-    { label: 'The app', href: '#tour' },
-    { label: 'Residents and owners', href: '#app' },
-    { label: 'Getting started', href: '#how-it-works' },
-    { label: 'Security', href: '#security' },
-];
+import { login, register } from '@/routes';
 
 const steps = [
     {
@@ -83,65 +74,7 @@ const securityPoints = [
             />
         </Head>
 
-        <!-- Navy in both themes, like the app's own header, so the white
-             screens of the phones stand out. -->
-        <header
-            class="bg-scrim/95 text-scrim-foreground border-scrim-foreground/10 sticky top-0 z-50 border-b backdrop-blur"
-        >
-            <div
-                class="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6"
-            >
-                <a href="#top" class="flex items-center gap-3">
-                    <img
-                        src="/texas-renters-logo.png"
-                        alt="TexasRenters.com"
-                        class="h-7 w-auto object-contain brightness-0 invert sm:h-8"
-                        width="400"
-                        height="111"
-                    />
-                    <span
-                        class="border-scrim-foreground/25 text-scrim-foreground/75 hidden border-l pl-3 text-sm sm:inline"
-                    >
-                        Client portal
-                    </span>
-                </a>
-
-                <nav
-                    class="hidden items-center gap-1 lg:flex"
-                    aria-label="Sections"
-                >
-                    <a
-                        v-for="item in navLinks"
-                        :key="item.href"
-                        :href="item.href"
-                        class="text-scrim-foreground/75 hover:text-scrim-foreground hover:bg-scrim-foreground/10 rounded-md px-3 py-2 text-sm font-medium transition-colors"
-                    >
-                        {{ item.label }}
-                    </a>
-                </nav>
-
-                <div class="flex items-center gap-1">
-                    <ThemeToggle
-                        class="text-scrim-foreground hover:bg-scrim-foreground/10 hover:text-scrim-foreground"
-                    />
-                    <Button
-                        as-child
-                        size="sm"
-                        variant="ghost"
-                        class="text-scrim-foreground hover:bg-scrim-foreground/10 hover:text-scrim-foreground hidden sm:inline-flex"
-                    >
-                        <Link :href="login()">Sign in</Link>
-                    </Button>
-                    <Button
-                        as-child
-                        size="sm"
-                        class="bg-scrim-foreground text-scrim hover:bg-scrim-foreground/90"
-                    >
-                        <Link :href="register()">Create account</Link>
-                    </Button>
-                </div>
-            </div>
-        </header>
+        <SiteHeader />
 
         <main id="top" class="flex-1">
             <!-- Hero: the words on the left, the real app on the right, its
@@ -360,129 +293,7 @@ const securityPoints = [
                 </div>
             </div>
 
-            <div
-                class="mx-auto grid w-full max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4"
-            >
-                <div class="flex flex-col gap-3">
-                    <img
-                        src="/texas-renters-logo.png"
-                        alt="TexasRenters.com"
-                        class="h-8 w-auto self-start object-contain brightness-0 invert"
-                        width="400"
-                        height="111"
-                    />
-                    <p class="text-scrim-foreground/70 text-sm text-pretty">
-                        Houston property management for owners and residents.
-                        Serving Houston, Katy, Sugar Land, The Woodlands,
-                        Cypress, Pearland and surrounding areas.
-                    </p>
-                </div>
-
-                <div class="flex flex-col gap-2 text-sm">
-                    <p class="font-medium">Portal</p>
-                    <Link
-                        :href="register()"
-                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
-                    >
-                        Create account
-                    </Link>
-                    <Link
-                        :href="login()"
-                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
-                    >
-                        Sign in
-                    </Link>
-                    <a
-                        href="#how-it-works"
-                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
-                    >
-                        Getting started
-                    </a>
-                    <a
-                        href="#security"
-                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
-                    >
-                        Security
-                    </a>
-                </div>
-
-                <div class="flex flex-col gap-2 text-sm">
-                    <p class="font-medium">The app</p>
-                    <a
-                        href="#tour"
-                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
-                    >
-                        Watch the tour
-                    </a>
-                    <a
-                        href="#app"
-                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
-                    >
-                        For residents and owners
-                    </a>
-                    <AppStoreBadges class="pt-2" />
-                </div>
-
-                <div class="flex flex-col gap-2 text-sm">
-                    <p class="font-medium">Contact</p>
-                    <a
-                        href="mailto:leasing@texasrenters.com"
-                        class="text-scrim-foreground/70 hover:text-scrim-foreground flex items-center gap-2"
-                    >
-                        <Mail class="size-3.5" />
-                        leasing@texasrenters.com
-                    </a>
-                    <a
-                        href="https://www.texasrenters.com"
-                        class="text-scrim-foreground/70 hover:text-scrim-foreground flex items-center gap-2"
-                        rel="noopener"
-                    >
-                        <Globe class="size-3.5" />
-                        texasrenters.com
-                    </a>
-                    <a
-                        href="https://www.texasrenters.com/property-management-landlord-protection"
-                        class="text-scrim-foreground/70 hover:text-scrim-foreground flex items-center gap-2"
-                        rel="noopener"
-                    >
-                        <LineChart class="size-3.5" />
-                        Free rental analysis
-                    </a>
-                    <Link
-                        :href="support()"
-                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
-                    >
-                        Support
-                    </Link>
-                    <Link
-                        :href="privacy()"
-                        class="text-scrim-foreground/70 hover:text-scrim-foreground"
-                    >
-                        Privacy policy
-                    </Link>
-                </div>
-            </div>
-
-            <div class="border-scrim-foreground/15 border-t">
-                <div
-                    class="text-scrim-foreground/70 mx-auto flex w-full max-w-6xl flex-col gap-1 px-4 py-6 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6"
-                >
-                    <span
-                        >&copy;
-                        {{ new Date().getFullYear() }} TexasRenters.com</span
-                    >
-                    <span>
-                        Developed and maintained by
-                        <a
-                            href="https://corepathbpo.com"
-                            target="_blank"
-                            rel="noopener"
-                            class="hover:text-scrim-foreground font-medium underline-offset-4 hover:underline"
-                            >CorePathBPO.com</a
-                        >
-                    </span>
-                </div>
-            </div>
+            <SiteFooter />
         </footer>
     </div>
 </template>
