@@ -111,12 +111,12 @@ import PublicPageLayout from '@/layouts/PublicPageLayout.vue';
             </li>
             <li>Turn notifications on or off in your notification settings.</li>
             <li>
-                Delete your account at any time from your profile settings, or
-                by emailing
-                <a href="mailto:info@texasrenters.com">info@texasrenters.com</a
-                >. Deleting your account removes your sign-in, devices and
-                personal settings. Records we must keep by law, such as lease
-                and payment history, are retained by Texas Renters.
+                Delete your account at any time from Account in the app or your
+                profile settings on the web, or by texting us at
+                <a href="sms:+12812488018">(281) 248-8018</a>. Deleting your
+                account removes your sign-in, devices and personal settings.
+                Records we must keep by law, such as lease and payment history,
+                are retained by Texas Renters.
             </li>
         </ul>
 
@@ -145,8 +145,6 @@ import PublicPageLayout from '@/layouts/PublicPageLayout.vue';
         <p>
             Texas Renters<br />
             5225 Katy Fwy Ste 545, Houston, TX 77007<br />
-            <a href="mailto:info@texasrenters.com">info@texasrenters.com</a>
-            &middot;
             <a href="tel:+12814073818">(281) 407-3818</a>
         </p>
     </PublicPageLayout>
