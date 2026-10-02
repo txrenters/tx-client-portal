@@ -23,3 +23,9 @@ test('shows the privacy policy and support pages to visitors', function (string 
     ['privacy', 'Privacy'],
     ['support', 'Support'],
 ]);
+
+test('sends the old two-factor link from the app to the security page', function () {
+    $this->actingAs(User::factory()->resident()->create())
+        ->get('/settings/two-factor')
+        ->assertRedirect('/settings/security');
+});
