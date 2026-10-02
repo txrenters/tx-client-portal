@@ -114,7 +114,7 @@ const count = (): number => latest.value?.count ?? 0;
         <DropdownMenuTrigger as-child>
             <Button
                 variant="ghost"
-                size="icon"
+                size="icon-sm"
                 class="relative"
                 :aria-label="
                     count() > 0
@@ -122,7 +122,7 @@ const count = (): number => latest.value?.count ?? 0;
                         : 'Notifications'
                 "
             >
-                <Bell class="size-5" />
+                <Bell class="size-4" />
                 <span
                     v-if="count() > 0"
                     class="bg-primary text-primary-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-none font-semibold tabular-nums"
