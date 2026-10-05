@@ -1,15 +1,17 @@
 <?php
 
-// tests/Feature/Console/Commands/NotifyExpiringLeasesTest.php
-
 use App\Models\ClientAccount;
 use App\Models\LeaseExpiryNotice;
 use App\Models\User;
 use App\Notifications\LeaseExpiringNotification;
+use App\Services\Leases\ExpiringLease;
 use App\Services\Leases\LeaseExpiryRecipients;
+use App\Services\Propertyware\PropertywareException;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Client\Request;
+use Illuminate\Notifications\Events\NotificationSending;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -19,17 +21,10 @@ beforeEach(function () {
     config(['services.propertyware.discover_accounts' => false]);
     $this->leases = [];
     $this->buildingsFail = false;
-    $this->ownerContactFailures = 0;
     $this->tenantContact = ['id' => '900', 'type' => 'TENANT'];
 
     Http::fake(function (Request $request) {
         $url = $request->url();
-
-        if (str_contains($url, '/contacts/500') && $this->ownerContactFailures > 0) {
-            $this->ownerContactFailures--;
-
-            return Http::response([], 500);
-        }
 
         return match (true) {
             str_contains($url, '/leases') => Http::response($this->leases),
@@ -115,19 +110,73 @@ test('a lease whose recipients cannot be read is skipped for today while the oth
     Notification::fake();
     Log::spy();
     $this->leases = [activeLease(55, '2027-01-01'), activeLease(56, '2026-12-20')];
-    $this->ownerContactFailures = 3; // every attempt of the first lookup, retries included
+    $this->recipientsDown = true;
+    $owner = $this->owner->load('user');
+    $tenant = $this->tenant->load('user');
+
+    $this->mock(LeaseExpiryRecipients::class, function ($mock) use ($owner, $tenant) {
+        $mock->shouldReceive('owners')->andReturnUsing(fn (ExpiringLease $lease) => $this->recipientsDown && $lease->id === 55
+            ? throw new PropertywareException('Propertyware is unavailable.')
+            : collect([$owner]));
+        $mock->shouldReceive('tenants')->andReturn(collect([$tenant]));
+    });
 
     $this->artisan('leases:notify-expiring')->assertSuccessful();
 
-    Notification::assertSentToTimes($this->owner->user, LeaseExpiringNotification::class, 1);
-    Notification::assertSentToTimes($this->tenant->user, LeaseExpiringNotification::class, 1);
-    Notification::assertSentTo($this->tenant->user, fn (LeaseExpiringNotification $n) => $n->notice['lease_id'] === 56);
+    Notification::assertSentToTimes($owner->user, LeaseExpiringNotification::class, 1);
+    Notification::assertSentToTimes($tenant->user, LeaseExpiringNotification::class, 1);
+    Notification::assertSentTo($tenant->user, fn (LeaseExpiringNotification $n) => $n->notice['lease_id'] === 56);
     expect(LeaseExpiryNotice::pluck('propertyware_lease_id')->all())->toBe([56]);
     Log::shouldHaveReceived('warning')->once();
 
-    // Tomorrow the skipped lease is tried again.
+    // Tomorrow, with Propertyware back, the skipped lease is tried again.
+    $this->recipientsDown = false;
     $this->artisan('leases:notify-expiring')->assertSuccessful();
-    Notification::assertSentTo($this->tenant->user, fn (LeaseExpiringNotification $n) => $n->notice['lease_id'] === 55);
+    Notification::assertSentTo($tenant->user, fn (LeaseExpiringNotification $n) => $n->notice['lease_id'] === 55);
+});
+
+test('a notice that cannot be written sends nothing for that lease while the others go out', function () {
+    Notification::fake();
+    $this->leases = [activeLease(55, '2027-01-01'), activeLease(56, '2026-12-20')];
+    $owner = $this->owner->load('user');
+    $unwritable = ClientAccount::factory()->owner()->make(['id' => 999_999])->setRelation('user', User::factory()->create());
+    $unwritable->role = null;
+
+    $this->mock(LeaseExpiryRecipients::class, function ($mock) use ($owner, $unwritable) {
+        $mock->shouldReceive('owners')->andReturnUsing(fn (ExpiringLease $lease) => collect($lease->id === 55 ? [$owner, $unwritable] : [$owner]));
+        $mock->shouldReceive('tenants')->andReturn(collect());
+    });
+
+    $this->artisan('leases:notify-expiring')->assertSuccessful();
+
+    Notification::assertSentToTimes($owner->user, LeaseExpiringNotification::class, 1);
+    Notification::assertSentTo($owner->user, fn (LeaseExpiringNotification $n) => $n->notice['lease_id'] === 56);
+    expect(LeaseExpiryNotice::pluck('propertyware_lease_id')->all())->toBe([56]);
+});
+
+test('a send that fails part-way records who was told, so nobody is told twice', function () {
+    $this->leases = [activeLease(55, '2027-01-01'), activeLease(56, '2026-12-20')];
+    Event::listen(NotificationSending::class, function (NotificationSending $event) {
+        if ($event->notifiable->is($this->tenant->user) && $event->notification->notice['lease_id'] === 55) {
+            throw new RuntimeException('The notification could not be stored.');
+        }
+    });
+
+    $this->artisan('leases:notify-expiring')
+        ->expectsOutputToContain('1 failed part-way')
+        ->assertSuccessful();
+
+    expect($this->owner->user->notifications()->count())->toBe(2)
+        ->and($this->tenant->user->notifications()->pluck('data')->pluck('lease_id')->all())->toBe([56])
+        ->and(LeaseExpiryNotice::where('propertyware_lease_id', 55)->sole())
+        ->recipients->toBe(1)
+        ->notified_at->not->toBeNull()
+        ->and(LeaseExpiryNotice::where('propertyware_lease_id', 56)->sole()->recipients)->toBe(2);
+
+    $this->artisan('leases:notify-expiring')->assertSuccessful();
+
+    expect($this->owner->user->notifications()->count())->toBe(2)
+        ->and($this->tenant->user->notifications()->count())->toBe(1);
 });
 
 test('someone listed twice for a lease gets one copy', function () {
