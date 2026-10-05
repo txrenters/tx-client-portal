@@ -48,7 +48,7 @@ const timeFormatter = appDateFormatter({
         <AppCard
             v-if="notices.length > 0"
             title="Reminders"
-            description="Notices about your lease."
+            description="Reminders about leases ending soon."
         >
             <ul class="divide-border/60 divide-y">
                 <li v-for="notice in notices" :key="notice.id">
@@ -87,9 +87,6 @@ const timeFormatter = appDateFormatter({
                                     }}</span
                                 >
                             </span>
-                            <span class="text-muted-foreground text-sm">{{
-                                notice.body
-                            }}</span>
                             <span
                                 class="text-muted-foreground text-sm whitespace-pre-line"
                                 >{{ notice.message }}</span

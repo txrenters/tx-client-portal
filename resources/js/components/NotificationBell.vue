@@ -43,7 +43,7 @@ type Latest = {
 
 /**
  * The header bell: a badge with how many things need the client's attention
- * (unread replies, and for owners, work orders waiting for approval) and a
+ * (unread replies, lease reminders, and for owners, work orders waiting for approval) and a
  * dropdown listing the first few. It loads after the page, refreshes when a
  * reply arrives over Reverb, when it's opened, and after the client changes
  * something; otherwise at most once a minute.
