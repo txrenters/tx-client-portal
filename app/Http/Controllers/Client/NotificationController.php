@@ -9,6 +9,7 @@ use App\Services\Notifications\NeedsAttention;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,7 +32,7 @@ class NotificationController extends Controller
             'approvals' => Inertia::defer(fn (): ?array => $attention->approvals($owner, 50)),
             'messages' => Inertia::defer(fn (): ?array => $attention->messages($request->user(), $account, 25)),
             'notices' => $account === null ? [] : $attention->notices($request->user(), $account)->latest()->limit(50)->get()
-                ->map(fn ($notice): array => NeedsAttention::present($notice))->values(),
+                ->map(fn (DatabaseNotification $notice): array => NeedsAttention::present($notice))->values(),
         ]);
     }
 
@@ -55,7 +56,7 @@ class NotificationController extends Controller
             'messages' => $messages,
             'notices' => [
                 'count' => $notices->count(),
-                'items' => $notices->take(5)->map(fn ($notice): array => NeedsAttention::present($notice))->values(),
+                'items' => $notices->take(5)->map(fn (DatabaseNotification $notice): array => NeedsAttention::present($notice))->values(),
             ],
         ]);
     }
@@ -71,6 +72,25 @@ class NotificationController extends Controller
         $notice = $attention->notices($request->user(), $account)->whereKey($notification)->firstOrFail();
         $notice->markAsRead();
 
-        return redirect()->to($notice->data['url'] ?? route('notifications.index'));
+        return redirect()->to($this->sameHostPath($request, $notice->data['url'] ?? null) ?? route('notifications.index'));
+    }
+
+    /**
+     * The path (and query) of a stored url, or null when it has none or
+     * points at another host, so opening a notice never leaves the portal.
+     */
+    private function sameHostPath(Request $request, mixed $url): ?string
+    {
+        $parts = is_string($url) ? parse_url($url) : false;
+
+        if ($parts === false || ! isset($parts['path'])) {
+            return null;
+        }
+
+        if (isset($parts['host']) && $parts['host'] !== $request->getHost()) {
+            return null;
+        }
+
+        return $parts['path'].(isset($parts['query']) ? '?'.$parts['query'] : '');
     }
 }

@@ -35,6 +35,17 @@ test('opening a notice marks it read and goes where it points', function () {
     $this->actingAs($this->user)->getJson(route('notifications.latest'))->assertJsonPath('notices.count', 0);
 });
 
+test('a notice pointing at another host goes to the notifications page instead', function () {
+    $this->user->notify(new LeaseExpiringNotification([
+        'type' => 'lease_expiring', 'role' => 'resident', 'account_id' => $this->tenant->id, 'lease_id' => 56, 'building_id' => 7,
+        'title' => 't', 'body' => 'b', 'message' => 'm', 'url' => 'https://evil.example/phish?x=1',
+    ]));
+    $id = $this->user->notifications()->get()->first(fn ($notice) => $notice->data['lease_id'] === 56)->id;
+
+    $this->actingAs($this->user)->post(route('notifications.read', $id))
+        ->assertRedirect(route('notifications.index'));
+});
+
 test('another login cannot open someone elses notice', function () {
     $id = $this->user->notifications()->sole()->id;
     $other = User::factory()->create();
