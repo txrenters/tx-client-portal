@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\MaintenanceController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\MeetingController;
 use App\Http\Controllers\Api\V1\MessageController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OwnerLedgerController;
 use App\Http\Controllers\Api\V1\PasskeyController;
@@ -113,6 +114,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('properties/{property}', [PropertyController::class, 'show'])->whereNumber('property')->name('properties.show');
             Route::get('meetings', [MeetingController::class, 'index'])->name('meetings.index');
             Route::get('approvals', ApprovalController::class)->name('approvals.index');
+            Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+            Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+            Route::post('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
             Route::get('contact-details', ContactDetailsController::class)->name('contact-details');
             Route::get('messages', [MessageController::class, 'index'])->name('messages.index');
             Route::get('realtime', [MessageController::class, 'realtime'])->name('realtime');
