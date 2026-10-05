@@ -40,6 +40,7 @@
 ## File Map
 
 tx-client
+
 - Create `database/migrations/2026_10_03_000001_create_notifications_table.php` — Laravel notifications table (generated).
 - Create `database/migrations/2026_10_03_000002_create_lease_expiry_notices_table.php`
 - Create `app/Models/LeaseExpiryNotice.php` — the once-per-lease record.
@@ -59,6 +60,7 @@ tx-client
 - Tests: `tests/Feature/Leases/*`, `tests/Feature/Console/Commands/NotifyExpiringLeasesTest.php`, `tests/Feature/Api/V1/NotificationTest.php`, `tests/Feature/Client/LeaseNoticeWebTest.php`
 
 tx-mobile
+
 - Modify `src/api/types.ts`, `src/api/queries.ts`
 - Modify `src/notifications/useNotifications.ts`
 - Modify `src/app/(app)/account/notifications.tsx`
@@ -72,6 +74,7 @@ tx-mobile
 ### Task 1: Storage and the preference (tx-client)
 
 **Files:**
+
 - Create: `database/migrations/2026_10_03_000001_create_notifications_table.php` (via artisan)
 - Create: `database/migrations/2026_10_03_000002_create_lease_expiry_notices_table.php`
 - Create: `app/Models/LeaseExpiryNotice.php`
@@ -80,6 +83,7 @@ tx-mobile
 - Test: `tests/Feature/Leases/LeaseExpiryStorageTest.php`
 
 **Interfaces:**
+
 - Produces: `App\Models\LeaseExpiryNotice` with fillable `propertyware_lease_id` (int), `end_date` (date, cast `immutable_date`), `notified_at` (nullable datetime), `recipients` (int). Preference key `'lease_expiry_push'`.
 
 - [ ] **Step 1: Write the failing test**
@@ -255,15 +259,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 2: Reading expiring leases from Propertyware (tx-client)
 
 **Files:**
+
 - Create: `app/Services/Leases/ExpiringLease.php`
 - Create: `app/Services/Leases/ExpiringLeases.php`
 - Test: `tests/Feature/Leases/ExpiringLeasesTest.php`
 
 **Interfaces:**
+
 - Consumes: `App\Services\Propertyware\PropertywareClient::listAll(string $path, array $query = [])`, `::getMany(array $paths): array`.
 - Produces:
-  - `ExpiringLease` (readonly): `int $id`, `int $portfolioId`, `int $buildingId`, `string $building`, `string $unit`, `?CarbonImmutable $startDate`, `CarbonImmutable $endDate`, `array<int,string> $tenantContactIds`; methods `renewalDeadline(): CarbonImmutable`, `daysLeft(CarbonImmutable $today): int`.
-  - `ExpiringLeases::between(CarbonImmutable $from, CarbonImmutable $to): array<int, ExpiringLease>` — throws `PropertywareException`.
+    - `ExpiringLease` (readonly): `int $id`, `int $portfolioId`, `int $buildingId`, `string $building`, `string $unit`, `?CarbonImmutable $startDate`, `CarbonImmutable $endDate`, `array<int,string> $tenantContactIds`; methods `renewalDeadline(): CarbonImmutable`, `daysLeft(CarbonImmutable $today): int`.
+    - `ExpiringLeases::between(CarbonImmutable $from, CarbonImmutable $to): array<int, ExpiringLease>` — throws `PropertywareException`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -511,10 +517,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 3: Who gets told (tx-client)
 
 **Files:**
+
 - Create: `app/Services/Leases/LeaseExpiryRecipients.php`
 - Test: `tests/Feature/Leases/LeaseExpiryRecipientsTest.php`
 
 **Interfaces:**
+
 - Consumes: `ExpiringLease` (Task 2); `PropertywareDirectory::findContact(string $contactId): ?Contact` (`Contact->role`, `Contact->portfolioIds`); `ClientAccount` (`role`, `propertyware_id`, `user`).
 - Produces: `LeaseExpiryRecipients::owners(ExpiringLease $lease): Collection<int, ClientAccount>` and `::tenants(ExpiringLease $lease): Collection<int, ClientAccount>`, each with `user` loaded.
 
@@ -716,10 +724,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 4: The wording (tx-client)
 
 **Files:**
+
 - Create: `app/Services/Leases/LeaseNoticeText.php`
 - Test: `tests/Feature/Leases/LeaseNoticeTextTest.php`
 
 **Interfaces:**
+
 - Consumes: `ExpiringLease` (Task 2), `ClientAccount` (id, role, `user->name`).
 - Produces: `LeaseNoticeText::for(ExpiringLease $lease, ClientAccount $account, CarbonImmutable $today): array` returning keys `type` ('lease_expiring'), `role` ('owner'|'resident'), `account_id`, `lease_id`, `building_id`, `building`, `unit`, `start_date` (Y-m-d|null), `end_date` (Y-m-d), `renewal_deadline` (Y-m-d), `days_left` (int), `title`, `body`, `message`, `url`.
 
@@ -902,10 +912,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 5: The notification (tx-client)
 
 **Files:**
+
 - Create: `app/Notifications/LeaseExpiringNotification.php`
 - Test: `tests/Feature/Leases/LeaseExpiringNotificationTest.php`
 
 **Interfaces:**
+
 - Consumes: notice array from `LeaseNoticeText::for` (Task 4); `ExpoChannel`, `PushMessage(title, body, data, channelId)`.
 - Produces: `new LeaseExpiringNotification(array $notice)`; stored `data` = the notice array; push `data` = `['type' => 'lease_expiring', 'accountId', 'leaseId', 'buildingId', 'notificationId', 'url']`.
 
@@ -1050,11 +1062,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 6: The daily command (tx-client)
 
 **Files:**
+
 - Create: `app/Console/Commands/NotifyExpiringLeases.php`
 - Modify: `routes/console.php`
 - Test: `tests/Feature/Console/Commands/NotifyExpiringLeasesTest.php`
 
 **Interfaces:**
+
 - Consumes: `ExpiringLeases::between` (Task 2), `LeaseExpiryRecipients::owners/tenants` (Task 3), `LeaseNoticeText::for` (Task 4), `LeaseExpiringNotification` (Task 5), `LeaseExpiryNotice` (Task 1).
 - Produces: `php artisan leases:notify-expiring [--seed]`.
 
@@ -1287,6 +1301,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 7: Notifications API for the app (tx-client)
 
 **Files:**
+
 - Create: `app/Services/Notifications/NeedsAttention.php`
 - Modify: `app/Http/Controllers/Client/NotificationController.php` (replace private `unreadMessages` / `summary` with `NeedsAttention`)
 - Create: `app/Http/Controllers/Api/V1/NotificationController.php`
@@ -1294,10 +1309,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Test: `tests/Feature/Api/V1/NotificationTest.php`
 
 **Interfaces:**
+
 - Produces:
-  - `NeedsAttention::messages(User $user, ?ClientAccount $account, int $limit): ?array{count:int, items:array}`, `NeedsAttention::approvals(?ClientAccount $owner, int $limit): ?array{count:int, items:array}`, `NeedsAttention::notices(User $user, ClientAccount $account): Builder` (database notifications of type `lease_expiring` for that account, newest first).
-  - Routes: `api.v1.accounts.notifications.index` (GET `accounts/{account}/notifications`), `api.v1.accounts.notifications.read` (POST `…/notifications/{notification}/read`), `api.v1.accounts.notifications.read-all` (POST `…/notifications/read-all`).
-  - Index JSON: `{ data: Notice[], meta: { unread: int, messages: Section|null, approvals: Section|null } }` where `Notice = { id: string, type: 'lease_expiring', title, body, message, building, unit, startDate, endDate, renewalDeadline, buildingId, role, readAt: string|null, createdAt: string }`.
+    - `NeedsAttention::messages(User $user, ?ClientAccount $account, int $limit): ?array{count:int, items:array}`, `NeedsAttention::approvals(?ClientAccount $owner, int $limit): ?array{count:int, items:array}`, `NeedsAttention::notices(User $user, ClientAccount $account): Builder` (database notifications of type `lease_expiring` for that account, newest first).
+    - Routes: `api.v1.accounts.notifications.index` (GET `accounts/{account}/notifications`), `api.v1.accounts.notifications.read` (POST `…/notifications/{notification}/read`), `api.v1.accounts.notifications.read-all` (POST `…/notifications/read-all`).
+    - Index JSON: `{ data: Notice[], meta: { unread: int, messages: Section|null, approvals: Section|null } }` where `Notice = { id: string, type: 'lease_expiring', title, body, message, building, unit, startDate, endDate, renewalDeadline, buildingId, role, readAt: string|null, createdAt: string }`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1561,6 +1577,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 8: Lease notices in the web bell and Notifications page (tx-client)
 
 **Files:**
+
 - Modify: `app/Http/Controllers/Client/NotificationController.php`
 - Modify: `routes/client.php` (~line 111)
 - Modify: `resources/js/components/NotificationBell.vue`
@@ -1569,6 +1586,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Test: `tests/Feature/Client/LeaseNoticeWebTest.php`
 
 **Interfaces:**
+
 - Consumes: `NeedsAttention::notices`, `NeedsAttention::present` (Task 7).
 - Produces: `latest()` JSON gains `notices: { count: int, items: Notice[] }`, `count` includes unread notices; `index()` props gain `notices`; route `notifications.read` (POST `notifications/{notification}/read`) redirecting to the notice's `url`.
 
@@ -1689,21 +1707,39 @@ export type Notice = {
 `NotificationBell.vue` — add `notices: Section<Notice>` to `Latest`, import `CalendarClock` from `@lucide/vue` and `read as readNotice` from `@/routes/notifications` (regenerate Wayfinder routes with `php artisan wayfinder:generate` if they are not auto-generated on build). Insert this block first inside `<template v-else>`:
 
 ```vue
-                <template v-if="latest.notices && latest.notices.count > 0">
-                    <DropdownMenuLabel class="text-muted-foreground text-xs font-normal"
-                        >Reminders ({{ latest.notices.count }})</DropdownMenuLabel
-                    >
-                    <DropdownMenuItem v-for="notice in latest.notices.items" :key="`notice-${notice.id}`" as-child>
-                        <Link :href="readNotice(notice.id)" method="post" as="button" class="flex w-full cursor-pointer items-start gap-3 text-left">
-                            <CalendarClock class="text-primary mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                            <span class="flex min-w-0 flex-col">
-                                <span class="truncate font-medium">{{ notice.title }}</span>
-                                <span class="text-muted-foreground line-clamp-2 text-xs">{{ notice.body }}</span>
-                            </span>
-                        </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator v-if="(latest.messages?.count ?? 0) + (latest.approvals?.count ?? 0) > 0" />
-                </template>
+<template v-if="latest.notices && latest.notices.count > 0">
+    <DropdownMenuLabel class="text-muted-foreground text-xs font-normal"
+        >Reminders ({{ latest.notices.count }})</DropdownMenuLabel
+    >
+    <DropdownMenuItem
+        v-for="notice in latest.notices.items"
+        :key="`notice-${notice.id}`"
+        as-child
+    >
+        <Link
+            :href="readNotice(notice.id)"
+            method="post"
+            as="button"
+            class="flex w-full cursor-pointer items-start gap-3 text-left"
+        >
+            <CalendarClock
+                class="text-primary mt-0.5 size-4 shrink-0"
+                aria-hidden="true"
+            />
+            <span class="flex min-w-0 flex-col">
+                <span class="truncate font-medium">{{ notice.title }}</span>
+                <span class="text-muted-foreground line-clamp-2 text-xs">{{
+                    notice.body
+                }}</span>
+            </span>
+        </Link>
+    </DropdownMenuItem>
+    <DropdownMenuSeparator
+        v-if="
+            (latest.messages?.count ?? 0) + (latest.approvals?.count ?? 0) > 0
+        "
+    />
+</template>
 ```
 
 `client/Notifications.vue` — add a `notices: Notice[]` prop and a "Reminders" card above the existing sections listing each notice's `title`, `body`, and `message` (with `whitespace-pre-line`), unread ones with a dot, each linking via `readNotice(notice.id)` as a POST `Link` (same markup pattern as the existing message rows in that file).
@@ -1731,12 +1767,14 @@ graphify update .
 Work on a branch: `git switch -c feature/lease-expiry-notifications` in `tx-mobile`.
 
 **Files:**
+
 - Modify: `src/api/types.ts` (near `PushPayload` ~line 478 and `NotificationPreferences` ~line 467)
 - Modify: `src/api/queries.ts`
 - Modify: `src/notifications/useNotifications.ts`
 - Modify: `src/app/(app)/account/notifications.tsx`
 
 **Interfaces:**
+
 - Consumes: API from Task 7.
 - Produces: types `Notice`, `NotificationsPage`; hooks `useNotificationsList(accountId: number): UseQueryResult<NotificationsPage | null>` (query key `['notifications', accountId]`; `null` = older portal), `useReadNotification(accountId: number): UseMutationResult<unknown, Error, string>`, `useReadAllNotifications(accountId: number): UseMutationResult<unknown, Error, void>`; route `/notifications/[id]`.
 
@@ -1745,28 +1783,32 @@ Work on a branch: `git switch -c feature/lease-expiry-notifications` in `tx-mobi
 ```ts
 /** A stored notice from the portal, e.g. a lease that ends in 90 days. */
 export type Notice = {
-  id: string;
-  type: 'lease_expiring';
-  role: 'owner' | 'resident' | null;
-  title: string;
-  body: string;
-  /** The full text, line breaks included. */
-  message: string;
-  building: string | null;
-  unit: string | null;
-  buildingId: number | null;
-  startDate: string | null;
-  endDate: string | null;
-  renewalDeadline: string | null;
-  readAt: string | null;
-  createdAt: string | null;
+    id: string;
+    type: 'lease_expiring';
+    role: 'owner' | 'resident' | null;
+    title: string;
+    body: string;
+    /** The full text, line breaks included. */
+    message: string;
+    building: string | null;
+    unit: string | null;
+    buildingId: number | null;
+    startDate: string | null;
+    endDate: string | null;
+    renewalDeadline: string | null;
+    readAt: string | null;
+    createdAt: string | null;
 };
 
 type Section<T> = { count: number; items: T[] } | null;
 
 export type NotificationsPage = {
-  data: Notice[];
-  meta: { unread: number; messages: Section<ChatThread>; approvals: Section<WorkOrder> };
+    data: Notice[];
+    meta: {
+        unread: number;
+        messages: Section<ChatThread>;
+        approvals: Section<WorkOrder>;
+    };
 };
 ```
 
@@ -1781,81 +1823,108 @@ Extend `PushPayload`: `type?: 'message' | 'work_order_approval' | 'lease_expirin
  * The bell's list. An older portal answers 404; that is reported as `null`
  * so the bell hides instead of showing an error.
  */
-export function useNotificationsList(accountId: number): UseQueryResult<NotificationsPage | null> {
-  return useQuery({
-    enabled: accountId > 0,
-    queryKey: ['notifications', accountId],
-    queryFn: async ({ signal }) => {
-      try {
-        return await request<NotificationsPage>(`accounts/${accountId}/notifications`, { signal });
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 404) {
-          return null;
-        }
+export function useNotificationsList(
+    accountId: number,
+): UseQueryResult<NotificationsPage | null> {
+    return useQuery({
+        enabled: accountId > 0,
+        queryKey: ['notifications', accountId],
+        queryFn: async ({ signal }) => {
+            try {
+                return await request<NotificationsPage>(
+                    `accounts/${accountId}/notifications`,
+                    { signal },
+                );
+            } catch (error) {
+                if (error instanceof ApiError && error.status === 404) {
+                    return null;
+                }
 
-        throw error;
-      }
-    },
-  });
+                throw error;
+            }
+        },
+    });
 }
 
-export function useReadNotification(accountId: number): UseMutationResult<unknown, Error, string> {
-  const client = useQueryClient();
+export function useReadNotification(
+    accountId: number,
+): UseMutationResult<unknown, Error, string> {
+    const client = useQueryClient();
 
-  return useMutation({
-    mutationFn: (id) => request(`accounts/${accountId}/notifications/${id}/read`, { method: 'POST' }),
-    onSuccess: () => void client.invalidateQueries({ queryKey: ['notifications', accountId] }),
-  });
+    return useMutation({
+        mutationFn: (id) =>
+            request(`accounts/${accountId}/notifications/${id}/read`, {
+                method: 'POST',
+            }),
+        onSuccess: () =>
+            void client.invalidateQueries({
+                queryKey: ['notifications', accountId],
+            }),
+    });
 }
 
-export function useReadAllNotifications(accountId: number): UseMutationResult<unknown, Error, void> {
-  const client = useQueryClient();
+export function useReadAllNotifications(
+    accountId: number,
+): UseMutationResult<unknown, Error, void> {
+    const client = useQueryClient();
 
-  return useMutation({
-    mutationFn: () => request(`accounts/${accountId}/notifications/read-all`, { method: 'POST' }),
-    onSuccess: () => void client.invalidateQueries({ queryKey: ['notifications', accountId] }),
-  });
+    return useMutation({
+        mutationFn: () =>
+            request(`accounts/${accountId}/notifications/read-all`, {
+                method: 'POST',
+            }),
+        onSuccess: () =>
+            void client.invalidateQueries({
+                queryKey: ['notifications', accountId],
+            }),
+    });
 }
 ```
 
 (Import `ApiError` from `./errors` and the new types if `queries.ts` does not already. Check that `request` resolves an empty 204 body without throwing; if it tries to parse JSON, pass whatever option it uses for empty responses.)
 
 - [ ] **Step 3: Push routing** — in `src/notifications/useNotifications.ts`:
-  - Add `| { screen: 'notice'; id: string }` to `Destination`.
-  - In `destinationOf`, first:
+    - Add `| { screen: 'notice'; id: string }` to `Destination`.
+    - In `destinationOf`, first:
 
 ```ts
-  if (payload.type === 'lease_expiring' && typeof payload.notificationId === 'string') {
+if (
+    payload.type === 'lease_expiring' &&
+    typeof payload.notificationId === 'string'
+) {
     return { screen: 'notice', id: payload.notificationId };
-  }
+}
 ```
 
-  - In `go`, first:
+- In `go`, first:
 
 ```ts
-  if (destination.screen === 'notice') {
-    router.push({ pathname: '/notifications/[id]', params: { id: destination.id } });
+if (destination.screen === 'notice') {
+    router.push({
+        pathname: '/notifications/[id]',
+        params: { id: destination.id },
+    });
 
     return;
-  }
+}
 ```
 
-  - In `refresh`, add `void queryClient.invalidateQueries({ queryKey: ['notifications', accountId] });`.
+- In `refresh`, add `void queryClient.invalidateQueries({ queryKey: ['notifications', accountId] });`.
 
 - [ ] **Step 4: Setting** — in `src/app/(app)/account/notifications.tsx`, inside the granted `rows` view after the approvals row:
 
 ```tsx
-                <Row
-                  label="Lease ending reminders"
-                  hint={
-                    owner
-                      ? 'Ninety days before a lease on your property ends, so you can renew or relist in time.'
-                      : 'Ninety days before your lease ends, so you have time to renew.'
-                  }
-                  value={data.data.lease_expiry_push ?? true}
-                  disabled={update.isPending}
-                  onChange={(value) => update.mutate({ lease_expiry_push: value })}
-                />
+<Row
+    label="Lease ending reminders"
+    hint={
+        owner
+            ? 'Ninety days before a lease on your property ends, so you can renew or relist in time.'
+            : 'Ninety days before your lease ends, so you have time to renew.'
+    }
+    value={data.data.lease_expiry_push ?? true}
+    disabled={update.isPending}
+    onChange={(value) => update.mutate({ lease_expiry_push: value })}
+/>
 ```
 
 - [ ] **Step 5: Verify** — `npx tsc --noEmit` will fail until Task 10 adds `/notifications/[id]` (typed routes). Run `npx expo lint` now; run tsc at the end of Task 10. Commit together with Task 10.
@@ -1865,12 +1934,14 @@ export function useReadAllNotifications(accountId: number): UseMutationResult<un
 ### Task 10: Mobile bell and Notifications screens (tx-mobile)
 
 **Files:**
+
 - Create: `src/components/NotificationBell.tsx`
 - Create: `src/app/notifications/_layout.tsx`, `src/app/notifications/index.tsx`, `src/app/notifications/[id].tsx`
 - Modify: `src/app/_layout.tsx` (~line 180, signed-in guard)
 - Modify: `src/app/(app)/index.tsx` (~line 97, header `right`)
 
 **Interfaces:**
+
 - Consumes: `useNotificationsList`, `useReadNotification`, `useReadAllNotifications`, `Notice` (Task 9); `Screen`, `Card`, `EmptyState`, `ErrorState`, `SkeletonDetails`, `Button` from `src/components/ui`; `formatDate` from `@/lib/format` if present (otherwise use `new Date(…).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })`).
 
 - [ ] **Step 1: Register the stack** — `src/app/notifications/_layout.tsx`:
@@ -1880,14 +1951,21 @@ import { Stack } from 'expo-router';
 import { colors } from '@/theme/theme';
 
 export default function NotificationsLayout() {
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas } }} />;
+    return (
+        <Stack
+            screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.canvas },
+            }}
+        />
+    );
 }
 ```
 
 In `src/app/_layout.tsx`, inside the `Stack.Protected` that guards `(app)`:
 
 ```tsx
-          <Stack.Screen name="notifications" />
+<Stack.Screen name="notifications" />
 ```
 
 - [ ] **Step 2: The bell** — `src/components/NotificationBell.tsx`:
@@ -1905,47 +1983,64 @@ import { useNotificationsList } from '@/api/queries';
 import { colors, fontSize } from '@/theme/theme';
 
 export function NotificationBell({ accountId }: { accountId: number }) {
-  const { data } = useNotificationsList(accountId);
+    const { data } = useNotificationsList(accountId);
 
-  if (data === null || data === undefined) {
-    return null;
-  }
+    if (data === null || data === undefined) {
+        return null;
+    }
 
-  const unread = data.meta.unread;
+    const unread = data.meta.unread;
 
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
-      hitSlop={10}
-      onPress={() => router.push('/notifications')}
-      style={styles.bell}
-    >
-      <Ionicons name="notifications-outline" size={22} color={colors.white} />
-      {unread > 0 ? (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{unread > 99 ? '99+' : unread}</Text>
-        </View>
-      ) : null}
-    </Pressable>
-  );
+    return (
+        <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+                unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'
+            }
+            hitSlop={10}
+            onPress={() => router.push('/notifications')}
+            style={styles.bell}
+        >
+            <Ionicons
+                name="notifications-outline"
+                size={22}
+                color={colors.white}
+            />
+            {unread > 0 ? (
+                <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                        {unread > 99 ? '99+' : unread}
+                    </Text>
+                </View>
+            ) : null}
+        </Pressable>
+    );
 }
 
 const styles = StyleSheet.create({
-  bell: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  badge: {
-    position: 'absolute',
-    top: 2,
-    right: 0,
-    minWidth: 16,
-    height: 16,
-    paddingHorizontal: 4,
-    borderRadius: 8,
-    backgroundColor: colors.destructive,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeText: { color: colors.white, fontSize: fontSize.xxs, fontWeight: '700' },
+    bell: {
+        width: 36,
+        height: 36,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    badge: {
+        position: 'absolute',
+        top: 2,
+        right: 0,
+        minWidth: 16,
+        height: 16,
+        paddingHorizontal: 4,
+        borderRadius: 8,
+        backgroundColor: colors.destructive,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    badgeText: {
+        color: colors.white,
+        fontSize: fontSize.xxs,
+        fontWeight: '700',
+    },
 });
 ```
 
@@ -1971,7 +2066,14 @@ with `headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.
  * Everything the bell counts: stored reminders first, then unread replies and
  * work orders waiting for approval, each opening its own screen.
  */
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import {
+    FlatList,
+    Pressable,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useNotificationsList, useReadAllNotifications } from '@/api/queries';
@@ -1983,91 +2085,206 @@ import { SkeletonDetails } from '@/components/ui/Skeleton';
 import { colors, fontSize, radius, spacing } from '@/theme/theme';
 
 type Row =
-  | { key: string; kind: 'notice'; id: string; title: string; detail: string; unread: boolean }
-  | { key: string; kind: 'message'; thread: number; title: string; detail: string }
-  | { key: string; kind: 'approval'; id: string; title: string; detail: string };
+    | {
+          key: string;
+          kind: 'notice';
+          id: string;
+          title: string;
+          detail: string;
+          unread: boolean;
+      }
+    | {
+          key: string;
+          kind: 'message';
+          thread: number;
+          title: string;
+          detail: string;
+      }
+    | {
+          key: string;
+          kind: 'approval';
+          id: string;
+          title: string;
+          detail: string;
+      };
 
 export default function NotificationsScreen() {
-  const { account } = useAuth();
-  const accountId = account?.id ?? 0;
-  const { data, error, isPending, isRefetching, refetch } = useNotificationsList(accountId);
-  const readAll = useReadAllNotifications(accountId);
+    const { account } = useAuth();
+    const accountId = account?.id ?? 0;
+    const { data, error, isPending, isRefetching, refetch } =
+        useNotificationsList(accountId);
+    const readAll = useReadAllNotifications(accountId);
 
-  const rows: Row[] = [
-    ...(data?.data ?? []).map((notice): Row => ({
-      key: `notice-${notice.id}`, kind: 'notice', id: notice.id, title: notice.title, detail: notice.body, unread: notice.readAt === null,
-    })),
-    ...(data?.meta.messages?.items ?? []).map((thread): Row => ({
-      key: `message-${thread.id}`, kind: 'message', thread: thread.id, title: thread.subject,
-      detail: thread.lastMessage ? `${thread.lastMessage.author}: ${thread.lastMessage.preview}` : 'New reply',
-    })),
-    ...(data?.meta.approvals?.items ?? []).map((order): Row => ({
-      key: `approval-${order.id}`, kind: 'approval', id: order.id, title: 'Approval needed',
-      detail: [order.category, order.property].filter(Boolean).join(' · ') || order.title,
-    })),
-  ];
+    const rows: Row[] = [
+        ...(data?.data ?? []).map((notice): Row => ({
+            key: `notice-${notice.id}`,
+            kind: 'notice',
+            id: notice.id,
+            title: notice.title,
+            detail: notice.body,
+            unread: notice.readAt === null,
+        })),
+        ...(data?.meta.messages?.items ?? []).map((thread): Row => ({
+            key: `message-${thread.id}`,
+            kind: 'message',
+            thread: thread.id,
+            title: thread.subject,
+            detail: thread.lastMessage
+                ? `${thread.lastMessage.author}: ${thread.lastMessage.preview}`
+                : 'New reply',
+        })),
+        ...(data?.meta.approvals?.items ?? []).map((order): Row => ({
+            key: `approval-${order.id}`,
+            kind: 'approval',
+            id: order.id,
+            title: 'Approval needed',
+            detail:
+                [order.category, order.property].filter(Boolean).join(' · ') ||
+                order.title,
+        })),
+    ];
 
-  const anyUnread = (data?.data ?? []).some((notice) => notice.readAt === null);
+    const anyUnread = (data?.data ?? []).some(
+        (notice) => notice.readAt === null,
+    );
 
-  function open(row: Row): void {
-    if (row.kind === 'notice') router.push({ pathname: '/notifications/[id]', params: { id: row.id } });
-    if (row.kind === 'message') router.push({ pathname: '/messages/[thread]', params: { thread: String(row.thread) } });
-    if (row.kind === 'approval') router.push({ pathname: '/maintenance/[id]', params: { id: row.id } });
-  }
+    function open(row: Row): void {
+        if (row.kind === 'notice')
+            router.push({
+                pathname: '/notifications/[id]',
+                params: { id: row.id },
+            });
+        if (row.kind === 'message')
+            router.push({
+                pathname: '/messages/[thread]',
+                params: { thread: String(row.thread) },
+            });
+        if (row.kind === 'approval')
+            router.push({
+                pathname: '/maintenance/[id]',
+                params: { id: row.id },
+            });
+    }
 
-  return (
-    <Screen
-      title="Notifications"
-      right={
-        anyUnread ? (
-          <Pressable accessibilityRole="button" hitSlop={10} onPress={() => readAll.mutate()}>
-            <Text style={styles.markAll}>Mark all read</Text>
-          </Pressable>
-        ) : undefined
-      }
-    >
-      {isPending ? (
-        <View style={styles.padded}><SkeletonDetails cards={3} rows={1} /></View>
-      ) : error !== null ? (
-        <ErrorState message={error instanceof ApiError ? error.message : 'Notifications could not be loaded.'} onRetry={() => void refetch()} />
-      ) : (
-        <FlatList
-          data={rows}
-          keyExtractor={(row) => row.key}
-          contentContainerStyle={rows.length === 0 ? styles.emptyContent : styles.content}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={colors.primary} />}
-          ListEmptyComponent={<EmptyState title="You're all caught up" message="Reminders and replies will show up here." icon="notifications-outline" />}
-          renderItem={({ item }) => (
-            <Pressable accessibilityRole="button" onPress={() => open(item)} style={({ pressed }) => [styles.row, pressed ? styles.pressed : null]}>
-              <Ionicons
-                name={item.kind === 'notice' ? 'calendar-outline' : item.kind === 'message' ? 'chatbubble-outline' : 'construct-outline'}
-                size={20}
-                color={colors.primary}
-              />
-              <View style={styles.rowText}>
-                <Text numberOfLines={1} style={styles.title}>{item.title}</Text>
-                <Text numberOfLines={2} style={styles.detail}>{item.detail}</Text>
-              </View>
-              {item.kind === 'notice' && item.unread ? <View style={styles.dot} /> : null}
-            </Pressable>
-          )}
-        />
-      )}
-    </Screen>
-  );
+    return (
+        <Screen
+            title="Notifications"
+            right={
+                anyUnread ? (
+                    <Pressable
+                        accessibilityRole="button"
+                        hitSlop={10}
+                        onPress={() => readAll.mutate()}
+                    >
+                        <Text style={styles.markAll}>Mark all read</Text>
+                    </Pressable>
+                ) : undefined
+            }
+        >
+            {isPending ? (
+                <View style={styles.padded}>
+                    <SkeletonDetails cards={3} rows={1} />
+                </View>
+            ) : error !== null ? (
+                <ErrorState
+                    message={
+                        error instanceof ApiError
+                            ? error.message
+                            : 'Notifications could not be loaded.'
+                    }
+                    onRetry={() => void refetch()}
+                />
+            ) : (
+                <FlatList
+                    data={rows}
+                    keyExtractor={(row) => row.key}
+                    contentContainerStyle={
+                        rows.length === 0 ? styles.emptyContent : styles.content
+                    }
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={isRefetching}
+                            onRefresh={() => void refetch()}
+                            tintColor={colors.primary}
+                        />
+                    }
+                    ListEmptyComponent={
+                        <EmptyState
+                            title="You're all caught up"
+                            message="Reminders and replies will show up here."
+                            icon="notifications-outline"
+                        />
+                    }
+                    renderItem={({ item }) => (
+                        <Pressable
+                            accessibilityRole="button"
+                            onPress={() => open(item)}
+                            style={({ pressed }) => [
+                                styles.row,
+                                pressed ? styles.pressed : null,
+                            ]}
+                        >
+                            <Ionicons
+                                name={
+                                    item.kind === 'notice'
+                                        ? 'calendar-outline'
+                                        : item.kind === 'message'
+                                          ? 'chatbubble-outline'
+                                          : 'construct-outline'
+                                }
+                                size={20}
+                                color={colors.primary}
+                            />
+                            <View style={styles.rowText}>
+                                <Text numberOfLines={1} style={styles.title}>
+                                    {item.title}
+                                </Text>
+                                <Text numberOfLines={2} style={styles.detail}>
+                                    {item.detail}
+                                </Text>
+                            </View>
+                            {item.kind === 'notice' && item.unread ? (
+                                <View style={styles.dot} />
+                            ) : null}
+                        </Pressable>
+                    )}
+                />
+            )}
+        </Screen>
+    );
 }
 
 const styles = StyleSheet.create({
-  padded: { padding: spacing.lg },
-  content: { padding: spacing.lg, gap: spacing.sm },
-  emptyContent: { flexGrow: 1, justifyContent: 'center' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.background },
-  pressed: { opacity: 0.7 },
-  rowText: { flex: 1, gap: 2 },
-  title: { fontSize: fontSize.base, fontWeight: '600', color: colors.foreground },
-  detail: { fontSize: fontSize.sm, color: colors.mutedForeground },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
-  markAll: { color: colors.primary, fontSize: fontSize.sm, fontWeight: '600' },
+    padded: { padding: spacing.lg },
+    content: { padding: spacing.lg, gap: spacing.sm },
+    emptyContent: { flexGrow: 1, justifyContent: 'center' },
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.md,
+        padding: spacing.md,
+        borderRadius: radius.lg,
+        backgroundColor: colors.background,
+    },
+    pressed: { opacity: 0.7 },
+    rowText: { flex: 1, gap: 2 },
+    title: {
+        fontSize: fontSize.base,
+        fontWeight: '600',
+        color: colors.foreground,
+    },
+    detail: { fontSize: fontSize.sm, color: colors.mutedForeground },
+    dot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: colors.primary,
+    },
+    markAll: {
+        color: colors.primary,
+        fontSize: fontSize.sm,
+        fontWeight: '600',
+    },
 });
 ```
 
@@ -2093,52 +2310,76 @@ import { SkeletonDetails } from '@/components/ui/Skeleton';
 import { colors, fontSize, spacing } from '@/theme/theme';
 
 export default function NoticeScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { account } = useAuth();
-  const accountId = account?.id ?? 0;
-  const { data, isPending } = useNotificationsList(accountId);
-  const read = useReadNotification(accountId);
-  const notice = data?.data.find((candidate) => candidate.id === id);
+    const { id } = useLocalSearchParams<{ id: string }>();
+    const { account } = useAuth();
+    const accountId = account?.id ?? 0;
+    const { data, isPending } = useNotificationsList(accountId);
+    const read = useReadNotification(accountId);
+    const notice = data?.data.find((candidate) => candidate.id === id);
 
-  useEffect(() => {
-    if (notice !== undefined && notice.readAt === null && !read.isPending) {
-      read.mutate(notice.id);
-    }
-    // Only when the notice itself changes, not on every mutation state change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notice?.id, notice?.readAt]);
+    useEffect(() => {
+        if (notice !== undefined && notice.readAt === null && !read.isPending) {
+            read.mutate(notice.id);
+        }
+        // Only when the notice itself changes, not on every mutation state change.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [notice?.id, notice?.readAt]);
 
-  return (
-    <Screen title="Lease reminder">
-      {isPending ? (
-        <SkeletonDetails cards={1} rows={4} />
-      ) : notice === undefined ? (
-        <EmptyState title="Not found" message="This notification is no longer available." icon="notifications-off-outline" />
-      ) : (
-        <ScrollView contentContainerStyle={styles.content}>
-          <Card>
-            <Text style={styles.title}>{notice.title}</Text>
-            <Text style={styles.message}>{notice.message}</Text>
-          </Card>
-          {notice.role === 'owner' && notice.buildingId !== null ? (
-            <Button
-              label="View property"
-              icon="home-outline"
-              onPress={() => router.push({ pathname: '/account/properties/[property]', params: { property: String(notice.buildingId) } })}
-            />
-          ) : (
-            <Button label="View my lease" icon="document-text-outline" onPress={() => router.push('/account/lease')} />
-          )}
-        </ScrollView>
-      )}
-    </Screen>
-  );
+    return (
+        <Screen title="Lease reminder">
+            {isPending ? (
+                <SkeletonDetails cards={1} rows={4} />
+            ) : notice === undefined ? (
+                <EmptyState
+                    title="Not found"
+                    message="This notification is no longer available."
+                    icon="notifications-off-outline"
+                />
+            ) : (
+                <ScrollView contentContainerStyle={styles.content}>
+                    <Card>
+                        <Text style={styles.title}>{notice.title}</Text>
+                        <Text style={styles.message}>{notice.message}</Text>
+                    </Card>
+                    {notice.role === 'owner' && notice.buildingId !== null ? (
+                        <Button
+                            label="View property"
+                            icon="home-outline"
+                            onPress={() =>
+                                router.push({
+                                    pathname: '/account/properties/[property]',
+                                    params: {
+                                        property: String(notice.buildingId),
+                                    },
+                                })
+                            }
+                        />
+                    ) : (
+                        <Button
+                            label="View my lease"
+                            icon="document-text-outline"
+                            onPress={() => router.push('/account/lease')}
+                        />
+                    )}
+                </ScrollView>
+            )}
+        </Screen>
+    );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, gap: spacing.lg },
-  title: { fontSize: fontSize.lg, fontWeight: '700', color: colors.foreground, marginBottom: spacing.sm },
-  message: { fontSize: fontSize.base, lineHeight: 22, color: colors.foreground },
+    content: { padding: spacing.lg, gap: spacing.lg },
+    title: {
+        fontSize: fontSize.lg,
+        fontWeight: '700',
+        color: colors.foreground,
+        marginBottom: spacing.sm,
+    },
+    message: {
+        fontSize: fontSize.base,
+        lineHeight: 22,
+        color: colors.foreground,
+    },
 });
 ```
 
@@ -2152,6 +2393,7 @@ Expected: no errors.
 - [ ] **Step 6: Check on the simulator**
 
 Run the portal locally with a seeded notice (`php artisan tinker`: notify a test user's tenant account with `LeaseExpiringNotification`), point the app's dev server field at it, `npx expo start`, open iOS simulator:
+
 - Home shows the bell with a badge of 1.
 - Bell → list shows "Your lease ends …"; tapping opens the full letter; back → dot gone, badge 0.
 - Settings → Notifications shows "Lease ending reminders".

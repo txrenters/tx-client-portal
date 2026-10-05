@@ -53,14 +53,14 @@ exact-day match would also be fragile.
 
 New table `lease_expiry_notices`:
 
-| column | type | note |
-|---|---|---|
-| id | bigint | |
-| propertyware_lease_id | bigint | |
-| end_date | date | unique with lease id |
-| notified_at | timestamp | null when seeded silently |
-| recipients | unsigned int | how many accounts were notified |
-| timestamps | | |
+| column                | type         | note                            |
+| --------------------- | ------------ | ------------------------------- |
+| id                    | bigint       |                                 |
+| propertyware_lease_id | bigint       |                                 |
+| end_date              | date         | unique with lease id            |
+| notified_at           | timestamp    | null when seeded silently       |
+| recipients            | unsigned int | how many accounts were notified |
+| timestamps            |              |                                 |
 
 Unique on `(propertyware_lease_id, end_date)`. An extended lease (new end
 date) is notified again 90 days before the new date.
@@ -158,11 +158,11 @@ Tap targets: tenant → Lease screen; owner → the property.
   `approvals`; unread notices add to `count`. `NotificationBell.vue` and
   `client/Notifications.vue` render it; opening one marks it read.
 - **API** (`routes/api.php`, owner and tenant accounts):
-  - `GET /api/v1/accounts/{account}/notifications` → one list, newest first:
-    lease notices plus the unread messages and approvals the web bell
-    shows; `meta.unread`.
-  - `POST /api/v1/accounts/{account}/notifications/{id}/read`
-  - `POST /api/v1/accounts/{account}/notifications/read-all`
+    - `GET /api/v1/accounts/{account}/notifications` → one list, newest first:
+      lease notices plus the unread messages and approvals the web bell
+      shows; `meta.unread`.
+    - `POST /api/v1/accounts/{account}/notifications/{id}/read`
+    - `POST /api/v1/accounts/{account}/notifications/read-all`
 - Notices older than 90 days are pruned by the existing daily
   `model:prune` run.
 
@@ -184,14 +184,14 @@ Tap targets: tenant → Lease screen; owner → the property.
 ## Testing
 
 - tx-client feature tests, with Propertyware faked:
-  - window and status filter; notice-given and terminated skipped
-  - once per lease; re-run sends nothing; new end date notifies again
-  - `--seed` records without notifying outside 80–90 days
-  - multiple owners and multiple tenants each get one copy; guarantors and
-    accountless contacts skipped
-  - owner payload contains no tenant name, lease name, email or phone
-  - push respects `lease_expiry_push`
-  - API list, read, read-all, and account scoping
+    - window and status filter; notice-given and terminated skipped
+    - once per lease; re-run sends nothing; new end date notifies again
+    - `--seed` records without notifying outside 80–90 days
+    - multiple owners and multiple tenants each get one copy; guarantors and
+      accountless contacts skipped
+    - owner payload contains no tenant name, lease name, email or phone
+    - push respects `lease_expiry_push`
+    - API list, read, read-all, and account scoping
 - tx-mobile: `npx expo lint`, `npx tsc --noEmit`, simulator check of bell,
   list, detail and push tap.
 
