@@ -191,6 +191,10 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         // The same reply, pushed to the app. Separate from the email because a
         // client with the app installed usually wants one and not the other.
         'message_replies_push' => true,
+        // A lease is 90 days from ending: the owner decides whether to renew or
+        // relist, the tenant whether to renew. Always kept in the app's list;
+        // this only decides whether the phone is buzzed.
+        'lease_expiry_push' => true,
     ];
 
     /**
