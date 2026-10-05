@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { CircleCheck, MessageSquare } from '@lucide/vue';
+import { CalendarClock, CircleCheck, MessageSquare } from '@lucide/vue';
 import AppCard from '@/components/AppCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
@@ -12,9 +12,10 @@ import {
     show as maintenanceShow,
 } from '@/routes/owner/maintenance';
 import { appDateFormatter } from '@/lib/timezone';
+import { read as readNotice } from '@/routes/notifications';
 import { index as ownerMessages } from '@/routes/owner/messages';
 import { index as residentMessages } from '@/routes/resident/messages';
-import type { ApprovalSummary, ChatThread } from '@/types';
+import type { ApprovalSummary, ChatThread, Notice } from '@/types';
 
 const props = defineProps<{
     isOwner: boolean;
@@ -22,6 +23,7 @@ const props = defineProps<{
     /** Undefined while loading, null when it failed. */
     approvals?: ApprovalSummary | null;
     messages?: { count: number; items: ChatThread[] } | null;
+    notices: Notice[];
 }>();
 
 const messagesRoute =
@@ -42,6 +44,61 @@ const timeFormatter = appDateFormatter({
             title="Notifications"
             description="Things that need your attention."
         />
+
+        <AppCard
+            v-if="notices.length > 0"
+            title="Reminders"
+            description="Notices about your lease."
+        >
+            <ul class="divide-border/60 divide-y">
+                <li v-for="notice in notices" :key="notice.id">
+                    <Link
+                        :href="readNotice(notice.id)"
+                        method="post"
+                        as="button"
+                        class="hover:bg-muted/50 flex w-full items-start gap-3 rounded-lg px-2 py-3 text-left transition-colors"
+                    >
+                        <CalendarClock
+                            class="text-primary mt-0.5 size-4 shrink-0"
+                            aria-hidden="true"
+                        />
+                        <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+                            <span
+                                class="flex items-baseline justify-between gap-2"
+                            >
+                                <span
+                                    class="flex items-center gap-2 font-medium"
+                                >
+                                    <span
+                                        v-if="!notice.readAt"
+                                        class="bg-primary size-2 shrink-0 rounded-full"
+                                        aria-label="Unread"
+                                    />
+                                    {{ notice.title }}
+                                </span>
+                                <span
+                                    class="text-muted-foreground shrink-0 text-xs"
+                                    >{{
+                                        notice.createdAt
+                                            ? timeFormatter.format(
+                                                  new Date(notice.createdAt),
+                                              )
+                                            : ''
+                                    }}</span
+                                >
+                            </span>
+                            <span class="text-muted-foreground text-sm">{{
+                                notice.body
+                            }}</span>
+                            <span
+                                class="text-muted-foreground text-sm whitespace-pre-line"
+                                >{{ notice.message }}</span
+                            >
+                        </span>
+                    </Link>
+                </li>
+            </ul>
+        </AppCard>
 
         <AppCard
             :title="

@@ -116,7 +116,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('approvals', ApprovalController::class)->name('approvals.index');
             Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
             Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
-            Route::post('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
+            Route::post('notifications/{notification}/read', [NotificationController::class, 'read'])->whereUuid('notification')->name('notifications.read');
             Route::get('contact-details', ContactDetailsController::class)->name('contact-details');
             Route::get('messages', [MessageController::class, 'index'])->name('messages.index');
             Route::get('realtime', [MessageController::class, 'realtime'])->name('realtime');

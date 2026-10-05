@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { Link, router, useHttp } from '@inertiajs/vue3';
 import { echo, echoIsConfigured } from '@laravel/echo-vue';
-import { Bell, CircleCheck, MessageSquare, Wrench } from '@lucide/vue';
+import {
+    Bell,
+    CalendarClock,
+    CircleCheck,
+    MessageSquare,
+    Wrench,
+} from '@lucide/vue';
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,11 +22,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
     index as notifications,
     latest as latestNotifications,
+    read as readNotice,
 } from '@/routes/notifications';
 import { show as maintenanceShow } from '@/routes/owner/maintenance';
 import { index as ownerMessages } from '@/routes/owner/messages';
 import { index as residentMessages } from '@/routes/resident/messages';
-import type { ChatThread, WorkOrder } from '@/types';
+import type { ChatThread, Notice, WorkOrder } from '@/types';
 
 type Section<T> = { count: number; items: T[] } | null;
 
@@ -31,6 +38,7 @@ type Latest = {
     channel: string | null;
     approvals: Section<WorkOrder>;
     messages: Section<ChatThread>;
+    notices?: Section<Notice>;
 };
 
 /**
@@ -150,6 +158,48 @@ const count = (): number => latest.value?.count ?? 0;
             </div>
 
             <template v-else>
+                <template v-if="latest.notices && latest.notices.count > 0">
+                    <DropdownMenuLabel
+                        class="text-muted-foreground text-xs font-normal"
+                        >Reminders ({{
+                            latest.notices.count
+                        }})</DropdownMenuLabel
+                    >
+                    <DropdownMenuItem
+                        v-for="notice in latest.notices.items"
+                        :key="`notice-${notice.id}`"
+                        as-child
+                    >
+                        <Link
+                            :href="readNotice(notice.id)"
+                            method="post"
+                            as="button"
+                            class="flex w-full cursor-pointer items-start gap-3 text-left"
+                        >
+                            <CalendarClock
+                                class="text-primary mt-0.5 size-4 shrink-0"
+                                aria-hidden="true"
+                            />
+                            <span class="flex min-w-0 flex-col">
+                                <span class="truncate font-medium">{{
+                                    notice.title
+                                }}</span>
+                                <span
+                                    class="text-muted-foreground line-clamp-2 text-xs"
+                                    >{{ notice.body }}</span
+                                >
+                            </span>
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator
+                        v-if="
+                            (latest.messages?.count ?? 0) +
+                                (latest.approvals?.count ?? 0) >
+                            0
+                        "
+                    />
+                </template>
+
                 <template v-if="latest.messages && latest.messages.count > 0">
                     <DropdownMenuLabel
                         class="text-muted-foreground text-xs font-normal"

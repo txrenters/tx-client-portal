@@ -7,6 +7,7 @@ use App\Http\Controllers\Concerns\ResolvesClientScope;
 use App\Http\Controllers\Controller;
 use App\Services\Notifications\NeedsAttention;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -29,6 +30,8 @@ class NotificationController extends Controller
             'portal' => $account?->role->value,
             'approvals' => Inertia::defer(fn (): ?array => $attention->approvals($owner, 50)),
             'messages' => Inertia::defer(fn (): ?array => $attention->messages($request->user(), $account, 25)),
+            'notices' => $account === null ? [] : $attention->notices($request->user(), $account)->latest()->limit(50)->get()
+                ->map(fn ($notice): array => NeedsAttention::present($notice))->values(),
         ]);
     }
 
@@ -41,14 +44,33 @@ class NotificationController extends Controller
         $account = $this->currentClientAccount($request);
         $approvalSummary = $attention->approvals($account?->role === ClientRole::Owner ? $account : null, 5);
         $messages = $attention->messages($request->user(), $account, 5);
+        $notices = $account === null ? collect() : $attention->notices($request->user(), $account)->whereNull('read_at')->latest()->get();
 
         return response()->json([
-            'count' => ($approvalSummary['count'] ?? 0) + ($messages['count'] ?? 0),
+            'count' => ($approvalSummary['count'] ?? 0) + ($messages['count'] ?? 0) + $notices->count(),
             'portal' => $account?->role->value,
             // Listen here for new replies; the bell refreshes when one arrives.
             'channel' => $account === null ? null : "contacts.{$account->propertyware_id}.messages",
             'approvals' => $approvalSummary,
             'messages' => $messages,
+            'notices' => [
+                'count' => $notices->count(),
+                'items' => $notices->take(5)->map(fn ($notice): array => NeedsAttention::present($notice))->values(),
+            ],
         ]);
+    }
+
+    /**
+     * Open a stored notice: mark it read and go to what it is about.
+     */
+    public function read(Request $request, string $notification, NeedsAttention $attention): RedirectResponse
+    {
+        $account = $this->currentClientAccount($request);
+        abort_if($account === null, 404);
+
+        $notice = $attention->notices($request->user(), $account)->whereKey($notification)->firstOrFail();
+        $notice->markAsRead();
+
+        return redirect()->to($notice->data['url'] ?? route('notifications.index'));
     }
 }
