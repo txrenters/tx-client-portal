@@ -15,6 +15,9 @@ Artisan::command('inspire', function () {
 // Owner approvals that could not reach Propertyware straight away.
 Schedule::command('approvals:push')->everyTenMinutes()->withoutOverlapping();
 
+// Owners and tenants whose lease ends within 90 days.
+Schedule::command('leases:notify-expiring')->dailyAt('09:00')->timezone('America/Chicago')->withoutOverlapping();
+
 // Old sign-in log entries and visits (see the models' KEEP_DAYS).
 Schedule::command('model:prune', ['--model' => [SignInEvent::class, PortalVisit::class, SecurityEvent::class]])->daily();
 
