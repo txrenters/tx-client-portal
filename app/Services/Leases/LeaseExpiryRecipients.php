@@ -48,6 +48,7 @@ class LeaseExpiryRecipients
 
         return ClientAccount::query()
             ->where('role', ClientRole::Resident)
+            ->whereHas('user', fn ($query) => $query->whereNull('suspended_at'))
             ->whereIn('propertyware_id', $lease->tenantContactIds)
             ->with('user')
             ->get();
@@ -64,14 +65,14 @@ class LeaseExpiryRecipients
 
         $map = [];
 
-        foreach (ClientAccount::query()->where('role', ClientRole::Owner)->with('user')->get() as $account) {
+        foreach (ClientAccount::query()->where('role', ClientRole::Owner)->whereHas('user', fn ($query) => $query->whereNull('suspended_at'))->with('user')->get() as $account) {
             $contact = $this->contactOrNull($account->propertyware_id);
 
             if ($contact?->role !== ClientRole::Owner) {
                 continue;
             }
 
-            foreach ($contact->portfolioIds as $portfolioId) {
+            foreach (array_unique($contact->portfolioIds) as $portfolioId) {
                 $map[$portfolioId][] = $account;
             }
         }

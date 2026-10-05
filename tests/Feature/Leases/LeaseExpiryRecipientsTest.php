@@ -82,3 +82,21 @@ test('tenants named on the lease with a portal login are told; others are not', 
     expect($recipients->tenants(expiringLease(['900', '901']))->pluck('id')->sort()->values()->all())
         ->toBe([$primary->id, $secondary->id]);
 });
+
+test('an owner whose login is suspended is not told', function () {
+    $active = ClientAccount::factory()->owner()->create(['propertyware_id' => '500']);
+    $suspended = ClientAccount::factory()->owner()->create(['propertyware_id' => '501']);
+    $suspended->user->forceFill(['suspended_at' => now()])->save();
+
+    $recipients = recipientsWithOwners(['500' => ownerContact('500', [2]), '501' => ownerContact('501', [2])]);
+
+    expect($recipients->owners(expiringLease())->pluck('id')->all())->toBe([$active->id]);
+});
+
+test('a tenant whose login is suspended is not told', function () {
+    $active = ClientAccount::factory()->resident()->create(['propertyware_id' => '900']);
+    $suspended = ClientAccount::factory()->resident()->create(['propertyware_id' => '901']);
+    $suspended->user->forceFill(['suspended_at' => now()])->save();
+
+    expect(recipientsWithOwners([])->tenants(expiringLease(['900', '901']))->pluck('id')->all())->toBe([$active->id]);
+});
