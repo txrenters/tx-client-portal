@@ -43,7 +43,7 @@ final class LeaseNoticeText
             $title = "Your lease ends {$end}";
             $body = "To renew, your documents must be submitted and approved by {$deadline}. After that, the home goes back on the market.";
             $message = implode("\n\n", [
-                "Dear {$greetingName},",
+                $greetingName === '' ? 'Dear Resident,' : "Dear {$greetingName},",
                 "This notification is to inform you that your lease will be expiring soon. The details of your current lease are shown below:\n\n{$details}",
                 "Per your lease agreement, your home will be placed back on the market 60 days before the lease ends. If you've been offered a renewal or extension, all required documents must be submitted and approved at least 60 days prior to your lease end date.",
                 "Best regards,\nThe TexasRenters.com Property Management Team",

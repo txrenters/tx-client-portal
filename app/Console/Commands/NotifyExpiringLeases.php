@@ -45,17 +45,27 @@ class NotifyExpiringLeases extends Command
             ->map(fn (LeaseExpiryNotice $record): string => $record->propertyware_lease_id.'@'.$record->end_date->toDateString())
             ->all();
 
+        $seed = $this->option('seed') || ! LeaseExpiryNotice::query()->exists();
+
+        if ($seed && ! $this->option('seed')) {
+            $this->info('No reminders have been recorded yet, so this first run is being treated as a seed.');
+        }
+
         $sent = 0;
         $quiet = 0;
         $skipped = 0;
         $failed = 0;
 
         foreach ($leases as $lease) {
-            if (in_array($lease->id.'@'.$lease->endDate->toDateString(), $done, strict: true)) {
+            $key = $lease->id.'@'.$lease->endDate->toDateString();
+
+            if (in_array($key, $done, strict: true)) {
                 continue;
             }
 
-            if ($this->option('seed') && $lease->daysLeft($today) < 80) {
+            $done[] = $key;
+
+            if ($seed && $lease->daysLeft($today) < 80) {
                 LeaseExpiryNotice::create(['propertyware_lease_id' => $lease->id, 'end_date' => $lease->endDate, 'recipients' => 0]);
                 $quiet++;
 
@@ -65,10 +75,15 @@ class NotifyExpiringLeases extends Command
             try {
                 $notices = $this->noticesFor($lease, $recipients, $today);
             } catch (Throwable $exception) {
-                Log::warning('Could not work out the reminders for a lease; trying again tomorrow.', [
-                    'lease_id' => $lease->id,
-                    'reason' => $exception->getMessage(),
-                ]);
+                if ($exception instanceof PropertywareException) {
+                    Log::warning('Could not work out the reminders for a lease; trying again tomorrow.', [
+                        'lease_id' => $lease->id,
+                        'reason' => $exception->getMessage(),
+                    ]);
+                } else {
+                    report($exception);
+                }
+
                 $skipped++;
 
                 continue;

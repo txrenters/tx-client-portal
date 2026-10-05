@@ -69,3 +69,11 @@ test('a lease with no start date leaves that line out', function () {
 
     expect(LeaseNoticeText::for($lease, $tenant, $this->today)['message'])->not->toContain('Lease Start Date');
 });
+
+test('a tenant with no name is greeted as Resident', function () {
+    $tenant = ClientAccount::factory()->resident()->for(User::factory()->create(['name' => '  ']))->create();
+
+    $notice = LeaseNoticeText::for($this->lease, $tenant, $this->today);
+
+    expect($notice['message'])->toStartWith('Dear Resident,');
+});

@@ -12,6 +12,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Client\Request;
 use Illuminate\Notifications\Events\NotificationSending;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -95,6 +96,47 @@ test('the first run tells only leases 80 to 90 days out and quietly records the 
     Notification::assertSentToTimes($this->tenant->user, LeaseExpiringNotification::class, 1);
 });
 
+test('with no record at all the first run is treated as a seed', function () {
+    Notification::fake();
+    $this->leases = [activeLease(55, '2027-01-01'), activeLease(56, '2026-11-02')];
+
+    $this->artisan('leases:notify-expiring')
+        ->expectsOutputToContain('first run')
+        ->assertSuccessful();
+
+    Notification::assertSentToTimes($this->tenant->user, LeaseExpiringNotification::class, 1);
+    Notification::assertSentTo($this->tenant->user, fn (LeaseExpiringNotification $n) => $n->notice['lease_id'] === 55);
+    expect(LeaseExpiryNotice::pluck('propertyware_lease_id')->sort()->values()->all())->toBe([55, 56]);
+});
+
+test('a lease returned twice in one response is sent once', function () {
+    Notification::fake();
+    LeaseExpiryNotice::create(['propertyware_lease_id' => 1, 'end_date' => '2026-06-01', 'recipients' => 0]);
+    $this->leases = [activeLease(55, '2027-01-01'), activeLease(55, '2027-01-01')];
+
+    $this->artisan('leases:notify-expiring')->assertSuccessful();
+
+    Notification::assertSentToTimes($this->tenant->user, LeaseExpiringNotification::class, 1);
+    expect(LeaseExpiryNotice::where('propertyware_lease_id', 55)->count())->toBe(1);
+});
+
+test('a failure that is not from Propertyware is reported', function () {
+    Exceptions::fake();
+    Notification::fake();
+    LeaseExpiryNotice::create(['propertyware_lease_id' => 1, 'end_date' => '2026-06-01', 'recipients' => 0]);
+    $this->leases = [activeLease(55, '2027-01-01')];
+
+    $this->mock(LeaseExpiryRecipients::class, function ($mock) {
+        $mock->shouldReceive('owners')->andThrow(new RuntimeException('Something broke.'));
+        $mock->shouldReceive('tenants')->andReturn(collect());
+    });
+
+    $this->artisan('leases:notify-expiring')->assertSuccessful();
+
+    Exceptions::assertReported(RuntimeException::class);
+    expect(LeaseExpiryNotice::where('propertyware_lease_id', 55)->count())->toBe(0);
+});
+
 test('when Propertyware fails nothing is recorded, so tomorrow tries again', function () {
     Notification::fake();
     $this->leases = [activeLease(55, '2027-01-01')];
@@ -108,6 +150,7 @@ test('when Propertyware fails nothing is recorded, so tomorrow tries again', fun
 
 test('a lease whose recipients cannot be read is skipped for today while the others go out', function () {
     Notification::fake();
+    LeaseExpiryNotice::create(['propertyware_lease_id' => 1, 'end_date' => '2026-06-01', 'recipients' => 0]);
     Log::spy();
     $this->leases = [activeLease(55, '2027-01-01'), activeLease(56, '2026-12-20')];
     $this->recipientsDown = true;
@@ -126,7 +169,7 @@ test('a lease whose recipients cannot be read is skipped for today while the oth
     Notification::assertSentToTimes($owner->user, LeaseExpiringNotification::class, 1);
     Notification::assertSentToTimes($tenant->user, LeaseExpiringNotification::class, 1);
     Notification::assertSentTo($tenant->user, fn (LeaseExpiringNotification $n) => $n->notice['lease_id'] === 56);
-    expect(LeaseExpiryNotice::pluck('propertyware_lease_id')->all())->toBe([56]);
+    expect(LeaseExpiryNotice::where('propertyware_lease_id', '>', 1)->pluck('propertyware_lease_id')->all())->toBe([56]);
     Log::shouldHaveReceived('warning')->once();
 
     // Tomorrow, with Propertyware back, the skipped lease is tried again.
@@ -137,6 +180,7 @@ test('a lease whose recipients cannot be read is skipped for today while the oth
 
 test('a notice that cannot be written sends nothing for that lease while the others go out', function () {
     Notification::fake();
+    LeaseExpiryNotice::create(['propertyware_lease_id' => 1, 'end_date' => '2026-06-01', 'recipients' => 0]);
     $this->leases = [activeLease(55, '2027-01-01'), activeLease(56, '2026-12-20')];
     $owner = $this->owner->load('user');
     $unwritable = ClientAccount::factory()->owner()->make(['id' => 999_999])->setRelation('user', User::factory()->create());
@@ -151,10 +195,11 @@ test('a notice that cannot be written sends nothing for that lease while the oth
 
     Notification::assertSentToTimes($owner->user, LeaseExpiringNotification::class, 1);
     Notification::assertSentTo($owner->user, fn (LeaseExpiringNotification $n) => $n->notice['lease_id'] === 56);
-    expect(LeaseExpiryNotice::pluck('propertyware_lease_id')->all())->toBe([56]);
+    expect(LeaseExpiryNotice::where('propertyware_lease_id', '>', 1)->pluck('propertyware_lease_id')->all())->toBe([56]);
 });
 
 test('a send that fails part-way records who was told, so nobody is told twice', function () {
+    LeaseExpiryNotice::create(['propertyware_lease_id' => 1, 'end_date' => '2026-06-01', 'recipients' => 0]);
     $this->leases = [activeLease(55, '2027-01-01'), activeLease(56, '2026-12-20')];
     Event::listen(NotificationSending::class, function (NotificationSending $event) {
         if ($event->notifiable->is($this->tenant->user) && $event->notification->notice['lease_id'] === 55) {
