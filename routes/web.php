@@ -4,14 +4,9 @@ use App\Http\Controllers\Client\InvitationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailConfirmationController;
 use App\Http\Controllers\MobileAppAssociationController;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
-Route::get('/', fn () => Auth::check()
-    ? redirect()->route('dashboard')
-    : Inertia::render('Welcome'),
-)->name('home');
+Route::inertia('/', 'Welcome')->name('home');
 
 Route::inertia('privacy', 'Privacy')->name('privacy');
 Route::inertia('support', 'Support')->name('support');

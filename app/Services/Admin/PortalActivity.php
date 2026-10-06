@@ -90,6 +90,8 @@ class PortalActivity
             ]);
 
         $approvals = WorkOrderApproval::query()
+            // The App Review logins' approvals are not for staff.
+            ->whereDoesntHave('user', fn ($query) => $query->where('is_demo', true))
             ->latest('decided_at')
             ->limit(50)
             ->get()
@@ -114,6 +116,8 @@ class PortalActivity
 
         $helpRequests = HelpRequest::query()
             ->with('user:id,email')
+            // The App Review logins' help requests are not for staff.
+            ->whereDoesntHave('user', fn ($query) => $query->where('is_demo', true))
             ->latest()
             ->limit(50)
             ->get()

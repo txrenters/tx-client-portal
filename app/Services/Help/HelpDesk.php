@@ -40,7 +40,8 @@ class HelpDesk
 
         $staff = array_filter((array) config('services.admin_emails', []));
 
-        if ($staff !== []) {
+        // The App Review logins are only for trying the form out; staff are never told.
+        if ($staff !== [] && ! $user->is_demo) {
             Notification::route('mail', $staff)->notify(new HelpRequestReceivedNotification($request));
         }
 
@@ -93,6 +94,7 @@ class HelpDesk
     {
         return HelpRequest::query()
             ->with(['user:id,name,email', 'resolver:id,email'])
+            ->whereDoesntHave('user', fn ($query) => $query->where('is_demo', true))
             ->when($status !== null, fn ($query) => $query->where('status', $status->value))
             ->when(filled($search), function ($query) use ($search): void {
                 $term = '%'.mb_strtolower((string) $search).'%';
@@ -128,7 +130,10 @@ class HelpDesk
      */
     public function openCount(): int
     {
-        return HelpRequest::query()->where('status', HelpRequestStatus::Open->value)->count();
+        return HelpRequest::query()
+            ->where('status', HelpRequestStatus::Open->value)
+            ->whereDoesntHave('user', fn ($query) => $query->where('is_demo', true))
+            ->count();
     }
 
     /**

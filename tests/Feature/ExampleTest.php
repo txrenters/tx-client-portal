@@ -9,10 +9,11 @@ test('shows the portal welcome page to visitors', function () {
         ->assertInertia(fn (AssertableInertia $page) => $page->component('Welcome'));
 });
 
-test('sends a signed-in client to their dashboard', function () {
+test('shows the welcome page to a signed-in client too', function () {
     $this->actingAs(User::factory()->resident()->create())
         ->get(route('home'))
-        ->assertRedirect(route('dashboard'));
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page->component('Welcome'));
 });
 
 test('shows the privacy policy and support pages to visitors', function (string $route, string $component) {

@@ -261,6 +261,8 @@ class WorkOrderApprovals
         WorkOrderApproval::query()
             ->whereNull('propertyware_synced_at')
             ->where(fn ($query) => $query->whereNull('sync_error')->orWhereNotIn('sync_error', [self::TEST_APPROVAL, self::SUPERSEDED]))
+            // The App Review logins' approvals are for made-up work orders.
+            ->whereDoesntHave('user', fn ($query) => $query->where('is_demo', true))
             ->orderBy('decided_at')
             ->each(function (WorkOrderApproval $approval) use (&$sent, &$failed): void {
                 $isLatest = ! WorkOrderApproval::query()

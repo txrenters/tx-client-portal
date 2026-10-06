@@ -20,7 +20,7 @@ const { mainNavGroups, secondaryNavItems, availableRoles } =
 <template>
     <Sidebar collapsible="icon" variant="sidebar">
         <SidebarHeader>
-            <SidebarBrand :href="dashboard()" label="Client portal" />
+            <SidebarBrand :href="dashboard()" label="Client Portal" />
             <AccountSwitcher />
             <RoleSwitcher v-if="availableRoles.length > 1" />
         </SidebarHeader>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import {
     ArrowRight,
     FileText,
@@ -15,7 +15,11 @@ import SiteFooter from '@/components/marketing/SiteFooter.vue';
 import SiteHeader from '@/components/marketing/SiteHeader.vue';
 import { Button } from '@/components/ui/button';
 import { vReveal } from '@/lib/reveal';
-import { login, register } from '@/routes';
+import { computed } from 'vue';
+import { dashboard, login, register } from '@/routes';
+
+const page = usePage();
+const isSignedIn = computed(() => page.props.auth.user !== null);
 
 const steps = [
     {
@@ -111,23 +115,36 @@ const securityPoints = [
                             class="flex flex-wrap items-center gap-3"
                         >
                             <Button
+                                v-if="isSignedIn"
                                 as-child
                                 size="lg"
                                 class="bg-scrim-foreground text-scrim hover:bg-scrim-foreground/90 h-12 px-6 text-base"
                             >
-                                <Link :href="register()">
-                                    Create your account
+                                <Link :href="dashboard()">
+                                    Go to your dashboard
                                     <ArrowRight class="size-4" />
                                 </Link>
                             </Button>
-                            <Button
-                                as-child
-                                size="lg"
-                                variant="outline"
-                                class="border-scrim-foreground/30 text-scrim-foreground hover:bg-scrim-foreground/10 hover:text-scrim-foreground h-12 bg-transparent px-6 text-base dark:bg-transparent"
-                            >
-                                <Link :href="login()">Sign in</Link>
-                            </Button>
+                            <template v-else>
+                                <Button
+                                    as-child
+                                    size="lg"
+                                    class="bg-scrim-foreground text-scrim hover:bg-scrim-foreground/90 h-12 px-6 text-base"
+                                >
+                                    <Link :href="register()">
+                                        Create your account
+                                        <ArrowRight class="size-4" />
+                                    </Link>
+                                </Button>
+                                <Button
+                                    as-child
+                                    size="lg"
+                                    variant="outline"
+                                    class="border-scrim-foreground/30 text-scrim-foreground hover:bg-scrim-foreground/10 hover:text-scrim-foreground h-12 bg-transparent px-6 text-base dark:bg-transparent"
+                                >
+                                    <Link :href="login()">Sign in</Link>
+                                </Button>
+                            </template>
                         </div>
 
                         <p

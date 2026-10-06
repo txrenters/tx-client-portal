@@ -20,3 +20,6 @@ Schedule::command('approvals:notify')->everyThirtyMinutes()->between('8:00', '20
 
 // Old sign-in log entries and visits (see the models' KEEP_DAYS).
 Schedule::command('model:prune', ['--model' => [SignInEvent::class, PortalVisit::class, SecurityEvent::class]])->daily();
+
+// The App Review logins start each day from their made-up records.
+Schedule::command('demo:reset')->dailyAt('03:00')->timezone('America/Chicago')->withoutOverlapping();
