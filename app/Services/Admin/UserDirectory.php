@@ -214,6 +214,7 @@ class UserDirectory
             'twoFactor' => $user->two_factor_confirmed_at !== null,
             'suspendedAt' => $user->suspended_at?->toIso8601String(),
             'isStaff' => $user->isStaff(),
+            'isDemo' => $user->is_demo,
             'joinedAt' => $user->created_at?->toIso8601String(),
             'accounts' => $user->clientAccounts
                 ->map(fn (ClientAccount $account): array => [
