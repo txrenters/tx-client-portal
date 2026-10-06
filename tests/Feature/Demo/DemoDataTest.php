@@ -54,3 +54,16 @@ test('a stored record gets an id in the demo range and is read back', function (
 test('the demo pdf is a pdf', function () {
     expect(DemoPdf::make('Lease Agreement'))->toStartWith('%PDF-1.4')->toContain('Lease Agreement')->toEndWith("%%EOF\n");
 });
+
+test('a record whose payload fails leaves no row behind', function () {
+    expect(fn () => DemoRecord::store('workorder', fn (int $id) => throw new RuntimeException('boom')))->toThrow(RuntimeException::class);
+
+    expect(DemoRecord::count())->toBe(0);
+});
+
+test('payloads skips records with an empty payload', function () {
+    DemoRecord::create(['kind' => 'workorder', 'payload' => []]);
+    DemoRecord::store('workorder', fn (int $id) => ['id' => (string) $id]);
+
+    expect(DemoRecord::payloads('workorder'))->toHaveCount(1);
+});

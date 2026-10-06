@@ -6,6 +6,7 @@ use App\Models\ClientAccount;
 use App\Models\User;
 use App\Services\Demo\DemoData;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 
@@ -68,3 +69,20 @@ test('a demo login never goes looking for more Propertyware accounts', function 
     Http::assertNotSent(fn ($request) => str_contains($request->url(), 'contacts?email'));
     expect($user->clientAccounts()->count())->toBe(1);
 });
+
+test('in demo mode a cache write is not visible through the real default store', function (string $driver) {
+    $real = storage_path('framework/cache/data-test-'.uniqid());
+    config(['cache.default' => $driver, 'cache.stores.'.$driver.'.path' => $real]);
+    $original = config('cache.default');
+
+    DemoMode::enter();
+    Cache::put('propertyware:buildings', ['demo'], 60);
+
+    expect(Cache::get('propertyware:buildings'))->toBe(['demo'])
+        ->and(Cache::store($original)->get('propertyware:buildings'))->toBeNull();
+    if ($driver === 'file') {
+        expect(config('cache.stores.demo.path'))->toBe(storage_path('framework/cache/demo'));
+    }
+    Cache::flush();
+    File::deleteDirectory($real);
+})->with(['array', 'file']);

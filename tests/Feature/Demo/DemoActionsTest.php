@@ -8,8 +8,10 @@ use App\Models\User;
 use App\Models\WorkOrderApproval;
 use App\Services\Admin\PortalActivity;
 use App\Services\Demo\DemoData;
+use App\Services\Demo\DemoPropertywareSoap;
 use App\Services\Help\HelpDesk;
 use App\Services\Propertyware\MaintenanceSummary;
+use App\Services\Propertyware\PropertywareSoap;
 use App\Services\Propertyware\WorkOrderApprovals;
 use App\Services\Referrals\ReferralProgram;
 use Illuminate\Http\UploadedFile;
@@ -114,4 +116,28 @@ test('demo help requests and referrals stay out of the staff views and counts', 
         ->and(app(HelpDesk::class)->forStaff()->total())->toBe(1)
         ->and(app(ReferralProgram::class)->forStaff()->pluck('firstName')->all())->toBe(['Real'])
         ->and(collect(app(PortalActivity::class)->recent())->where('type', 'help_request')->pluck('actor')->all())->toBe([$real->email]);
+});
+
+test('with approval pushing on, a demo approval and decline are stamped synced and never leave the demo', function (string $decision) {
+    config(['services.propertyware.approval_push' => true, 'services.propertyware.approval_test_mode' => false]);
+    [$user, $account] = demoLogin(ClientRole::Owner);
+    Sanctum::actingAs($user);
+
+    $this->postJson(route('api.v1.accounts.maintenance.approval', [$account, DemoData::WORK_ORDER_APPROVAL]), ['decision' => $decision])
+        ->assertSuccessful();
+
+    expect(WorkOrderApproval::sole())->decision->toBe($decision)->propertyware_synced_at->not->toBeNull()
+        ->and(app(PropertywareSoap::class))->toBeInstanceOf(DemoPropertywareSoap::class);
+    Http::assertNotSent(fn ($request) => ! str_ends_with((string) parse_url($request->url(), PHP_URL_HOST), '.demo.invalid'));
+})->with(['approved', 'declined']);
+
+test('demo work-order approvals stay out of the staff activity feed', function () {
+    [$demo, $demoAccount] = demoLogin(ClientRole::Owner);
+    $real = User::factory()->create();
+    WorkOrderApproval::factory()->for($demo)->for($demoAccount)->create(['approver_name' => 'Demo Approver']);
+    WorkOrderApproval::factory()->for($real)->create(['approver_name' => 'Real Approver']);
+
+    $actors = collect(app(PortalActivity::class)->recent())->filter(fn ($row) => str_starts_with($row['type'], 'work_order_'))->pluck('actor')->all();
+
+    expect($actors)->toBe(['Real Approver']);
 });

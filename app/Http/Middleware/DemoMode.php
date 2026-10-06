@@ -51,8 +51,9 @@ class DemoMode
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // The app's token is resolved by the route's auth middleware, which
-        // runs after this group, so ask the Sanctum guard directly.
+        // On an authenticated route the priority list runs auth:sanctum ahead
+        // of this middleware, so the user is already resolved. The sanctum
+        // fallback only matters on a route that has no auth middleware.
         $user = $request->user() ?? $request->user('sanctum');
 
         if ($user instanceof User && $user->is_demo) {
@@ -95,7 +96,12 @@ class DemoMode
             'services.expo.url' => 'https://'.DemoBackend::EXPO,
             // The same store under its own prefix, so a shared key such as the
             // account-wide building list never mixes demo and real records.
-            'cache.stores.'.self::cacheStore() => [...config("cache.stores.{$default}"), 'prefix' => 'demo_'.Setting::valueOf(DemoReset::CACHE_GENERATION, '0').'_'],
+            'cache.stores.'.self::cacheStore() => [
+                ...config("cache.stores.{$default}"),
+                'prefix' => 'demo_'.Setting::valueOf(DemoReset::CACHE_GENERATION, '0').'_',
+                // The file driver ignores the prefix, so it gets a directory of its own.
+                ...config("cache.stores.{$default}.driver") === 'file' ? ['path' => storage_path('framework/cache/demo')] : [],
+            ],
             'queue.default' => 'sync',
             'mail.default' => 'array',
         ]);

@@ -5,6 +5,7 @@ namespace App\Models;
 use Closure;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Something an App Review login created, kept in place of Propertyware or the hub.
@@ -34,20 +35,23 @@ class DemoRecord extends Model
      */
     public static function store(string $kind, Closure $payload): array
     {
-        $record = static::create(['kind' => $kind, 'payload' => []]);
-        $id = self::FIRST_ID + $record->id;
-        $record->update(['external_id' => $id, 'payload' => $payload($id)]);
+        // One transaction, so a payload that throws leaves no half-made row behind.
+        return DB::transaction(function () use ($kind, $payload): array {
+            $record = static::create(['kind' => $kind, 'payload' => []]);
+            $id = self::FIRST_ID + $record->id;
+            $record->update(['external_id' => $id, 'payload' => $payload($id)]);
 
-        return $record->payload;
+            return $record->payload;
+        });
     }
 
     /**
-     * Every stored payload of one kind, oldest first.
+     * Every stored payload of one kind, oldest first, leaving out any still empty.
      *
      * @return array<int, array<string, mixed>>
      */
     public static function payloads(string $kind): array
     {
-        return static::query()->where('kind', $kind)->orderBy('id')->pluck('payload')->all();
+        return static::query()->where('kind', $kind)->orderBy('id')->pluck('payload')->filter()->values()->all();
     }
 }
