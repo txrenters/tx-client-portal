@@ -27,3 +27,6 @@ Artisan::command('notifications:prune', function () {
 })->purpose('Delete stored notifications older than 90 days');
 
 Schedule::command('notifications:prune')->daily();
+
+// The App Review logins start each day from their made-up records.
+Schedule::command('demo:reset')->dailyAt('03:00')->timezone('America/Chicago')->withoutOverlapping();

@@ -33,6 +33,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property StaffRole|null $staff_role Staff access granted in the admin area; see isOwner() for the config owners.
  * @property Carbon|null $suspended_at Set by staff to shut the login out; see isSuspended().
  * @property array<string, bool>|null $notification_preferences What the client turned on or off; see notificationPreferences().
+ * @property bool $is_demo One of the App Review logins; see App\Http\Middleware\DemoMode.
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -42,6 +43,17 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+
+    protected static function booted(): void
+    {
+        // A referral outlives its user (user_id is nulled), but a demo user's
+        // would then look real to staff and never be reset, so it goes with them.
+        static::deleting(function (User $user): void {
+            if ($user->is_demo) {
+                Referral::query()->where('user_id', $user->id)->delete();
+            }
+        });
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -177,6 +189,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'last_seen_at' => 'datetime',
             'staff_role' => StaffRole::class,
             'notification_preferences' => 'array',
+            'is_demo' => 'boolean',
         ];
     }
 

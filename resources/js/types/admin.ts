@@ -63,6 +63,8 @@ export type AdminUser = {
     suspendedAt: string | null;
     /** Staff logins, which cannot be impersonated. */
     isStaff: boolean;
+    /** One of the App Review logins, which see made-up records. */
+    isDemo: boolean;
     joinedAt: string | null;
     accounts: { id: number; role: string; propertywareId: string | null }[];
     appSessions: number;

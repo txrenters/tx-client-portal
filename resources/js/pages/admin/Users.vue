@@ -147,6 +147,9 @@ const joined = appDateFormatter({
                                 {{ user.email }}
                             </p>
                             <div class="mt-1 flex flex-wrap gap-1">
+                                <Badge v-if="user.isDemo" variant="outline"
+                                    >Demo</Badge
+                                >
                                 <Badge
                                     v-if="user.suspendedAt"
                                     variant="destructive"

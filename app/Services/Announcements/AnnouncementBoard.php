@@ -133,6 +133,8 @@ class AnnouncementBoard
         return User::query()
             ->whereNotNull('email_verified_at')
             ->whereNull('suspended_at')
+            // The App Review logins are never mailed or pushed announcements.
+            ->where('is_demo', false)
             ->whereHas('clientAccounts', fn ($query) => $audience === 'all'
                 ? $query
                 : $query->where('role', ClientRole::from($audience)->value));

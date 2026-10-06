@@ -96,6 +96,7 @@ setLayoutProps({
 
         <div class="flex flex-wrap gap-1">
             <Badge v-if="isStaff">Staff</Badge>
+            <Badge v-if="user.isDemo" variant="outline">Demo</Badge>
             <Badge v-if="user.suspendedAt" variant="destructive"
                 >Suspended</Badge
             >

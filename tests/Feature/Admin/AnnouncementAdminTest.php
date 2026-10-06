@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\ClientRole;
 use App\Jobs\SendAnnouncement;
 use App\Models\Announcement;
+use App\Models\ClientAccount;
 use App\Models\User;
 use App\Notifications\AnnouncementNotification;
 use App\Services\Announcements\AnnouncementBoard;
@@ -83,4 +85,14 @@ test('clients cannot post announcements', function () {
     $this->actingAs($client)->post(route('admin.announcements.store'), announcementDetails())->assertForbidden();
 
     expect(Announcement::count())->toBe(0);
+});
+
+test('the App Review logins are never in an announcement audience', function () {
+    $real = User::factory()->create(['email_verified_at' => now()]);
+    $demo = User::factory()->demo()->create(['email_verified_at' => now()]);
+    foreach ([$real, $demo] as $user) {
+        ClientAccount::factory()->for($user)->create(['role' => ClientRole::Owner]);
+    }
+
+    expect(app(AnnouncementBoard::class)->audienceQuery('all')->pluck('id')->all())->toBe([$real->id]);
 });

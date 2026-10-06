@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\DemoMode;
 use App\Http\Middleware\EnsureUserIsNotSuspended;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\GuardRequests;
@@ -37,7 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Sorted after the route's auth middleware, so an app token has been
         // resolved to its user before the suspension is checked.
-        $middleware->appendToGroup('api', [EnsureUserIsNotSuspended::class, TrackLastSeen::class]);
+        $middleware->appendToGroup('api', [EnsureUserIsNotSuspended::class, TrackLastSeen::class, DemoMode::class]);
         $middleware->appendToPriorityList(AuthenticatesRequests::class, EnsureUserIsNotSuspended::class);
         $middleware->appendToPriorityList(AuthenticatesRequests::class, TrackLastSeen::class);
 
@@ -45,6 +46,8 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             EnsureUserIsNotSuspended::class,
             TrackLastSeen::class,
+            // Before anything reads Propertyware for the page: an App Review login sees made-up records.
+            DemoMode::class,
             SyncPropertywareAccounts::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
