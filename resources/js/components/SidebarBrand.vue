@@ -31,7 +31,7 @@ defineProps<{
             />
         </span>
         <span
-            class="border-scrim-foreground/20 text-scrim-foreground border-t pt-2.5 text-center text-lg leading-tight font-bold tracking-tight group-data-[collapsible=icon]:hidden"
+            class="border-scrim-foreground/20 text-scrim-foreground border-t pt-2.5 text-center text-lg leading-tight font-bold tracking-wide uppercase group-data-[collapsible=icon]:hidden"
         >
             {{ label }}
         </span>
