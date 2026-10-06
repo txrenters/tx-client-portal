@@ -90,7 +90,7 @@ const systemItems = computed<NavItem[]>(() => [
 <template>
     <Sidebar collapsible="icon" variant="sidebar">
         <SidebarHeader>
-            <SidebarBrand :href="dashboard()" label="Staff" />
+            <SidebarBrand :href="dashboard()" label="Staff Portal" />
         </SidebarHeader>
 
         <SidebarContent>
