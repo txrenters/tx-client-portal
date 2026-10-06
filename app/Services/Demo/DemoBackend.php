@@ -26,11 +26,36 @@ final class DemoBackend
 
     public const EXPO = 'expo.demo.invalid';
 
+    /**
+     * The real hosts of the outside systems, which a demo request must never reach.
+     *
+     * @var array<int, string>
+     */
+    private array $blocked = [];
+
     public function __construct(private DemoPropertyware $propertyware, private DemoChatHub $chatHub) {}
+
+    /**
+     * Refuse these hosts. DemoMode hands over the hosts the outside systems
+     * were configured with before the switch, so a service that kept its old
+     * config still cannot reach the real system.
+     *
+     * @param  array<int, string>  $hosts
+     */
+    public function blocking(array $hosts): void
+    {
+        $this->blocked = $hosts;
+    }
 
     public function respond(Request $request): ?PromiseInterface
     {
-        return match (parse_url($request->url(), PHP_URL_HOST)) {
+        $host = parse_url($request->url(), PHP_URL_HOST);
+
+        if (is_string($host) && in_array($host, $this->blocked, true)) {
+            return Http::response(['message' => 'Not available in the demo.'], 404);
+        }
+
+        return match ($host) {
             self::PROPERTYWARE => $this->propertyware->respond($request),
             self::CHAT_HUB => $this->chatHub->respond($request),
             // No listing photos for made-up homes.

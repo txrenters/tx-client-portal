@@ -52,6 +52,13 @@ class DemoMode
     {
         $default = config('cache.default');
 
+        // Captured before the config below is overwritten: the real systems a demo request must never reach.
+        $real = collect(['services.propertyware.base_url', 'services.chat_hub.url', 'services.tx_cma.url', 'services.leads.webhook_url', 'services.expo.url'])
+            ->map(fn (string $key): mixed => parse_url((string) config($key), PHP_URL_HOST))
+            ->filter(fn (mixed $host): bool => is_string($host) && $host !== '' && ! str_ends_with($host, '.demo.invalid'))
+            ->values()
+            ->all();
+
         config([
             'services.propertyware.base_url' => 'https://'.DemoBackend::PROPERTYWARE,
             'services.propertyware.client_id' => 'demo',
@@ -77,6 +84,9 @@ class DemoMode
 
         app()->instance(PropertywareSoap::class, new DemoPropertywareSoap);
         Cache::setDefaultDriver(self::cacheStore());
-        Http::fake(app(DemoBackend::class)->respond(...));
+
+        $backend = app(DemoBackend::class);
+        $backend->blocking($real);
+        Http::fake($backend->respond(...));
     }
 }
