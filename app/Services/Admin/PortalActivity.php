@@ -114,6 +114,8 @@ class PortalActivity
 
         $helpRequests = HelpRequest::query()
             ->with('user:id,email')
+            // The App Review logins' help requests are not for staff.
+            ->whereDoesntHave('user', fn ($query) => $query->where('is_demo', true))
             ->latest()
             ->limit(50)
             ->get()

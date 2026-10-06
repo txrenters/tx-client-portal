@@ -6,6 +6,7 @@ use App\Models\HelpRequest;
 use App\Models\Referral;
 use App\Models\User;
 use App\Models\WorkOrderApproval;
+use App\Services\Admin\PortalActivity;
 use App\Services\Demo\DemoData;
 use App\Services\Help\HelpDesk;
 use App\Services\Propertyware\MaintenanceSummary;
@@ -111,5 +112,6 @@ test('demo help requests and referrals stay out of the staff views and counts', 
 
     expect(app(HelpDesk::class)->openCount())->toBe(1)
         ->and(app(HelpDesk::class)->forStaff()->total())->toBe(1)
-        ->and(app(ReferralProgram::class)->forStaff()->pluck('firstName')->all())->toBe(['Real']);
+        ->and(app(ReferralProgram::class)->forStaff()->pluck('firstName')->all())->toBe(['Real'])
+        ->and(collect(app(PortalActivity::class)->recent())->where('type', 'help_request')->pluck('actor')->all())->toBe([$real->email]);
 });
