@@ -2,7 +2,9 @@
 
 // tests/Feature/Leases/LeaseExpiryRecipientsTest.php
 
+use App\Enums\ClientRole;
 use App\Models\ClientAccount;
+use App\Services\Demo\DemoData;
 use App\Services\Leases\ExpiringLease;
 use App\Services\Leases\LeaseExpiryRecipients;
 use App\Services\Propertyware\PropertywareClient;
@@ -99,4 +101,20 @@ test('a tenant whose login is suspended is not told', function () {
     $suspended->user->forceFill(['suspended_at' => now()])->save();
 
     expect(recipientsWithOwners([])->tenants(expiringLease(['900', '901']))->pluck('id')->all())->toBe([$active->id]);
+});
+
+test('demo logins are never looked up in Propertyware and never told', function () {
+    [, $demoOwner] = demoLogin(ClientRole::Owner);
+    [, $demoTenant] = demoLogin(ClientRole::Resident);
+    $real = ClientAccount::factory()->owner()->create(['propertyware_id' => '500']);
+    $realTenant = ClientAccount::factory()->resident()->create(['propertyware_id' => '900']);
+
+    $recipients = recipientsWithOwners(['500' => ownerContact('500', [2])]);
+    $lease = expiringLease(['900', (string) DemoData::TENANT_CONTACT]);
+
+    expect($recipients->owners($lease)->pluck('id')->all())->toBe([$real->id])
+        ->and($recipients->tenants($lease)->pluck('id')->all())->toBe([$realTenant->id]);
+
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), (string) DemoData::OWNER_CONTACT));
+    expect($demoOwner->exists && $demoTenant->exists)->toBeTrue();
 });

@@ -54,14 +54,16 @@ class ExpiringLeases
                 unit: filled($unit['name'] ?? null) ? trim((string) $unit['name']) : $building,
                 startDate: filled($lease['startDate'] ?? null) ? CarbonImmutable::parse($lease['startDate']) : null,
                 endDate: CarbonImmutable::parse($lease['endDate']),
-                tenantContactIds: collect($lease['contacts'] ?? [])
-                    ->filter(fn (mixed $contact): bool => is_array($contact)
-                        && ($contact['namedOnLease'] ?? false) === true
-                        && in_array($contact['role'] ?? null, self::TENANT_ROLES, strict: true)
-                        && isset($contact['id']))
-                    ->map(fn (array $contact): string => (string) $contact['id'])
-                    ->values()
-                    ->all(),
+                tenantContactIds: array_values(array_map(
+                    fn (array $contact): string => (string) $contact['id'],
+                    array_filter(
+                        $lease['contacts'] ?? [],
+                        fn (mixed $contact): bool => is_array($contact)
+                            && ($contact['namedOnLease'] ?? false) === true
+                            && in_array($contact['role'] ?? null, self::TENANT_ROLES, strict: true)
+                            && isset($contact['id']),
+                    ),
+                )),
             );
         })->all();
     }

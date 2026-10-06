@@ -24,7 +24,8 @@ test('creates both demo logins, verified and linked to the made-up contacts', fu
         ->and(Hash::check('Owner-pass-2026!', $owner->password))->toBeTrue()
         ->and($owner->clientAccounts->map(fn ($a) => [$a->role, $a->propertyware_id])->all())->toBe([[ClientRole::Owner, (string) DemoData::OWNER_CONTACT]])
         ->and($tenant->clientAccounts->map(fn ($a) => [$a->role, $a->propertyware_id])->all())->toBe([[ClientRole::Resident, (string) DemoData::TENANT_CONTACT]]);
-    Notification::assertNothingSent();
+    // Only the two bell notices are written; no credentials are mailed.
+    Notification::assertCount(2);
 });
 
 test('running it again resets the passwords and keeps one account each', function () {

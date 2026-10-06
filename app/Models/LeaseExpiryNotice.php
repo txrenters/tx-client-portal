@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Model;
  *
  * An extension gives the lease a new end date, and so a new row and a new
  * reminder 90 days before it.
+ *
+ * @property CarbonImmutable $end_date
  */
 #[Fillable(['propertyware_lease_id', 'end_date', 'notified_at', 'recipients'])]
 class LeaseExpiryNotice extends Model
