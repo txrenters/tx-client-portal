@@ -35,10 +35,15 @@ class ClientInvitationNotification extends Notification
         return (new MailMessage)
             ->subject(__('You\'re invited to the TexasRenters.com client portal'))
             ->greeting(__('Hi :name,', ['name' => $this->invitation->name]))
-            ->line(__('TexasRenters.com has set up your :portal. Use it to view your property information, maintenance requests, messages, and documents in one place.', [
+            ->line(__('We are building a new client portal that brings everything TexasRenters.com does for you into one place, and your :portal is ready for you to test.', [
                 'portal' => mb_strtolower($this->invitation->role->portalLabel()),
             ]))
+            ->line(__('You can check for updates anytime. From one login you can view your property information, follow your maintenance requests, message our team, and find your documents.'))
+            ->line(__('The portal is live on the web today, and our iOS and Android apps are coming soon, so you will be able to use the same login on your phone.'))
+            ->line(__('We are adding new features all the time, and your feedback helps shape what comes next.'))
             ->action(__('Set up your account'), route('invitations.show', $this->token))
-            ->line(__('This link expires in :days days.', ['days' => InviteClient::EXPIRES_AFTER_DAYS]));
+            ->line(__('Create your account with the email address connected to your Propertyware account. That is this address, so it is already filled in for you: just choose a name and password, and you are in. This link expires in :days days.', ['days' => InviteClient::EXPIRES_AFTER_DAYS]))
+            ->line(__('Questions? Visit our support site at :url or text us at (281) 248-8018.', ['url' => route('support')]))
+            ->salutation(__("Thank you,\nThe TexasRenters.com Team"));
     }
 }
