@@ -113,6 +113,30 @@ test('the app reads the same ledger with the lease balance', function () {
         ->assertJsonPath('meta.balance', 120.5);
 });
 
+test('totals what was charged and paid month by month for the last year', function () {
+    $this->travelTo('2026-10-15 12:00:00');
+    $this->actingAs($this->tenant);
+
+    $months = collect(partialGet(route('resident.dashboard'), 'resident/Dashboard', 'ledger')->assertOk()->json('props.ledger.months'));
+
+    expect($months)->toHaveCount(12)
+        ->and($months->first()['month'])->toBe('2025-11')
+        // A month where nothing moved still holds its place on the chart.
+        ->and($months->last())->toMatchArray(['month' => '2026-10', 'charged' => 0, 'paid' => 0])
+        ->and($months->firstWhere('month', '2026-09'))->toMatchArray(['charged' => 1400, 'paid' => 1400])
+        // Prepaid money being applied counts on neither side.
+        ->and($months->firstWhere('month', '2026-08'))->toMatchArray(['charged' => 40, 'paid' => 0])
+        // A credit comes off what was charged that month.
+        ->and($months->firstWhere('month', '2026-07'))->toMatchArray(['charged' => -100, 'paid' => 0]);
+
+    Sanctum::actingAs($this->tenant);
+
+    $this->getJson(route('api.v1.accounts.payments', $this->account))
+        ->assertOk()
+        ->assertJsonCount(12, 'meta.months')
+        ->assertJsonPath('meta.months.10', ['month' => '2026-09', 'charged' => 1400, 'paid' => 1400]);
+});
+
 test('owners have no tenant ledger', function () {
     Sanctum::actingAs($this->tenant);
     $owner = ClientAccount::factory()->owner()->for($this->tenant)->create(['propertyware_id' => '500']);

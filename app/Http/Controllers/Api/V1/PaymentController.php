@@ -36,6 +36,7 @@ class PaymentController extends Controller
                 'total' => $entries['results']['total'],
                 'charged' => $entries['charged'],
                 'paid' => $entries['paid'],
+                'months' => $entries['months'],
                 'balance' => $directory->leaseFor($scope)?->balance,
                 'from' => $entries['from'],
                 'to' => $entries['to'],

@@ -22,6 +22,8 @@ import MaintenanceList from '@/components/MaintenanceList.vue';
 import AppCard from '@/components/AppCard.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue';
+import MonthlyMoneyChart from '@/components/MonthlyMoneyChart.vue';
+import type { ChartConfig } from '@/components/ui/chart';
 import DashboardFeeds from '@/components/DashboardFeeds.vue';
 import DashboardMetrics from '@/components/DashboardMetrics.vue';
 import type { Metric } from '@/components/DashboardMetrics.vue';
@@ -50,6 +52,12 @@ defineOptions({
         breadcrumbs: [{ title: 'Home', href: dashboard() }],
     },
 });
+
+/** A tenant's chart: what was billed against what they paid. */
+const paymentSeries = {
+    charged: { label: 'Charged', color: 'var(--chart-expense)' },
+    paid: { label: 'Paid', color: 'var(--chart-income)' },
+} satisfies ChartConfig;
 
 const props = defineProps<{
     property?: PortalProperty | null;
@@ -210,53 +218,59 @@ function refreshDashboard(): void {
                     description="Rent charges and payments will appear here as they happen."
                 />
 
-                <ul v-else class="flex flex-col">
-                    <li
-                        v-for="entry in ledger.entries.slice(0, 5)"
-                        :key="entry.id"
-                        class="border-border/60 flex items-center gap-3 border-b py-2.5 last:border-0"
-                    >
-                        <span
-                            class="flex size-8 shrink-0 items-center justify-center rounded-lg"
-                            :class="
-                                entry.kind === 'payment'
-                                    ? 'bg-destructive/10 text-destructive'
-                                    : 'bg-muted text-muted-foreground'
-                            "
+                <div v-else class="flex flex-col gap-6">
+                    <MonthlyMoneyChart
+                        :months="ledger.months"
+                        :series="paymentSeries"
+                    />
+                    <ul class="flex flex-col">
+                        <li
+                            v-for="entry in ledger.entries.slice(0, 5)"
+                            :key="entry.id"
+                            class="border-border/60 flex items-center gap-3 border-b py-2.5 last:border-0"
                         >
-                            <component
-                                :is="
-                                    entry.direction === 'credit'
-                                        ? ArrowDownLeft
-                                        : ArrowUpRight
+                            <span
+                                class="flex size-8 shrink-0 items-center justify-center rounded-lg"
+                                :class="
+                                    entry.kind === 'payment'
+                                        ? 'bg-destructive/10 text-destructive'
+                                        : 'bg-muted text-muted-foreground'
                                 "
-                                class="size-4"
-                                aria-hidden="true"
-                            />
-                        </span>
-                        <span class="flex min-w-0 flex-1 flex-col">
-                            <span class="truncate text-sm font-medium">{{
-                                entry.description
-                            }}</span>
-                            <span class="text-muted-foreground text-xs">{{
-                                formatDate(entry.date)
-                            }}</span>
-                        </span>
-                        <span
-                            class="shrink-0 text-sm font-medium tabular-nums"
-                            :class="
-                                entry.kind === 'payment'
-                                    ? 'text-destructive'
-                                    : entry.kind === 'charge'
-                                      ? 'text-foreground'
-                                      : 'text-muted-foreground'
-                            "
-                        >
-                            {{ entry.direction === 'credit' ? '−' : '+'
-                            }}{{ exact.format(entry.amount) }}
-                        </span>
-                    </li>
-                </ul>
+                            >
+                                <component
+                                    :is="
+                                        entry.direction === 'credit'
+                                            ? ArrowDownLeft
+                                            : ArrowUpRight
+                                    "
+                                    class="size-4"
+                                    aria-hidden="true"
+                                />
+                            </span>
+                            <span class="flex min-w-0 flex-1 flex-col">
+                                <span class="truncate text-sm font-medium">{{
+                                    entry.description
+                                }}</span>
+                                <span class="text-muted-foreground text-xs">{{
+                                    formatDate(entry.date)
+                                }}</span>
+                            </span>
+                            <span
+                                class="shrink-0 text-sm font-medium tabular-nums"
+                                :class="
+                                    entry.kind === 'payment'
+                                        ? 'text-destructive'
+                                        : entry.kind === 'charge'
+                                          ? 'text-foreground'
+                                          : 'text-muted-foreground'
+                                "
+                            >
+                                {{ entry.direction === 'credit' ? '−' : '+'
+                                }}{{ exact.format(entry.amount) }}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
             </AppCard>
         </div>
     </div>

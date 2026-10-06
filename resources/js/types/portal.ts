@@ -390,8 +390,16 @@ export type LeaseLedger = {
     results: Paginated<LeaseLedgerEntry>;
     charged: number;
     paid: number;
+    /** The last 12 months, oldest first, for the dashboard chart. */
+    months: LeaseMonthlyTotals[];
     from: string;
     to: string;
+};
+
+export type LeaseMonthlyTotals = {
+    month: string;
+    charged: number;
+    paid: number;
 };
 
 /** What an owner has been billed, by portfolio. */
