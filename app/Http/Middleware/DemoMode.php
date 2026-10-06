@@ -2,10 +2,12 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\ChatHub\ChatHubClient;
 use App\Services\Demo\DemoBackend;
 use App\Services\Demo\DemoPropertywareSoap;
+use App\Services\Demo\DemoReset;
 use App\Services\Propertyware\DocumentLibrary;
 use App\Services\Propertyware\Financials;
 use App\Services\Propertyware\LeaseLedger;
@@ -93,7 +95,7 @@ class DemoMode
             'services.expo.url' => 'https://'.DemoBackend::EXPO,
             // The same store under its own prefix, so a shared key such as the
             // account-wide building list never mixes demo and real records.
-            'cache.stores.'.self::cacheStore() => [...config("cache.stores.{$default}"), 'prefix' => 'demo_'],
+            'cache.stores.'.self::cacheStore() => [...config("cache.stores.{$default}"), 'prefix' => 'demo_'.Setting::valueOf(DemoReset::CACHE_GENERATION, '0').'_'],
             'queue.default' => 'sync',
             'mail.default' => 'array',
         ]);
