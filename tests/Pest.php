@@ -1,6 +1,10 @@
 <?php
 
+use App\Enums\ClientRole;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\ClientAccount;
+use App\Models\User;
+use App\Services\Demo\DemoData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
@@ -63,4 +67,22 @@ function partialGet(string $uri, string $component, string ...$props): TestRespo
         'X-Inertia-Partial-Component' => $component,
         'X-Inertia-Partial-Data' => implode(',', $props),
     ]);
+}
+
+/**
+ * One of the App Review logins, linked to its made-up Propertyware contact.
+ *
+ * @return array{0: User, 1: ClientAccount}
+ */
+function demoLogin(ClientRole $role): array
+{
+    $user = User::factory()->demo()->create([
+        'email' => $role === ClientRole::Owner ? 'appreview.owner@texasrenters.com' : 'appreview.tenant@texasrenters.com',
+    ]);
+    $account = ClientAccount::factory()->for($user)->create([
+        'role' => $role,
+        'propertyware_id' => (string) ($role === ClientRole::Owner ? DemoData::OWNER_CONTACT : DemoData::TENANT_CONTACT),
+    ]);
+
+    return [$user, $account];
 }

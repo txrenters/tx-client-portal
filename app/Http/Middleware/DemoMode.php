@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use App\Services\ChatHub\ChatHubClient;
 use App\Services\Demo\DemoBackend;
 use App\Services\Demo\DemoPropertywareSoap;
@@ -15,8 +16,11 @@ use App\Services\Propertyware\PropertywareClient;
 use App\Services\Propertyware\PropertywareDirectory;
 use App\Services\Propertyware\PropertywareSoap;
 use App\Services\Push\ExpoPushClient;
+use Closure;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Serves an App Review login made-up records instead of Propertyware, the
@@ -39,6 +43,22 @@ class DemoMode
         PropertywareDirectory::class, Financials::class, LeaseLedgerSource::class, LeaseLedgerStore::class,
         LeaseLedger::class, DocumentLibrary::class, MaintenanceSummary::class,
     ];
+
+    /**
+     * @param  Closure(Request): Response  $next
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        // The app's token is resolved by the route's auth middleware, which
+        // runs after this group, so ask the Sanctum guard directly.
+        $user = $request->user() ?? $request->user('sanctum');
+
+        if ($user instanceof User && $user->is_demo) {
+            self::enter();
+        }
+
+        return $next($request);
+    }
 
     public static function cacheStore(): string
     {
