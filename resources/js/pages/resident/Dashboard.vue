@@ -23,6 +23,7 @@ import AppCard from '@/components/AppCard.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue';
 import MonthlyMoneyChart from '@/components/MonthlyMoneyChart.vue';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { ChartConfig } from '@/components/ui/chart';
 import DashboardFeeds from '@/components/DashboardFeeds.vue';
 import DashboardMetrics from '@/components/DashboardMetrics.vue';
@@ -157,6 +158,48 @@ function refreshDashboard(): void {
 
         <DashboardMetrics :metrics="metrics" />
 
+        <AppCard
+            title="Your payments"
+            description="Charges and payments for the last 12 months."
+            :href="leaseRoute()"
+            link-label="View lease"
+        >
+            <!-- Shaped like the totals and chart it stands in for. -->
+            <div v-if="ledger === undefined" class="flex flex-col gap-4">
+                <div
+                    class="border-border grid grid-cols-3 gap-px overflow-hidden rounded-lg border sm:max-w-lg"
+                >
+                    <div
+                        v-for="tile in 3"
+                        :key="tile"
+                        class="bg-card flex flex-col gap-2 px-4 py-3"
+                    >
+                        <Skeleton class="h-3 w-16" />
+                        <Skeleton class="h-6 w-24" />
+                    </div>
+                </div>
+                <Skeleton class="h-72 w-full" />
+            </div>
+
+            <ErrorState
+                v-else-if="ledger === null"
+                description="We couldn't load your charges and payments right now."
+            />
+
+            <MonthlyMoneyChart
+                v-else-if="ledger.entries.length > 0"
+                :months="ledger.months"
+                :series="paymentSeries"
+            />
+
+            <EmptyState
+                v-else
+                :icon="Receipt"
+                title="Nothing yet"
+                description="Rent charges and payments will appear here as they happen."
+            />
+        </AppCard>
+
         <!-- Messages and activity first, then maintenance beside what they have paid. -->
         <DashboardFeeds
             :messages-href="messages().url"
@@ -218,59 +261,53 @@ function refreshDashboard(): void {
                     description="Rent charges and payments will appear here as they happen."
                 />
 
-                <div v-else class="flex flex-col gap-6">
-                    <MonthlyMoneyChart
-                        :months="ledger.months"
-                        :series="paymentSeries"
-                    />
-                    <ul class="flex flex-col">
-                        <li
-                            v-for="entry in ledger.entries.slice(0, 5)"
-                            :key="entry.id"
-                            class="border-border/60 flex items-center gap-3 border-b py-2.5 last:border-0"
+                <ul v-else class="flex flex-col">
+                    <li
+                        v-for="entry in ledger.entries.slice(0, 5)"
+                        :key="entry.id"
+                        class="border-border/60 flex items-center gap-3 border-b py-2.5 last:border-0"
+                    >
+                        <span
+                            class="flex size-8 shrink-0 items-center justify-center rounded-lg"
+                            :class="
+                                entry.kind === 'payment'
+                                    ? 'bg-destructive/10 text-destructive'
+                                    : 'bg-muted text-muted-foreground'
+                            "
                         >
-                            <span
-                                class="flex size-8 shrink-0 items-center justify-center rounded-lg"
-                                :class="
-                                    entry.kind === 'payment'
-                                        ? 'bg-destructive/10 text-destructive'
-                                        : 'bg-muted text-muted-foreground'
+                            <component
+                                :is="
+                                    entry.direction === 'credit'
+                                        ? ArrowDownLeft
+                                        : ArrowUpRight
                                 "
-                            >
-                                <component
-                                    :is="
-                                        entry.direction === 'credit'
-                                            ? ArrowDownLeft
-                                            : ArrowUpRight
-                                    "
-                                    class="size-4"
-                                    aria-hidden="true"
-                                />
-                            </span>
-                            <span class="flex min-w-0 flex-1 flex-col">
-                                <span class="truncate text-sm font-medium">{{
-                                    entry.description
-                                }}</span>
-                                <span class="text-muted-foreground text-xs">{{
-                                    formatDate(entry.date)
-                                }}</span>
-                            </span>
-                            <span
-                                class="shrink-0 text-sm font-medium tabular-nums"
-                                :class="
-                                    entry.kind === 'payment'
-                                        ? 'text-destructive'
-                                        : entry.kind === 'charge'
-                                          ? 'text-foreground'
-                                          : 'text-muted-foreground'
-                                "
-                            >
-                                {{ entry.direction === 'credit' ? '−' : '+'
-                                }}{{ exact.format(entry.amount) }}
-                            </span>
-                        </li>
-                    </ul>
-                </div>
+                                class="size-4"
+                                aria-hidden="true"
+                            />
+                        </span>
+                        <span class="flex min-w-0 flex-1 flex-col">
+                            <span class="truncate text-sm font-medium">{{
+                                entry.description
+                            }}</span>
+                            <span class="text-muted-foreground text-xs">{{
+                                formatDate(entry.date)
+                            }}</span>
+                        </span>
+                        <span
+                            class="shrink-0 text-sm font-medium tabular-nums"
+                            :class="
+                                entry.kind === 'payment'
+                                    ? 'text-destructive'
+                                    : entry.kind === 'charge'
+                                      ? 'text-foreground'
+                                      : 'text-muted-foreground'
+                            "
+                        >
+                            {{ entry.direction === 'credit' ? '−' : '+'
+                            }}{{ exact.format(entry.amount) }}
+                        </span>
+                    </li>
+                </ul>
             </AppCard>
         </div>
     </div>
