@@ -2590,12 +2590,13 @@ git commit -m "Add demo:accounts and a nightly demo:reset for the App Review log
 These depend on `feature/lease-expiry-notifications` and `feature/approval-pushes`, which aren't on `main` yet. Do them in the merge that brings those branches in:
 
 1. In `LeaseExpiryRecipients::ownersByPortfolio()` and the tenant query, skip client accounts whose user `is_demo`, so `findContact` never sees a demo ID. Add a test beside the existing recipient tests.
-2. `approvals:notify` (on the approval branch) also skips `is_demo` users.
+2. `approvals:notify` (on the approval branch) loops owner `ClientAccount`s with `whereHas('user')`; it must exclude `is_demo` users (`whereHas('user', fn ($q) => $q->where('is_demo', false))`). Add a test.
 3. Have `DemoReset::handle()` write the starting bell notifications for the demo users, using those branches' notification classes: the owner's lease-ending reminder for `HOME_LEASED`, the tenant's renewal letter, and one approval notice for `WORK_ORDER_APPROVAL`. Use the classes' own `toArray`, and write through `$user->notifyNow($notification, ['database'])` so no push is sent.
+4. Once the `notifications` table exists (it doesn't on `main`), `DemoReset::handle()` also deletes the demo users' rows from it (before writing the starting ones), so notices a reviewer read or created don't pile up.
 
 ## Rollout
 
-1. Merge, deploy, then run `php artisan migrate` and `php artisan demo:accounts`. Choose the passwords when prompted.
+1. Merge, deploy, then run `php artisan migrate` and `php artisan demo:accounts`. Choose the passwords when prompted. In Docker the prompts need a TTY: run `docker compose run --rm -it app php artisan demo:accounts`, or pass `--owner-password` and `--tenant-password`.
 2. In App Store Connect › App Review Information:
     - Put the owner login in the sign-in fields.
     - Write in the Notes: "Tenant demo: appreview.tenant@texasrenters.com / <password>. Both accounts use sample data; actions are kept in a sandbox and reset nightly."

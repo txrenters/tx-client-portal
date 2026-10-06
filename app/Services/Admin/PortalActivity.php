@@ -90,6 +90,8 @@ class PortalActivity
             ]);
 
         $approvals = WorkOrderApproval::query()
+            // The App Review logins' approvals are not for staff.
+            ->whereDoesntHave('user', fn ($query) => $query->where('is_demo', true))
             ->latest('decided_at')
             ->limit(50)
             ->get()
