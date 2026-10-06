@@ -44,6 +44,17 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
+    protected static function booted(): void
+    {
+        // A referral outlives its user (user_id is nulled), but a demo user's
+        // would then look real to staff and never be reset, so it goes with them.
+        static::deleting(function (User $user): void {
+            if ($user->is_demo) {
+                Referral::query()->where('user_id', $user->id)->delete();
+            }
+        });
+    }
+
     /**
      * Get the attributes that should be cast.
      *
