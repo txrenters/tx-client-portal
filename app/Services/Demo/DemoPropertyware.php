@@ -211,7 +211,11 @@ final class DemoPropertyware
                 'fileName' => $fileName,
                 'fileType' => str_ends_with(strtolower($fileName), '.pdf') ? 'application/pdf' : 'application/octet-stream',
                 'description' => null,
-                'entityType' => (string) $query['entityType'],
+                // Written as the upload names it ('Building'), read back the way Propertyware lists files ('BUILDING').
+                'entityType' => match ((string) $query['entityType']) {
+                    'Owner', 'Tenant' => 'CONTACT',
+                    default => strtoupper(str_replace(' ', '_', (string) $query['entityType'])),
+                },
                 'entityId' => (int) $query['entityId'],
                 'publishToOwnerPortal' => ($query['publishToOwnerPortal'] ?? 'false') === 'true',
                 'publishToTenantPortal' => ($query['publishToTenantPortal'] ?? 'false') === 'true',
