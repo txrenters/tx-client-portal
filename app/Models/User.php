@@ -204,6 +204,9 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         // The same reply, pushed to the app. Separate from the email because a
         // client with the app installed usually wants one and not the other.
         'message_replies_push' => true,
+        // A work order is waiting for the owner's approval and cannot go ahead
+        // until they decide. Owners only; a tenant is never pushed one.
+        'work_order_approvals_push' => true,
     ];
 
     /**
