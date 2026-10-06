@@ -26,12 +26,13 @@ final class DemoBackend
 
     public const EXPO = 'expo.demo.invalid';
 
-    public function __construct(private DemoPropertyware $propertyware) {}
+    public function __construct(private DemoPropertyware $propertyware, private DemoChatHub $chatHub) {}
 
     public function respond(Request $request): ?PromiseInterface
     {
         return match (parse_url($request->url(), PHP_URL_HOST)) {
             self::PROPERTYWARE => $this->propertyware->respond($request),
+            self::CHAT_HUB => $this->chatHub->respond($request),
             // No listing photos for made-up homes.
             self::LISTINGS => Http::response(['match_type' => 'none']),
             // A referral from a demo login is accepted and dropped.
