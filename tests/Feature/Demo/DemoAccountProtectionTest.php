@@ -24,13 +24,13 @@ test('a demo login can still change its name', function () {
     $this->patchJson(route('api.v1.profile.update'), ['name' => 'Apple Reviewer', 'email' => $user->email])->assertOk();
 });
 
-test('a demo login cannot delete itself', function () {
+test('a demo login can delete itself, as App Review checks', function () {
     [$user] = demoLogin(ClientRole::Resident);
     Sanctum::actingAs($user);
 
-    $this->deleteJson(route('api.v1.profile.destroy'), ['password' => 'password'])->assertForbidden();
+    $this->deleteJson(route('api.v1.profile.destroy'), ['password' => 'password'])->assertSuccessful();
 
-    expect($user->fresh())->not->toBeNull();
+    expect($user->fresh())->toBeNull();
 });
 
 test('a real login can still change its email', function () {

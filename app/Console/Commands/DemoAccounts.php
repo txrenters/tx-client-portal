@@ -2,14 +2,14 @@
 
 namespace App\Console\Commands;
 
-use App\Enums\ClientRole;
+use App\Models\Setting;
 use App\Models\User;
-use App\Services\Demo\DemoData;
+use App\Services\Demo\DemoLogins;
 use App\Services\Demo\DemoReset;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 
@@ -19,22 +19,16 @@ use function Laravel\Prompts\password;
 #[Description('Create or refresh the App Review demo owner and tenant logins')]
 class DemoAccounts extends Command
 {
-    /**
-     * @var array<string, array{name: string, role: ClientRole, contact: int}>
-     */
-    private const LOGINS = [
-        'appreview.owner@texasrenters.com' => ['name' => 'Demo Owner', 'role' => ClientRole::Owner, 'contact' => DemoData::OWNER_CONTACT],
-        'appreview.tenant@texasrenters.com' => ['name' => 'Demo Tenant', 'role' => ClientRole::Resident, 'contact' => DemoData::TENANT_CONTACT],
-    ];
-
     public function handle(DemoReset $reset): int
     {
         $passwords = [
-            'appreview.owner@texasrenters.com' => $this->option('owner-password') ?: password('Password for the demo owner'),
-            'appreview.tenant@texasrenters.com' => $this->option('tenant-password') ?: password('Password for the demo tenant'),
+            'owner' => $this->option('owner-password') ?: password('Password for the demo owner'),
+            'tenant' => $this->option('tenant-password') ?: password('Password for the demo tenant'),
         ];
 
-        foreach ($passwords as $email => $plain) {
+        foreach ($passwords as $key => $plain) {
+            $email = DemoLogins::ALL[$key]['email'];
+
             $validator = Validator::make(['password' => $plain], ['password' => ['required', Password::defaults()]]);
 
             if ($validator->fails()) {
@@ -52,21 +46,10 @@ class DemoAccounts extends Command
             }
         }
 
-        DB::transaction(function () use ($passwords): void {
-            foreach (self::LOGINS as $email => $login) {
-                $user = User::query()->firstOrNew(['email' => $email]);
-                // The model's password cast hashes it, so pass the plain text.
-                $user->forceFill([
-                    'name' => $login['name'],
-                    'password' => $passwords[$email],
-                    'email_verified_at' => $user->email_verified_at ?? now(),
-                    'is_demo' => true,
-                ])->save();
-
-                $user->clientAccounts()->delete();
-                $user->clientAccounts()->create(['role' => $login['role'], 'propertyware_id' => (string) $login['contact']]);
-            }
-        });
+        // The reset keeps the hashes so it can bring a deleted login back, then creates or refreshes both.
+        foreach ($passwords as $key => $plain) {
+            Setting::put(DemoLogins::hashKey($key), Hash::make($plain));
+        }
 
         $reset->handle();
 

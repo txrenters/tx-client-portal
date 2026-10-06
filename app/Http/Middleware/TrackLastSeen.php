@@ -30,7 +30,8 @@ class TrackLastSeen
 
         $user = $request->user();
 
-        if ($user === null || ($request->hasSession() && $request->session()->has(ImpersonationController::SESSION_KEY))) {
+        // A login deleted during this very request has nothing left to track.
+        if ($user === null || ! $user->exists || ($request->hasSession() && $request->session()->has(ImpersonationController::SESSION_KEY))) {
             return $response;
         }
 
