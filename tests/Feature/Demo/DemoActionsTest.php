@@ -2,13 +2,19 @@
 
 use App\Enums\ClientRole;
 use App\Models\DemoRecord;
+use App\Models\HelpRequest;
+use App\Models\Referral;
+use App\Models\User;
 use App\Models\WorkOrderApproval;
 use App\Services\Demo\DemoData;
+use App\Services\Help\HelpDesk;
 use App\Services\Propertyware\MaintenanceSummary;
 use App\Services\Propertyware\WorkOrderApprovals;
+use App\Services\Referrals\ReferralProgram;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 
@@ -36,7 +42,7 @@ test('the owner\'s document upload is kept and downloads again', function () {
     [$user, $account] = demoLogin(ClientRole::Owner);
     Sanctum::actingAs($user);
 
-    $this->post(route('api.v1.accounts.documents.store', $account), [
+    $created = $this->post(route('api.v1.accounts.documents.store', $account), [
         'file' => UploadedFile::fake()->createWithContent('W-9.pdf', '%PDF-1.4 w9'),
         'description' => 'Signed W-9',
         // The demo owner has two homes, so the reviewer picks one, as the upload dialog asks.
@@ -45,6 +51,9 @@ test('the owner\'s document upload is kept and downloads again', function () {
     ], ['Accept' => 'application/json'])->assertSuccessful();
 
     $this->getJson(route('api.v1.accounts.documents.index', $account))->assertOk()->assertJsonFragment(['description' => 'Signed W-9']);
+
+    $this->get(route('api.v1.accounts.documents.show', [$account, $created->json('data.id')]))->assertOk();
+    expect($this->get(route('api.v1.accounts.documents.show', [$account, $created->json('data.id')]))->streamedContent())->toBe('%PDF-1.4 w9');
 });
 
 test('the owner approves the waiting work order and it is never sent to Propertyware', function () {
@@ -75,7 +84,9 @@ test('messages open and reply inside the portal', function () {
 });
 
 test('a referral and a help request from a demo login reach nobody', function () {
+    config(['services.admin_emails' => ['staff@example.com']]);
     Mail::fake();
+    Notification::fake();
     [$user, $account] = demoLogin(ClientRole::Resident);
     Sanctum::actingAs($user);
 
@@ -86,4 +97,19 @@ test('a referral and a help request from a demo login reach nobody', function ()
 
     Http::assertNotSent(fn ($request) => ! str_ends_with((string) parse_url($request->url(), PHP_URL_HOST), '.demo.invalid'));
     Mail::assertNothingOutgoing();
+    Notification::assertNothingSent();
+});
+
+test('demo help requests and referrals stay out of the staff views and counts', function () {
+    config(['services.admin_emails' => ['staff@example.com']]);
+    [$demo, $account] = demoLogin(ClientRole::Resident);
+    $real = User::factory()->create();
+    HelpRequest::factory()->for($demo)->create();
+    HelpRequest::factory()->for($real)->create();
+    Referral::factory()->create(['user_id' => $demo->id, 'first_name' => 'Demo']);
+    Referral::factory()->create(['user_id' => $real->id, 'first_name' => 'Real']);
+
+    expect(app(HelpDesk::class)->openCount())->toBe(1)
+        ->and(app(HelpDesk::class)->forStaff()->total())->toBe(1)
+        ->and(app(ReferralProgram::class)->forStaff()->pluck('firstName')->all())->toBe(['Real']);
 });

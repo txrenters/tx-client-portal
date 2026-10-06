@@ -109,6 +109,8 @@ class ReferralProgram
     public function forStaff(?ReferralStatus $status = null, ?string $search = null): LengthAwarePaginator
     {
         return Referral::query()
+            // The App Review logins' referrals are never followed up by staff.
+            ->whereDoesntHave('user', fn ($query) => $query->where('is_demo', true))
             ->when($status !== null, fn ($query) => $query->where('status', $status->value))
             ->when(filled($search), function ($query) use ($search): void {
                 $term = '%'.mb_strtolower((string) $search).'%';
