@@ -27,7 +27,13 @@ class NotifyPendingApprovals extends Command
         $pushed = 0;
         $skipped = 0;
 
-        $owners = ClientAccount::query()->where('role', ClientRole::Owner)->whereHas('user')->with('user.pushTokens')->get();
+        // The App Review demo owner holds made-up records and a fake
+        // Propertyware contact; looking it up would hit the real API every run.
+        $owners = ClientAccount::query()
+            ->where('role', ClientRole::Owner)
+            ->whereHas('user', fn ($user) => $user->where('is_demo', false))
+            ->with('user.pushTokens')
+            ->get();
 
         foreach ($owners as $account) {
             try {

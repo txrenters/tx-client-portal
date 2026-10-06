@@ -98,6 +98,20 @@ test('the first run records what is already waiting without pushing it', functio
     expect(sentPushes())->toBe([]);
 });
 
+test('the demo owner is never looked up in Propertyware, not even when seeding', function (bool $seed) {
+    $demo = User::factory()->demo()->create();
+    ClientAccount::factory()->owner()->for($demo)->create(['propertyware_id' => '900000001']);
+    PushToken::factory()->for($demo)->create(['token' => 'ExponentPushToken[demo]']);
+
+    $this->artisan('approvals:notify', $seed ? ['--seed' => true] : [])->assertSuccessful();
+
+    Http::assertNotSent(fn (Request $request) => str_contains($request->url(), '900000001'));
+    Http::assertSent(fn (Request $request) => str_contains($request->url(), '/contacts/500'));
+
+    expect(ApprovalPushNotice::pluck('client_account_id')->all())->toBe([$this->account->id])
+        ->and(collect(sentPushes())->pluck('to')->all())->not->toContain('ExponentPushToken[demo]');
+})->with([[false], [true]]);
+
 test('an owner who switched approval pushes off is not pushed, and is not flooded on switching back', function () {
     $this->user->forceFill(['notification_preferences' => ['work_order_approvals_push' => false]])->save();
 
