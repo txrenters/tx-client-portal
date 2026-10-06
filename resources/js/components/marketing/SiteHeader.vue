@@ -26,19 +26,14 @@ const isSignedIn = computed(() => page.props.auth.user !== null);
         <div
             class="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6"
         >
-            <Link :href="home()" class="flex items-center gap-3">
+            <Link :href="home()" class="flex items-center">
                 <img
                     src="/texas-renters-logo.png"
                     alt="TexasRenters.com"
-                    class="h-7 w-auto object-contain brightness-0 invert sm:h-8"
+                    class="h-8 w-auto object-contain brightness-0 invert sm:h-10"
                     width="400"
                     height="111"
                 />
-                <span
-                    class="border-scrim-foreground/25 text-scrim-foreground/75 hidden border-l pl-3 text-sm sm:inline"
-                >
-                    Client portal
-                </span>
             </Link>
 
             <nav
