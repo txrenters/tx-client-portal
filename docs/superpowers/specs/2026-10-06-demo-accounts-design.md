@@ -38,39 +38,35 @@ One fixture set, `resources/demo/propertyware.php` (plus small PDFs under `resou
 - **Documents**: the lease, a monthly statement and an inspection report (real small PDFs that open).
 - **Conversations**: Propertyware conversations on the contact and building.
 - **Chat hub**: one thread per login with a short office exchange.
-- **Scheduling**: event types plus one upcoming meeting.
-- **Notifications**: the owner and tenant lease reminders and one approval notice, written by `demo:reset` as stored notifications. These use the existing classes once the lease and approval branches are merged; until then, whatever notification classes `main` has.
+- **Notifications**: the owner and tenant lease reminders and one approval notice, written by `demo:reset` as stored notifications. They need the notification bell and classes from the lease and approval branches, so they are added when those branches merge; `main` has no bell yet.
 
 No real tenant, owner or address appears anywhere.
 
 ## How it switches
 
-**`DemoMode` middleware**, in the web client and `api` v1 groups, runs after authentication and before `SyncPropertywareAccounts`. When `$request->user()?->is_demo` is true it:
+**`DemoMode` middleware** sits in the web group (before `SyncPropertywareAccounts` and `HandleInertiaRequests`) and in the `api` group. It resolves the user with `$request->user() ?? $request->user('sanctum')`. When that user `is_demo`, it does the following for the rest of the request (the app runs PHP-FPM, not Octane, so nothing outlives the request):
 
-1. Rebinds `PropertywareClient`, `PropertywareSoap`, `ChatHubClient` and `SchedulingClient` in the container to demo subclasses for the rest of the request. The app runs on PHP-FPM, without Octane, so a rebind lasts only for that one request.
-2. Switches the default cache store to a `demo` store. This is the same driver with prefix `demo:`, so shared keys such as `propertyware:buildings` and `propertyware:units` never mix demo and real data.
-3. Disables account discovery for the request.
+1. **Points every outside service at an unreachable `.invalid` host** (RFC 2606). This covers the Propertyware REST base URL and credentials, the chat hub, tx-cma listing photos, the leads webhook and Expo push. It then forgets the resolved client singletons and every service built on them, so they are rebuilt with the demo settings. A request that somehow escaped the fake could only fail to resolve; it could never reach a real system.
+2. **Answers those hosts with `Http::fake(DemoBackend)`.** `DemoBackend` routes by host to `DemoPropertyware` (REST paths) and `DemoChatHub`, and accepts and drops the leads webhook and Expo pushes. It returns `null` for any other host so that host is untouched. The real Propertyware services, such as the ledger maths, approvals, documents and maintenance, run unchanged against these answers.
+3. **Swaps `PropertywareSoap` for `DemoPropertywareSoap`**, whose `approveWorkOrder` is a no-op.
+4. **Switches the default cache store to `demo`**: the same driver as the default store, with prefix `demo:`. Shared keys such as `propertyware:buildings` never mix demo and real data.
+5. **Runs queued jobs inline** on the `sync` queue, inside the faked request, so the ledger warm-up jobs and referral webhook never reach a worker with real settings.
+6. **Sends mail to the `array` mailer**, so a demo help request never emails staff.
+7. **Turns off account discovery.**
 
-**Demo clients** override every public method of their parents:
+Scheduling is left real. It holds no client records: the meeting types are the public catalogue, and upcoming meetings are looked up by email, so a demo email simply has none.
 
-- **`DemoPropertywareClient`**
-  - `get`, `list`, `listAll`, `listAllForFilters`, `listAllForQueries`, `listAllForPaths` and `getMany` answer from the fixture set merged with `demo_records`, applying the same query filters the real API is called with (`portfolioID`, `buildingID`, `leaseID`, `entityType`/`entityId`, date ranges).
-  - `download` returns the fixture PDF as a `Response`.
-  - `create('workorders')`, `upload('docs')` and `update('docs/{id}')` write to `demo_records` and return the shape Propertyware returns.
-  - Any path the fixtures don't cover throws `PropertywareException` ("not available in the demo"), so a gap fails loudly in tests instead of calling out.
-- **`DemoPropertywareSoap::approveWorkOrder`** is a no-op.
-- **`DemoChatHubClient`** serves fixture threads and messages; `openThread` and `postClientMessage` write to `demo_records`. Staff never see them.
-- **`DemoSchedulingClient`** returns fixture event types and an upcoming meeting.
+**`DemoPropertyware`** answers each Propertyware REST path the portal uses from `DemoData` merged with `demo_records`. It applies the same query filters the real API is called with (`portfolioID`, `buildingID`, `leaseID`, `entityType`/`entityId`, `postDate` ranges, `limit`/`offset`). `POST workorders`, `POST docs` and `PUT docs/{id}` write to `demo_records`. `docs/{id}/download` returns a generated PDF. Any other path returns 404, which surfaces as a `PropertywareException`, so a gap fails loudly in tests.
 
-**`demo_records` table**: `id`, `kind` (workorder, document, document_file, chat_thread, chat_message), `external_id`, `payload` (json) and timestamps. Uploaded document files are stored on the local disk under `demo/`. `demo:reset` truncates the table, deletes `demo/` files, clears the `demo:` cache, deletes demo users' approvals, notifications, help requests and referrals, and writes the starting notifications.
+**`DemoChatHub`** serves one thread per demo contact. `POST threads` and `POST threads/{id}/messages` write to `demo_records`, so staff never see them.
+
+**`demo_records` table**: `id`, `kind` (workorder, document, document_file, chat_thread, chat_message), `external_id`, `payload` (json) and timestamps. Uploaded document files are stored on the local disk under `demo/`. `demo:reset` truncates the table, deletes `demo/` files, starts a new demo cache prefix (a stored generation number, so nothing shared is flushed), deletes demo users' approvals, notifications, help requests and referrals, and writes the starting notifications.
 
 ## Keeping real systems safe
 
 - **`approvals:push`**: `pushPending` excludes approvals whose user `is_demo`, so a demo approval is never sent over SOAP. The in-request send already goes through the demo SOAP client.
 - **`leases:notify-expiring`**: `LeaseExpiryRecipients` (on the lease branch) skips client accounts whose user `is_demo`, so demo IDs never reach `findContact`. Demo leases don't exist in real Propertyware, so no real lease reaches the demo users.
-- **Queued jobs**, which run without the request's bindings:
-  - Jobs dispatched for a demo login (`WarmOwnerLedgerBalance`, `WarmPortfolioIncome`, `ImportOwnerLedgers`, `SyncLeaseLedger`) are not dispatched; the services compute inline for demo requests.
-  - `SendReferralToLeads` is not dispatched for demo users.
+- **Queued jobs** dispatched during a demo request (`WarmOwnerLedgerBalance`, `WarmPortfolioIncome`, `ImportOwnerLedgers`, `SyncLeaseLedger`, `SendReferralToLeads`) run inline on `sync`, inside the faked request, and never reach a worker.
 - **Account discovery** (`SyncPropertywareAccounts`, `MeController`) is skipped for demo users.
 - **Pushes**: lease and approval pushes only go to demo devices through demo notifications written by `demo:reset`; the push jobs exclude demo users. There are no staff pushes.
 - **Admin**: the users list and user page show a "Demo" badge. Admin "view as" and suspend still work.
