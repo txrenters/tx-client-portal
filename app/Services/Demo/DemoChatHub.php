@@ -21,10 +21,11 @@ final class DemoChatHub
         $path = (string) preg_replace('#^api/v1/#', '', trim((string) parse_url($request->url(), PHP_URL_PATH), '/'));
         parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
         $segments = explode('/', $path);
+        $contactId = is_string($query['contact_id'] ?? null) ? $query['contact_id'] : '';
         $id = (int) ($segments[1] ?? 0);
 
         return match (true) {
-            $request->method() === 'GET' && $path === 'threads' => $this->list((string) ($query['contact_id'] ?? ''), (int) ($query['page'] ?? 1)),
+            $request->method() === 'GET' && $path === 'threads' => $this->list($contactId, (int) ($query['page'] ?? 1)),
             $request->method() === 'GET' && $segments[0] === 'threads' && count($segments) === 2 => $this->show($id),
             $request->method() === 'GET' && $segments[0] === 'threads' && ($segments[2] ?? null) === 'messages' => Http::response(['data' => $this->messages($id)
                 ->filter(fn (array $message): bool => $message['id'] > (int) ($query['after_id'] ?? 0))->values()->all()]),
@@ -55,7 +56,7 @@ final class DemoChatHub
     /**
      * Threads with their last message and when they last changed, newest first.
      *
-     * @return Collection<int, array<string, mixed>>
+     * @return Collection<int, non-empty-array<string, mixed>>
      */
     private function threads(): Collection
     {
