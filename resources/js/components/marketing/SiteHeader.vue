@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import ThemeToggle from '@/components/marketing/ThemeToggle.vue';
 import { Button } from '@/components/ui/button';
-import { home, login, register } from '@/routes';
+import { dashboard, home, login, register } from '@/routes';
 
 // Sections of the landing page, linked from any page that uses this header.
 const navLinks = [
@@ -11,6 +12,9 @@ const navLinks = [
     { label: 'Getting started', href: '#how-it-works' },
     { label: 'Security', href: '#security' },
 ];
+
+const page = usePage();
+const isSignedIn = computed(() => page.props.auth.user !== null);
 </script>
 
 <template>
@@ -56,20 +60,30 @@ const navLinks = [
                     class="text-scrim-foreground hover:bg-scrim-foreground/10 hover:text-scrim-foreground"
                 />
                 <Button
-                    as-child
-                    size="sm"
-                    variant="ghost"
-                    class="text-scrim-foreground hover:bg-scrim-foreground/10 hover:text-scrim-foreground hidden sm:inline-flex"
-                >
-                    <Link :href="login()">Sign in</Link>
-                </Button>
-                <Button
+                    v-if="isSignedIn"
                     as-child
                     size="sm"
                     class="bg-scrim-foreground text-scrim hover:bg-scrim-foreground/90"
                 >
-                    <Link :href="register()">Create account</Link>
+                    <Link :href="dashboard()">Go to dashboard</Link>
                 </Button>
+                <template v-else>
+                    <Button
+                        as-child
+                        size="sm"
+                        variant="ghost"
+                        class="text-scrim-foreground hover:bg-scrim-foreground/10 hover:text-scrim-foreground hidden sm:inline-flex"
+                    >
+                        <Link :href="login()">Sign in</Link>
+                    </Button>
+                    <Button
+                        as-child
+                        size="sm"
+                        class="bg-scrim-foreground text-scrim hover:bg-scrim-foreground/90"
+                    >
+                        <Link :href="register()">Create account</Link>
+                    </Button>
+                </template>
             </div>
         </div>
     </header>
