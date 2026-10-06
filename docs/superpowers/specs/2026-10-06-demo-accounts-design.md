@@ -16,10 +16,10 @@ The accounts are for App Review and our own demos only.
 
 `php artisan demo:accounts {--owner-password=} {--tenant-password=}` creates or refreshes:
 
-| Login | Name | Role | Propertyware ID |
-| --- | --- | --- | --- |
-| `appreview.owner@texasrenters.com` | Demo Owner | owner | `900000001` |
-| `appreview.tenant@texasrenters.com` | Demo Tenant | tenant | `900000002` |
+| Login                               | Name        | Role   | Propertyware ID |
+| ----------------------------------- | ----------- | ------ | --------------- |
+| `appreview.owner@texasrenters.com`  | Demo Owner  | owner  | `900000001`     |
+| `appreview.tenant@texasrenters.com` | Demo Tenant | tenant | `900000002`     |
 
 - Passwords are set directly (prompted when the options are missing); the email is marked verified; no invitation is sent and no mailbox is needed.
 - A new `users.is_demo` boolean (default false) marks them. Only this command sets it; it is not mass-assignable.
@@ -31,8 +31,8 @@ The accounts are for App Review and our own demos only.
 One fixture set, `resources/demo/propertyware.php` (plus small PDFs under `resources/demo/files/`), shaped exactly like Propertyware's REST responses, built from the samples already in the tests:
 
 - **Owner** "Demo Owner", one portfolio with two made-up Houston-area homes:
-  - **Home A** is leased to Demo Tenant, with the lease ending about 75 days from today (dates are computed relative to today so the 90-day reminder always applies).
-  - **Home B** is vacant.
+    - **Home A** is leased to Demo Tenant, with the lease ending about 75 days from today (dates are computed relative to today so the 90-day reminder always applies).
+    - **Home B** is vacant.
 - **Ledger**: six months of general-ledger rows (rent in, management fee, a repair bill), plus bills and GL accounts.
 - **Work orders**: four on Home A/B. One is completed, one is in progress, one is new, and one is waiting for the owner's approval.
 - **Documents**: the lease, a monthly statement and an inspection report (real small PDFs that open).

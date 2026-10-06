@@ -5,6 +5,7 @@
 **Goal:** Give Apple's reviewer a demo owner login and a demo tenant login that show realistic data on every screen and let every action work, without touching Propertyware, the chat hub, the leads webhook or staff.
 
 **Architecture:** A `users.is_demo` flag marks the two logins. A `DemoMode` middleware does the following for their requests only:
+
 - points every outside service's config at unreachable `*.demo.invalid` hosts;
 - answers those hosts through `Http::fake(DemoBackend)` with made-up records (`DemoData`) merged with whatever the reviewer created (`demo_records`);
 - swaps SOAP for a no-op;
@@ -28,10 +29,10 @@ The real services (`PropertywareDirectory`, `MaintenanceSummary`, `DocumentLibra
 - `demo:reset` runs daily at 03:00 America/Chicago.
 - The app runs on PHP-FPM. `DemoMode` changes container and config state for one request only. Do not adopt Octane without revisiting `DemoMode`.
 - Follow the codebase's style:
-  - `#[Fillable]` attributes on models.
-  - Docblocks that explain *why*.
-  - `__()` for user-facing text.
-  - Run `composer lint` (Pint) before each commit.
+    - `#[Fillable]` attributes on models.
+    - Docblocks that explain _why_.
+    - `__()` for user-facing text.
+    - Run `composer lint` (Pint) before each commit.
 - Run a single test with `php artisan test --compact --filter=<name>`, and the suite with `composer test`.
 
 ## Review Focus
@@ -46,35 +47,36 @@ The real services (`PropertywareDirectory`, `MaintenanceSummary`, `DocumentLibra
 
 ## File Structure
 
-| File | Responsibility |
-| --- | --- |
-| `database/migrations/2026_10_06_100000_add_is_demo_to_users_table.php` | `users.is_demo` boolean |
-| `database/migrations/2026_10_06_100100_create_demo_records_table.php` | What the reviewer creates |
-| `app/Models/DemoRecord.php` | Store and read created records |
-| `app/Services/Demo/DemoData.php` | The made-up records, shaped like Propertyware and the chat hub |
-| `app/Services/Demo/DemoPdf.php` | A tiny valid PDF for document downloads |
-| `app/Services/Demo/DemoPropertyware.php` | Answers Propertyware REST paths |
-| `app/Services/Demo/DemoChatHub.php` | Answers chat hub paths |
-| `app/Services/Demo/DemoBackend.php` | Routes faked requests by host |
-| `app/Services/Demo/DemoPropertywareSoap.php` | No-op work order approval |
-| `app/Services/Demo/DemoReset.php` | Wipes what the reviewer created |
-| `app/Http/Middleware/DemoMode.php` | Switches a demo login's request over |
-| `app/Console/Commands/DemoAccounts.php` | `demo:accounts` |
-| `app/Console/Commands/DemoResetCommand.php` | `demo:reset` |
-| Modify `app/Models/User.php` | `is_demo` cast |
-| Modify `database/factories/UserFactory.php` | `demo()` state |
-| Modify `bootstrap/app.php` | Register `DemoMode` |
-| Modify `app/Services/Propertyware/WorkOrderApprovals.php` | `pushPending` skips demo users |
-| Modify `app/Http/Requests/Settings/ProfileUpdateRequest.php`, `ProfileDeleteRequest.php` | Lock the demo email and deletion |
-| Modify `app/Services/Admin/UserDirectory.php`, `resources/js/pages/admin/Users.vue`, `resources/js/pages/admin/UserShow.vue` | "Demo" badge |
-| Modify `routes/console.php` | Schedule `demo:reset` |
-| Tests in `tests/Feature/Demo/` | One file per task |
+| File                                                                                                                         | Responsibility                                                 |
+| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `database/migrations/2026_10_06_100000_add_is_demo_to_users_table.php`                                                       | `users.is_demo` boolean                                        |
+| `database/migrations/2026_10_06_100100_create_demo_records_table.php`                                                        | What the reviewer creates                                      |
+| `app/Models/DemoRecord.php`                                                                                                  | Store and read created records                                 |
+| `app/Services/Demo/DemoData.php`                                                                                             | The made-up records, shaped like Propertyware and the chat hub |
+| `app/Services/Demo/DemoPdf.php`                                                                                              | A tiny valid PDF for document downloads                        |
+| `app/Services/Demo/DemoPropertyware.php`                                                                                     | Answers Propertyware REST paths                                |
+| `app/Services/Demo/DemoChatHub.php`                                                                                          | Answers chat hub paths                                         |
+| `app/Services/Demo/DemoBackend.php`                                                                                          | Routes faked requests by host                                  |
+| `app/Services/Demo/DemoPropertywareSoap.php`                                                                                 | No-op work order approval                                      |
+| `app/Services/Demo/DemoReset.php`                                                                                            | Wipes what the reviewer created                                |
+| `app/Http/Middleware/DemoMode.php`                                                                                           | Switches a demo login's request over                           |
+| `app/Console/Commands/DemoAccounts.php`                                                                                      | `demo:accounts`                                                |
+| `app/Console/Commands/DemoResetCommand.php`                                                                                  | `demo:reset`                                                   |
+| Modify `app/Models/User.php`                                                                                                 | `is_demo` cast                                                 |
+| Modify `database/factories/UserFactory.php`                                                                                  | `demo()` state                                                 |
+| Modify `bootstrap/app.php`                                                                                                   | Register `DemoMode`                                            |
+| Modify `app/Services/Propertyware/WorkOrderApprovals.php`                                                                    | `pushPending` skips demo users                                 |
+| Modify `app/Http/Requests/Settings/ProfileUpdateRequest.php`, `ProfileDeleteRequest.php`                                     | Lock the demo email and deletion                               |
+| Modify `app/Services/Admin/UserDirectory.php`, `resources/js/pages/admin/Users.vue`, `resources/js/pages/admin/UserShow.vue` | "Demo" badge                                                   |
+| Modify `routes/console.php`                                                                                                  | Schedule `demo:reset`                                          |
+| Tests in `tests/Feature/Demo/`                                                                                               | One file per task                                              |
 
 ---
 
 ### Task 1: Mark demo users
 
 **Files:**
+
 - Create: `database/migrations/2026_10_06_100000_add_is_demo_to_users_table.php`
 - Modify: `app/Models/User.php` (the `casts()` method, near line 178)
 - Modify: `database/factories/UserFactory.php`
@@ -83,6 +85,7 @@ The real services (`PropertywareDirectory`, `MaintenanceSummary`, `DocumentLibra
 - Test: `tests/Feature/Demo/DemoUserTest.php`
 
 **Interfaces:**
+
 - Produces: `User::$is_demo` (bool, cast), `User::factory()->demo()`, admin user array key `isDemo` (bool).
 
 - [ ] **Step 1: Write the failing test**
@@ -204,6 +207,7 @@ git commit -m "Mark the App Review logins as demo users"
 ### Task 2: The demo records
 
 **Files:**
+
 - Create: `database/migrations/2026_10_06_100100_create_demo_records_table.php`
 - Create: `app/Models/DemoRecord.php`
 - Create: `app/Services/Demo/DemoData.php`
@@ -211,17 +215,18 @@ git commit -m "Mark the App Review logins as demo users"
 - Test: `tests/Feature/Demo/DemoDataTest.php`
 
 **Interfaces:**
+
 - Produces:
-  - `DemoRecord::store(string $kind, Closure(int $id): array $payload): array` — saves a record and returns its payload.
-  - `DemoRecord::payloads(string $kind): array<int, array>`
-  - `DemoData` constants: `OWNER_CONTACT`, `TENANT_CONTACT`, `PORTFOLIO`, `HOME_LEASED`, `HOME_VACANT`, `LEASE`, `VENDOR`, `WORK_ORDER_DONE`, `WORK_ORDER_AC`, `WORK_ORDER_APPROVAL`, `WORK_ORDER_GARAGE`, `DOC_LEASE`, `DOC_STATEMENT`, `DOC_INSPECTION`, `DOC_INVOICE`, `DOC_WELCOME`, `OWNER_THREAD`, `TENANT_THREAD`, `RENT`.
-  - `DemoData` methods, each returning a Propertyware- or hub-shaped array:
-    - `contact(string|int $id): ?array`, `portfolio(int $id): ?array`
-    - `buildings(): array`, `leases(): array`, `leaseAdjustments(): array`
-    - `glAccounts(): array`, `generalLedger(): array`, `bills(): array`, `vendors(): array`
-    - `workOrders(): array`, `documents(): array`, `conversations(): array`
-    - `chatThreads(): array`, `chatMessages(): array`
-  - `DemoPdf::make(string $title): string`
+    - `DemoRecord::store(string $kind, Closure(int $id): array $payload): array` — saves a record and returns its payload.
+    - `DemoRecord::payloads(string $kind): array<int, array>`
+    - `DemoData` constants: `OWNER_CONTACT`, `TENANT_CONTACT`, `PORTFOLIO`, `HOME_LEASED`, `HOME_VACANT`, `LEASE`, `VENDOR`, `WORK_ORDER_DONE`, `WORK_ORDER_AC`, `WORK_ORDER_APPROVAL`, `WORK_ORDER_GARAGE`, `DOC_LEASE`, `DOC_STATEMENT`, `DOC_INSPECTION`, `DOC_INVOICE`, `DOC_WELCOME`, `OWNER_THREAD`, `TENANT_THREAD`, `RENT`.
+    - `DemoData` methods, each returning a Propertyware- or hub-shaped array:
+        - `contact(string|int $id): ?array`, `portfolio(int $id): ?array`
+        - `buildings(): array`, `leases(): array`, `leaseAdjustments(): array`
+        - `glAccounts(): array`, `generalLedger(): array`, `bills(): array`, `vendors(): array`
+        - `workOrders(): array`, `documents(): array`, `conversations(): array`
+        - `chatThreads(): array`, `chatMessages(): array`
+    - `DemoPdf::make(string $title): string`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -855,6 +860,7 @@ git commit -m "Make up the owner, tenant, homes and ledger the demo logins see"
 ### Task 3: Answer Propertyware for the demo
 
 **Files:**
+
 - Create: `app/Services/Demo/DemoPropertyware.php`
 - Create: `app/Services/Demo/DemoBackend.php`
 - Create: `app/Services/Demo/DemoPropertywareSoap.php`
@@ -862,13 +868,14 @@ git commit -m "Make up the owner, tenant, homes and ledger the demo logins see"
 - Test: `tests/Feature/Demo/DemoPropertywareTest.php`
 
 **Interfaces:**
+
 - Consumes: `DemoData` and `DemoRecord` (Task 2).
 - Produces:
-  - `DemoBackend` host constants `PROPERTYWARE`, `CHAT_HUB`, `LISTINGS`, `LEADS`, `EXPO`.
-  - `DemoBackend::respond(Illuminate\Http\Client\Request $request): ?GuzzleHttp\Promise\PromiseInterface` — returns `null` for hosts it doesn't own.
-  - `DemoPropertyware::respond(Request $request): PromiseInterface`
-  - `DemoMode::enter(): void` — switches the current request to demo mode.
-  - `DemoMode::cacheStore(): string` — the demo store name, `'demo'`.
+    - `DemoBackend` host constants `PROPERTYWARE`, `CHAT_HUB`, `LISTINGS`, `LEADS`, `EXPO`.
+    - `DemoBackend::respond(Illuminate\Http\Client\Request $request): ?GuzzleHttp\Promise\PromiseInterface` — returns `null` for hosts it doesn't own.
+    - `DemoPropertyware::respond(Request $request): PromiseInterface`
+    - `DemoMode::enter(): void` — switches the current request to demo mode.
+    - `DemoMode::cacheStore(): string` — the demo store name, `'demo'`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1425,6 +1432,7 @@ class DemoMode
 ```
 
 Two framework details to check while implementing:
+
 - **The `null` fall-through.** Open `vendor/laravel/framework/src/Illuminate/Http/Client/Factory.php` (`fake()`, near line 331) and `PendingRequest::stub`. Confirm that a stub callback returning `null` falls through to the next stub or a real request. If it doesn't, return `Http::response()` only for demo hosts and pass the rest on with `allowStrayRequests` (near line 451).
 - **The forgotten singletons.** The provider must rebuild them. `forgetInstance` drops the cached object but keeps the singleton binding, so the next `make` builds it again from config.
 
@@ -1446,11 +1454,13 @@ git commit -m "Answer Propertyware from the made-up records for a demo request"
 ### Task 4: Answer the chat hub for the demo
 
 **Files:**
+
 - Create: `app/Services/Demo/DemoChatHub.php`
 - Modify: `app/Services/Demo/DemoBackend.php` (constructor and the `CHAT_HUB` arm)
 - Test: `tests/Feature/Demo/DemoChatHubTest.php`
 
 **Interfaces:**
+
 - Consumes: `DemoData::chatThreads()`, `DemoData::chatMessages()`, `DemoRecord::store/payloads`, `DemoMode::enter()`.
 - Produces: `DemoChatHub::respond(Request $request): PromiseInterface`.
 
@@ -1664,11 +1674,13 @@ git commit -m "Answer the messaging hub from the demo threads"
 ### Task 5: Switch demo logins' requests over
 
 **Files:**
+
 - Modify: `app/Http/Middleware/DemoMode.php` (add `handle()`)
 - Modify: `bootstrap/app.php` (the web and api groups)
 - Test: `tests/Feature/Demo/DemoModeTest.php`
 
 **Interfaces:**
+
 - Consumes: `DemoMode::enter()`, `User::$is_demo`, `User::factory()->demo()`.
 - Produces: `DemoMode::handle(Request $request, Closure $next): Response`, and the test helper `demoLogin(ClientRole $role): array{0: User, 1: ClientAccount}` in `tests/Pest.php`, used by Tasks 6–8.
 
@@ -1805,6 +1817,7 @@ Add to `DemoMode`:
 Add these imports: `App\Models\User`, `Closure`, `Illuminate\Http\Request` and `Symfony\Component\HttpFoundation\Response`.
 
 In `bootstrap/app.php`:
+
 - Import `App\Http\Middleware\DemoMode`.
 - Change `$middleware->appendToGroup('api', [EnsureUserIsNotSuspended::class, TrackLastSeen::class]);` to `$middleware->appendToGroup('api', [EnsureUserIsNotSuspended::class, TrackLastSeen::class, DemoMode::class]);`.
 - In `$middleware->web(append: [...])`, insert `DemoMode::class,` right after `TrackLastSeen::class,`, before `SyncPropertywareAccounts::class`. Add the comment: `// Before anything reads Propertyware for the page: an App Review login sees made-up records.`
@@ -1827,10 +1840,12 @@ git commit -m "Serve the demo logins made-up records on every request"
 ### Task 6: Every screen loads for both demo logins
 
 **Files:**
+
 - Test: `tests/Feature/Demo/DemoScreensTest.php`
 - Modify, as gaps show up: `app/Services/Demo/DemoData.php` and `app/Services/Demo/DemoPropertyware.php`
 
 **Interfaces:**
+
 - Consumes: `demoLogin()` and `DemoData` constants.
 
 - [ ] **Step 1: Write the test**
@@ -1992,6 +2007,7 @@ test('the tenant\'s app shows rent due and the lease ending soon', function () {
 Run: `php artisan test --compact --filter=DemoScreensTest`
 
 Each failure shows one of four things. Fix each in the source, never by weakening the test:
+
 - **`failed` lists a path that answered 404.** Add that path to `DemoPropertyware::find()`. Copy the response shape from the test that fakes it: `grep -rn "'\*/<path>" tests/Feature`.
 - **A page throws on a missing field** (`Undefined array key "x"` in a `Data/*.php` class). Add the field to the matching `DemoData` record, using the value the existing tests give it.
 - **A route needs a query parameter** (a 422 naming it, for example `portfolio` on `ledger`). Add that parameter to the dataset row, with the value its FormRequest expects (`DemoData::PORTFOLIO` for a portfolio).
@@ -2017,10 +2033,12 @@ git commit -m "Prove every owner and tenant screen loads for the demo logins"
 ### Task 7: Demo actions work and stay in the portal
 
 **Files:**
+
 - Modify: `app/Services/Propertyware/WorkOrderApprovals.php` (`pushPending`)
 - Test: `tests/Feature/Demo/DemoActionsTest.php`
 
 **Interfaces:**
+
 - Consumes: `demoLogin()`, `DemoData`, `DemoRecord`, `MaintenanceSummary::clientCategories()`.
 
 - [ ] **Step 1: Write the failing test**
@@ -2115,6 +2133,7 @@ test('a referral and a help request from a demo login reach nobody', function ()
 ```
 
 Before running:
+
 - Check `App\Enums\HelpTopic` for a valid case value, and replace `'other'` if it isn't one.
 - `Mail::fake()` swaps the mailer before the request, so the `mail.default => 'array'` switch isn't what this test proves. What it proves is that nothing is sent from the demo request at all.
 - If the help request does notify staff, the assertion fails. Then add a demo check to `HelpDesk::submit` that skips staff notification for `is_demo` users, and keep the test as written.
@@ -2153,11 +2172,13 @@ git commit -m "Keep what the demo logins create inside the portal, and never pus
 ### Task 8: Keep the review logins intact
 
 **Files:**
+
 - Modify: `app/Http/Requests/Settings/ProfileUpdateRequest.php`
 - Modify: `app/Http/Requests/Settings/ProfileDeleteRequest.php`
 - Test: `tests/Feature/Demo/DemoAccountProtectionTest.php`
 
 **Interfaces:**
+
 - Consumes: `demoLogin()`.
 
 - [ ] **Step 1: Write the failing test**
@@ -2270,6 +2291,7 @@ git commit -m "Keep the demo logins' email and account from being changed or del
 ### Task 9: Create and reset the demo logins
 
 **Files:**
+
 - Create: `app/Services/Demo/DemoReset.php`
 - Create: `app/Console/Commands/DemoAccounts.php`
 - Create: `app/Console/Commands/DemoResetCommand.php`
@@ -2278,10 +2300,11 @@ git commit -m "Keep the demo logins' email and account from being changed or del
 - Test: `tests/Feature/Demo/DemoAccountsCommandTest.php`
 
 **Interfaces:**
+
 - Consumes: `DemoRecord`, `DemoData`, `Setting::valueOf/put`, `WorkOrderApproval`, `HelpRequest`, `Referral`, `ConversationRead`, `LeaseLedgerEntry`, `LeaseLedgerSync`.
 - Produces:
-  - `DemoReset::handle(): void`.
-  - Setting key `demo.cache_generation`. The demo cache prefix becomes `demo_{generation}_`, so a reset abandons every demo cache key at once on any cache driver, without flushing the shared store.
+    - `DemoReset::handle(): void`.
+    - Setting key `demo.cache_generation`. The demo cache prefix becomes `demo_{generation}_`, so a reset abandons every demo cache key at once on any cache driver, without flushing the shared store.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2574,6 +2597,6 @@ These depend on `feature/lease-expiry-notifications` and `feature/approval-pushe
 
 1. Merge, deploy, then run `php artisan migrate` and `php artisan demo:accounts`. Choose the passwords when prompted.
 2. In App Store Connect › App Review Information:
-   - Put the owner login in the sign-in fields.
-   - Write in the Notes: "Tenant demo: appreview.tenant@texasrenters.com / <password>. Both accounts use sample data; actions are kept in a sandbox and reset nightly."
+    - Put the owner login in the sign-in fields.
+    - Write in the Notes: "Tenant demo: appreview.tenant@texasrenters.com / <password>. Both accounts use sample data; actions are kept in a sandbox and reset nightly."
 3. Leave `cr@texasrenters.com` untouched until the pending review closes.
