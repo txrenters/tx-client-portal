@@ -154,7 +154,11 @@ class EarlierWorkOrderTexts
         return [
             'thread' => [
                 'id' => -(int) $workOrder['id'],
-                'subject' => filled($workOrder['title'] ?? null) ? (string) $workOrder['title'] : 'Work order texts',
+                'subject' => match (true) {
+                    filled($workOrder['title'] ?? null) => (string) $workOrder['title'],
+                    filled($workOrder['number'] ?? null) => 'Work order #'.$workOrder['number'],
+                    default => 'Work order texts',
+                },
                 'kind' => 'maintenance',
                 'workOrderId' => filled($workOrder['propertyware_id'] ?? null) ? (string) $workOrder['propertyware_id'] : null,
                 'workOrderNumber' => filled($workOrder['number'] ?? null) ? (string) $workOrder['number'] : null,

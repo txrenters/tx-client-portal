@@ -38,7 +38,7 @@ test('lists the earlier work order texts as closed conversations, newest first',
         ->json('props.earlierTexts');
 
     expect($threads)->toHaveCount(2)
-        ->and($threads[0])->toMatchArray(['id' => -9, 'subject' => 'Work order texts', 'workOrderId' => '8200', 'isClosed' => true, 'isHistory' => true])
+        ->and($threads[0])->toMatchArray(['id' => -9, 'subject' => 'Work order #1002', 'workOrderId' => '8200', 'isClosed' => true, 'isHistory' => true])
         ->and($threads[1])->toMatchArray(['id' => -7, 'subject' => 'AC not cooling', 'workOrderNumber' => '1001', 'category' => 'maintenance'])
         ->and($threads[1]['lastMessage'])->toMatchArray(['preview' => 'Thanks!', 'fromClient' => true, 'hasAttachment' => true]);
 
