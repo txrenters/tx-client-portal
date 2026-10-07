@@ -4,6 +4,7 @@ use App\Models\ClientAccount;
 use App\Models\User;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function () {
@@ -169,16 +170,12 @@ test('shows the conversations that mention a work order on its page', function (
         ->assertJsonPath('data.0.subject', '12 Elm St');
 });
 
-test('shows account conversations on the Messages page rather than in the sidebar', function () {
+test('keeps account conversations on the Conversations page, not on Messages', function () {
     $this->actingAs($this->owner);
 
-    $response = partialGet(route('owner.messages.index'), 'client/Messages', 'accountConversations')->assertOk();
-
-    expect($response->json('props.accountConversations.total'))->toBe(1)
-        ->and($response->json('props.accountConversations.conversations.0'))->toMatchArray([
-            'subject' => 'Owner draw',
-            'about' => 'account',
-        ]);
+    $this->get(route('owner.messages.index'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page->component('client/Messages')->missing('accountConversations'));
 });
 
 test('shows a resident the conversations about their home on its page', function () {

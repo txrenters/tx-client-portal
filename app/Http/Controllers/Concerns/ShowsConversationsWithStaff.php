@@ -8,7 +8,6 @@ use App\Http\Requests\Client\StartConversationRequest;
 use App\Services\ChatHub\ChatHubException;
 use App\Services\ChatHub\ClientConversations;
 use App\Services\Maintenance\EarlierWorkOrderTexts;
-use App\Services\Propertyware\ConversationLibrary;
 use App\Services\Propertyware\PropertywareDirectory;
 use App\Services\Propertyware\PropertywareException;
 use Illuminate\Http\RedirectResponse;
@@ -28,7 +27,7 @@ trait ShowsConversationsWithStaff
 {
     use ResolvesClientScope;
 
-    protected function renderMessages(Request $request, ClientRole $role, ClientConversations $conversations, PropertywareDirectory $directory, ConversationLibrary $library, EarlierWorkOrderTexts $earlierTexts): Response
+    protected function renderMessages(Request $request, ClientRole $role, ClientConversations $conversations, PropertywareDirectory $directory, EarlierWorkOrderTexts $earlierTexts): Response
     {
         $account = $this->activeClientAccount($request, $role);
         abort_if($account === null, 403);
@@ -68,15 +67,6 @@ trait ShowsConversationsWithStaff
                     return null;
                 }
             })->once(as: 'message-property-options-'.$account->id, until: now()->addMinutes(5)),
-            // Calls and emails our office logged against the client's record
-            // rather than one of their properties; a property's own are on its page.
-            'accountConversations' => Inertia::defer(function () use ($request, $role, $directory, $library): ?array {
-                try {
-                    return $library->forAccount($this->clientScope($request, $role, $directory));
-                } catch (PropertywareException) {
-                    return null;
-                }
-            }, 'accountConversations'),
             // Work order texts from before the hub, listed after its conversations.
             'earlierTexts' => Inertia::defer(fn (): ?array => $earlierTexts->threads($account), 'earlierTexts'),
             // Loaded after the page, then page by page as the client scrolls the list.

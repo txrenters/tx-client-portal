@@ -9,7 +9,6 @@ use App\Http\Requests\Client\ReplyMessageRequest;
 use App\Http\Requests\Client\StartConversationRequest;
 use App\Services\ChatHub\ClientConversations;
 use App\Services\Maintenance\EarlierWorkOrderTexts;
-use App\Services\Propertyware\ConversationLibrary;
 use App\Services\Propertyware\PropertywareDirectory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,9 +22,9 @@ class MessageController extends Controller
     /**
      * The resident's conversations with TexasRenters.com support and maintenance.
      */
-    public function index(Request $request, ClientConversations $conversations, PropertywareDirectory $directory, ConversationLibrary $library, EarlierWorkOrderTexts $earlierTexts): Response
+    public function index(Request $request, ClientConversations $conversations, PropertywareDirectory $directory, EarlierWorkOrderTexts $earlierTexts): Response
     {
-        return $this->renderMessages($request, ClientRole::Resident, $conversations, $directory, $library, $earlierTexts);
+        return $this->renderMessages($request, ClientRole::Resident, $conversations, $directory, $earlierTexts);
     }
 
     public function store(StartConversationRequest $request, ClientConversations $conversations): RedirectResponse

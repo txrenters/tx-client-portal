@@ -133,27 +133,6 @@ class ConversationLibrary
     }
 
     /**
-     * Conversations about the client's account rather than any one property.
-     *
-     * Propertyware keeps these against the contact, so they belong with the
-     * client rather than on a property page.
-     *
-     * @return array{total: int, conversations: array<int, array<string, mixed>>}
-     *
-     * @throws PropertywareException
-     */
-    public function forAccount(ClientScope $scope, int $limit = 5): array
-    {
-        $conversations = $this->forClient($scope)
-            ->filter(fn (Conversation $conversation): bool => $conversation->buildingId === null);
-
-        return [
-            'total' => $conversations->count(),
-            'conversations' => $this->present($scope, $conversations->take($limit), []),
-        ];
-    }
-
-    /**
      * Conversations on a work order's building that mention its number,
      * since Propertyware keeps no conversations on work orders themselves.
      *

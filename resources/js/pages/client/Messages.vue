@@ -23,7 +23,6 @@ import {
 } from '@lucide/vue';
 import { watchDebounced } from '@vueuse/core';
 import { computed, nextTick, ref, watch } from 'vue';
-import AccountConversations from '@/components/AccountConversations.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import FilePreviewInput from '@/components/FilePreviewInput.vue';
@@ -78,7 +77,6 @@ import {
 } from '@/components/ui/tooltip';
 import { Textarea } from '@/components/ui/textarea';
 import { dashboard as ownerDashboard } from '@/routes/owner';
-import { index as ownerConversations } from '@/routes/owner/conversations';
 import { show as ownerWorkOrder } from '@/routes/owner/maintenance';
 import {
     index as ownerMessages,
@@ -86,7 +84,6 @@ import {
     store as ownerStore,
 } from '@/routes/owner/messages';
 import { dashboard as residentDashboard } from '@/routes/resident';
-import { index as residentConversations } from '@/routes/resident/conversations';
 import { show as residentWorkOrder } from '@/routes/resident/maintenance';
 import {
     index as residentMessages,
@@ -100,12 +97,7 @@ import {
     appDayOffset,
     isSameAppDay,
 } from '@/lib/timezone';
-import type {
-    ChatConversation,
-    ChatThreadMessage,
-    ChatThread,
-    Conversation,
-} from '@/types';
+import type { ChatConversation, ChatThreadMessage, ChatThread } from '@/types';
 
 /**
  * Conversations with TexasRenters.com support and maintenance. They live in
@@ -151,11 +143,6 @@ const props = defineProps<{
     conversation?: ChatConversation | null;
     /** Work order texts from before the messaging hub, as closed conversations. */
     earlierTexts?: ChatThread[] | null;
-    /** Calls and emails our office logged against the client's own record. */
-    accountConversations?: {
-        total: number;
-        conversations: Conversation[];
-    } | null;
 }>();
 
 const routes =
@@ -165,14 +152,12 @@ const routes =
               reply: ownerReply,
               store: ownerStore,
               workOrder: ownerWorkOrder,
-              conversations: ownerConversations,
           }
         : {
               index: residentMessages,
               reply: residentReply,
               store: residentStore,
               workOrder: residentWorkOrder,
-              conversations: residentConversations,
           };
 
 /**
@@ -515,11 +500,6 @@ const listedEarlierTexts = computed<ChatThread[]>(() => {
             (!to || day <= to)
         );
     });
-});
-
-/** Every call and email logged on the client's own record. */
-const accountConversationsUrl = routes.conversations.url({
-    query: { property: 'account' },
 });
 
 /** Conversations opened on this page; the server records them as read too. */
@@ -1357,21 +1337,12 @@ watch(
             >
                 <div
                     v-if="selectedThreadId === null"
-                    class="flex flex-1 flex-col gap-8 overflow-y-auto overscroll-contain p-6"
+                    class="flex flex-1 items-center justify-center p-6"
                 >
                     <EmptyState
-                        class="my-auto"
                         :icon="MessageSquare"
                         title="Pick a conversation"
                         description="Choose one from the list, or start a new message."
-                    />
-                    <!-- Wide screens: in this otherwise empty panel, so it is in view. -->
-                    <AccountConversations
-                        v-if="available"
-                        class="hidden lg:flex"
-                        :account-conversations="accountConversations"
-                        :work-order-href="routes.workOrder"
-                        :all-href="accountConversationsUrl"
                     />
                 </div>
 
@@ -1711,14 +1682,5 @@ watch(
                 </template>
             </Card>
         </div>
-
-        <!-- Phones: below the list. Wide screens show it in the empty conversation panel. -->
-        <AccountConversations
-            v-if="available && selectedThreadId === null"
-            class="lg:hidden"
-            :account-conversations="accountConversations"
-            :work-order-href="routes.workOrder"
-            :all-href="accountConversationsUrl"
-        />
     </div>
 </template>
