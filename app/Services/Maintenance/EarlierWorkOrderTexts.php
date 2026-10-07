@@ -33,6 +33,16 @@ class EarlierWorkOrderTexts
     /** What the client sees as the author of our texts. */
     public const STAFF = 'Maintenance team';
 
+    /**
+     * The attachment types a browser may show inline. Anything else (an SVG or
+     * HTML file someone texted in, say) only ever downloads, so it can never
+     * run on the portal's own domain.
+     */
+    public const INLINE_TYPES = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif',
+        'application/pdf', 'video/mp4', 'video/3gpp', 'video/quicktime',
+    ];
+
     /** Attachment links for the website, through the signed-in session. */
     public const WEB = 'web';
 
@@ -159,11 +169,20 @@ class EarlierWorkOrderTexts
             return null;
         }
 
+        $type = strtolower(trim(explode(';', (string) $response->header('Content-Type'))[0]));
+        $inline = in_array($type, self::INLINE_TYPES, true);
+
         return response($response->body(), 200, [
-            'Content-Type' => $response->header('Content-Type') ?: 'application/octet-stream',
-            'Content-Disposition' => HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_INLINE, $fileName, Str::ascii($fileName) ?: 'attachment'),
+            'Content-Type' => $inline ? $type : 'application/octet-stream',
+            'Content-Disposition' => HeaderUtils::makeDisposition(
+                $inline ? HeaderUtils::DISPOSITION_INLINE : HeaderUtils::DISPOSITION_ATTACHMENT,
+                $fileName,
+                Str::ascii($fileName) ?: 'attachment',
+            ),
             'Cache-Control' => 'private, max-age=300',
             'X-Content-Type-Options' => 'nosniff',
+            // Nothing in a file may run; PDFs are left to the browser's own viewer.
+            ...($type === 'application/pdf' ? [] : ['Content-Security-Policy' => "default-src 'none'; img-src 'self'; media-src 'self'; sandbox"]),
         ]);
     }
 

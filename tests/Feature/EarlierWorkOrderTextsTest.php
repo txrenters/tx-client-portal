@@ -131,7 +131,8 @@ test('passes an earlier text\'s attachment on to the client, and only what tx-ma
     $response = $this->get(route('resident.messages.earlier-media', ['media' => 5, 'name' => 'leak photo.jpg']))
         ->assertOk()
         ->assertHeader('Content-Type', 'image/jpeg')
-        ->assertHeader('Cache-Control', 'max-age=300, private');
+        ->assertHeader('Cache-Control', 'max-age=300, private')
+        ->assertHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; media-src 'self'; sandbox");
 
     expect($response->getContent())->toBe('jpeg-bytes')
         ->and($response->headers->get('Content-Disposition'))->toContain('inline');
@@ -140,3 +141,17 @@ test('passes an earlier text\'s attachment on to the client, and only what tx-ma
 
     $this->get(route('resident.messages.earlier-media', ['media' => 6, 'name' => 'x.jpg']))->assertNotFound();
 });
+
+test('an attachment that could run in a browser only ever downloads', function (string $type) {
+    config(['services.tx_maintenance.url' => 'https://files.test']);
+    Http::fake(['files.test/*' => Http::response('<svg onload="alert(1)"/>', 200, ['Content-Type' => $type])]);
+    $this->actingAs($this->tenant);
+
+    $response = $this->get(route('resident.messages.earlier-media', ['media' => 7, 'name' => 'photo.jpg']))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/octet-stream')
+        ->assertHeader('X-Content-Type-Options', 'nosniff');
+
+    expect($response->headers->get('Content-Disposition'))->toStartWith('attachment')
+        ->and($response->headers->get('Content-Security-Policy'))->toContain('sandbox');
+})->with(['image/svg+xml', 'text/html', 'text/html; charset=utf-8', 'application/xhtml+xml', '']);
