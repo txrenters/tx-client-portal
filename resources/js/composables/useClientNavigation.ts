@@ -43,7 +43,6 @@ import type { ClientRole, NavGroup, NavItem } from '@/types';
 
 export type UseClientNavigationReturn = {
     activeRole: ComputedRef<ClientRole | null>;
-    availableRoles: ComputedRef<ClientRole[]>;
     mainNavGroups: ComputedRef<NavGroup[]>;
     secondaryNavItems: ComputedRef<NavItem[]>;
     mobileNavItems: ComputedRef<NavItem[]>;
@@ -144,7 +143,6 @@ const referralNavItems = (role: ClientRole | null): NavItem[] => {
 export function useClientNavigation(): UseClientNavigationReturn {
     const page = usePage();
     const activeRole = computed(() => page.props.client?.activeRole ?? null);
-    const availableRoles = computed(() => page.props.client?.roles ?? []);
 
     const mainNavGroups = computed<NavGroup[]>(() => {
         if (activeRole.value === 'owner') {
@@ -200,7 +198,6 @@ export function useClientNavigation(): UseClientNavigationReturn {
 
     return {
         activeRole,
-        availableRoles,
         mainNavGroups,
         secondaryNavItems,
         mobileNavItems,
