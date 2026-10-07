@@ -2,7 +2,6 @@
 import AccountSwitcher from '@/components/AccountSwitcher.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
-import RoleSwitcher from '@/components/RoleSwitcher.vue';
 import SidebarBrand from '@/components/SidebarBrand.vue';
 import {
     Sidebar,
@@ -13,8 +12,7 @@ import {
 import { useClientNavigation } from '@/composables/useClientNavigation';
 import { dashboard } from '@/routes';
 
-const { mainNavGroups, secondaryNavItems, availableRoles } =
-    useClientNavigation();
+const { mainNavGroups, secondaryNavItems } = useClientNavigation();
 </script>
 
 <template>
@@ -22,7 +20,6 @@ const { mainNavGroups, secondaryNavItems, availableRoles } =
         <SidebarHeader>
             <SidebarBrand :href="dashboard()" label="Client Portal" />
             <AccountSwitcher />
-            <RoleSwitcher v-if="availableRoles.length > 1" />
         </SidebarHeader>
 
         <SidebarContent class="gap-2 py-2">
