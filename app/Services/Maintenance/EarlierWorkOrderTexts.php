@@ -27,6 +27,11 @@ use Symfony\Component\HttpFoundation\HeaderUtils;
  * Each work order's texts are one conversation, shaped like a hub thread but
  * with a negative id (minus tx-maintenance's work order id), so it can never
  * be mistaken for one.
+ *
+ * Everything from tx-maintenance, or read back from the cache, is checked for
+ * this shape before use (conversationFrom), and anything else is dropped.
+ *
+ * @phpstan-type Conversation array{thread: array<array-key, mixed>, messages: list<array<array-key, mixed>>}
  */
 class EarlierWorkOrderTexts
 {
@@ -58,7 +63,7 @@ class EarlierWorkOrderTexts
      * The client's earlier work order texts, newest conversation first. Empty
      * when tx-maintenance isn't set up; null when it can't be reached.
      *
-     * @return array<int, array{thread: array<string, mixed>, messages: array<int, array<string, mixed>>}>|null
+     * @return array<int, Conversation>|null
      */
     public function conversations(ClientAccount $account, string $surface = self::WEB): ?array
     {
@@ -67,20 +72,19 @@ class EarlierWorkOrderTexts
         }
 
         $key = 'maintenance-texts:'.$account->id;
-        $conversations = Cache::get($key);
+        $cached = Cache::get($key);
 
-        if (! is_array($conversations)) {
+        if (is_array($cached)) {
+            $conversations = $this->conversationsFrom($cached);
+        } else {
             $data = $this->fetch($account);
 
             if ($data === null) {
                 return null;
             }
 
-            $conversations = collect($data)
-                ->map(fn (array $item): array => $this->present($item, $account))
-                ->sortByDesc(fn (array $conversation): string => (string) $conversation['thread']['updatedAt'])
-                ->values()
-                ->all();
+            $conversations = $this->conversationsFrom(array_map(fn (mixed $item): mixed => is_array($item) ? $this->present($item, $account) : null, $data));
+            usort($conversations, fn (array $a, array $b): int => strcmp((string) ($b['thread']['updatedAt'] ?? ''), (string) ($a['thread']['updatedAt'] ?? '')));
 
             Cache::put($key, $conversations, now()->addMinutes(10));
         }
@@ -103,7 +107,7 @@ class EarlierWorkOrderTexts
     /**
      * One of the client's earlier conversations, by its (negative) id.
      *
-     * @return array{thread: array<string, mixed>, messages: array<int, array<string, mixed>>}|null
+     * @return Conversation|null
      */
     public function conversation(ClientAccount $account, int $threadId, string $surface = self::WEB): ?array
     {
@@ -116,7 +120,7 @@ class EarlierWorkOrderTexts
      * order: the household on its lease, or the property's owners. Null when
      * there were none or tx-maintenance can't be reached.
      *
-     * @return array{thread: array<string, mixed>, messages: array<int, array<string, mixed>>}|null
+     * @return Conversation|null
      */
     public function forWorkOrder(ClientAccount $account, string $workOrderId, string $surface = self::WEB): ?array
     {
@@ -128,7 +132,7 @@ class EarlierWorkOrderTexts
         $cached = Cache::get($key);
 
         if (is_array($cached)) {
-            $conversation = $cached['conversation'];
+            $conversation = $this->conversationFrom($cached['conversation'] ?? null);
         } else {
             $data = $this->fetch($account, $workOrderId);
 
@@ -136,7 +140,7 @@ class EarlierWorkOrderTexts
                 return null;
             }
 
-            $conversation = isset($data[0]) ? $this->present($data[0], $account) : null;
+            $conversation = is_array($data[0] ?? null) ? $this->present($data[0], $account) : null;
             Cache::put($key, ['conversation' => $conversation], now()->addMinutes(10));
         }
 
@@ -189,16 +193,25 @@ class EarlierWorkOrderTexts
     /**
      * Point each message's attachments at the portal, never at tx-maintenance.
      *
-     * @param  array{thread: array<string, mixed>, messages: array<int, array<string, mixed>>}  $conversation
-     * @return array{thread: array<string, mixed>, messages: array<int, array<string, mixed>>}
+     * @param  Conversation  $conversation
+     * @return Conversation
      */
     private function linkAttachments(array $conversation, ClientAccount $account, string $surface): array
     {
         $conversation['messages'] = array_map(function (array $message) use ($account, $surface): array {
-            $message['mediaUrls'] = array_map(fn (array $media): string => $surface === self::API
-                ? 'accounts/'.$account->id.'/messages/earlier-media/'.$media['id'].'/'.rawurlencode((string) $media['name'])
-                : route($account->role->value.'.messages.earlier-media', ['media' => $media['id'], 'name' => $media['name']]),
-                $message['attachments'] ?? []);
+            $attachments = is_array($message['attachments'] ?? null) ? $message['attachments'] : [];
+            $message['mediaUrls'] = [];
+
+            foreach ($attachments as $media) {
+                if (! is_array($media) || ! is_numeric($media['id'] ?? null) || ! is_string($media['name'] ?? null)) {
+                    continue;
+                }
+
+                $message['mediaUrls'][] = $surface === self::API
+                    ? 'accounts/'.$account->id.'/messages/earlier-media/'.(int) $media['id'].'/'.rawurlencode($media['name'])
+                    : route($account->role->value.'.messages.earlier-media', ['media' => (int) $media['id'], 'name' => $media['name']]);
+            }
+
             unset($message['attachments']);
 
             return $message;
@@ -208,7 +221,9 @@ class EarlierWorkOrderTexts
     }
 
     /**
-     * @return array<int, array<string, mixed>>|null
+     * The decoded "data" list from tx-maintenance, unchecked.
+     *
+     * @return array<array-key, mixed>|null
      */
     private function fetch(ClientAccount $account, ?string $workOrderId = null): ?array
     {
@@ -249,12 +264,51 @@ class EarlierWorkOrderTexts
     }
 
     /**
-     * @param  array{work_order: array<string, mixed>, messages: array<int, array<string, mixed>>}  $item
-     * @return array{thread: array<string, mixed>, messages: array<int, array<string, mixed>>}
+     * The conversations among these values that have the expected shape.
+     *
+     * @param  array<array-key, mixed>  $values
+     * @return list<Conversation>
+     */
+    private function conversationsFrom(array $values): array
+    {
+        $conversations = [];
+
+        foreach ($values as $value) {
+            $conversation = $this->conversationFrom($value);
+
+            if ($conversation !== null) {
+                $conversations[] = $conversation;
+            }
+        }
+
+        return $conversations;
+    }
+
+    /**
+     * The value as a conversation, or null when it isn't shaped like one.
+     *
+     * @return Conversation|null
+     */
+    private function conversationFrom(mixed $value): ?array
+    {
+        if (! is_array($value) || ! is_array($value['thread'] ?? null) || ! is_array($value['messages'] ?? null)) {
+            return null;
+        }
+
+        return [
+            'thread' => $value['thread'],
+            'messages' => array_values(array_filter($value['messages'], is_array(...))),
+        ];
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $item  One entry from tx-maintenance, unchecked.
+     * @return Conversation
      */
     private function present(array $item, ClientAccount $account): array
     {
-        $workOrder = $item['work_order'];
+        $workOrder = is_array($item['work_order'] ?? null) ? $item['work_order'] : [];
+        $incoming = array_values(array_filter(is_array($item['messages'] ?? null) ? $item['messages'] : [], is_array(...)));
         $someoneElse = $account->role === ClientRole::Owner ? 'another owner' : 'another resident';
         $messages = array_map(fn (array $message): array => [
             'id' => (int) $message['id'],
@@ -274,7 +328,7 @@ class EarlierWorkOrderTexts
             },
             'authorPhotoUrl' => null,
             'at' => $message['sent_at'] ?? null,
-        ], $item['messages']);
+        ], $incoming);
         $latest = end($messages) ?: null;
 
         return [
