@@ -291,6 +291,8 @@ export type ChatThread = {
     phone?: string | null;
     /** What the conversation is about, when the client picked a category. */
     category?: 'leasing' | 'accounting' | 'maintenance' | null;
+    /** Work order texts from before the messaging hub: closed, with a negative id. */
+    isHistory?: boolean;
 };
 
 export type ChatThreadMessage = {

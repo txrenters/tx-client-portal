@@ -7,6 +7,7 @@ use App\Http\Requests\Client\ReplyMessageRequest;
 use App\Http\Requests\Client\StartConversationRequest;
 use App\Services\ChatHub\ChatHubException;
 use App\Services\ChatHub\ClientConversations;
+use App\Services\Maintenance\EarlierWorkOrderTexts;
 use App\Services\Propertyware\ConversationLibrary;
 use App\Services\Propertyware\PropertywareDirectory;
 use App\Services\Propertyware\PropertywareException;
@@ -18,19 +19,22 @@ use Inertia\Response;
 
 /**
  * The Messages page: the client's conversations with TexasRenters.com support
- * and maintenance, held in the messaging hub (tx-chatbot).
+ * and maintenance, held in the messaging hub (tx-chatbot), and below them the
+ * work order texts from before the hub, as closed conversations with negative
+ * ids (EarlierWorkOrderTexts).
  */
 trait ShowsConversationsWithStaff
 {
     use ResolvesClientScope;
 
-    protected function renderMessages(Request $request, ClientRole $role, ClientConversations $conversations, PropertywareDirectory $directory, ConversationLibrary $library): Response
+    protected function renderMessages(Request $request, ClientRole $role, ClientConversations $conversations, PropertywareDirectory $directory, ConversationLibrary $library, EarlierWorkOrderTexts $earlierTexts): Response
     {
         $account = $this->activeClientAccount($request, $role);
         abort_if($account === null, 403);
 
         $validated = $request->validate([
-            'thread' => ['nullable', 'integer', 'min:1'],
+            // Negative ids are earlier work order texts.
+            'thread' => ['nullable', 'integer', 'not_in:0'],
             'page' => ['nullable', 'integer', 'min:1'],
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'in:open,closed'],
@@ -72,6 +76,8 @@ trait ShowsConversationsWithStaff
                     return null;
                 }
             }, 'accountConversations'),
+            // Work order texts from before the hub, listed after its conversations.
+            'earlierTexts' => Inertia::defer(fn (): ?array => $earlierTexts->threads($account), 'earlierTexts'),
             // Loaded after the page, then page by page as the client scrolls the list.
             'threads' => Inertia::scroll(function () use ($request, $conversations, $account, $validated, $filters): LengthAwarePaginator {
                 $page = (int) ($validated['page'] ?? 1);
@@ -87,7 +93,11 @@ trait ShowsConversationsWithStaff
                     'query' => array_filter($filters),
                 ]);
             })->defer(),
-            'conversation' => $selected === null ? null : Inertia::defer(function () use ($request, $conversations, $account, $selected): ?array {
+            'conversation' => $selected === null ? null : Inertia::defer(function () use ($request, $conversations, $earlierTexts, $account, $selected): ?array {
+                if ($selected < 0) {
+                    return $earlierTexts->conversation($account, $selected) ?? abort(404);
+                }
+
                 try {
                     $conversation = $conversations->conversation($account, $selected) ?? abort(404);
                     $conversations->markRead($request->user(), $conversation);

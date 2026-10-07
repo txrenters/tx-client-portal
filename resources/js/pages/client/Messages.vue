@@ -150,6 +150,8 @@ const props = defineProps<{
     /** Loaded after the page, then page by page as the list scrolls. */
     threads?: { data: ChatThread[] };
     conversation?: ChatConversation | null;
+    /** Work order texts from before the messaging hub, as closed conversations. */
+    earlierTexts?: ChatThread[] | null;
     /** Calls and emails our office logged against the client's own record. */
     accountConversations?: {
         total: number;
@@ -488,6 +490,32 @@ const listedThreads = computed<ChatThread[]>(() => {
                   },
               },
     );
+});
+
+/**
+ * The earlier work order texts the applied filters allow. They are all closed,
+ * so they drop out when only open conversations are asked for.
+ */
+const listedEarlierTexts = computed<ChatThread[]>(() => {
+    const { search, status: shownStatus, from, to } = props.filters;
+
+    if (!props.earlierTexts || shownStatus === 'open') {
+        return [];
+    }
+
+    const term = (search ?? '').trim().toLowerCase();
+
+    return props.earlierTexts.filter((thread) => {
+        const day = thread.updatedAt?.slice(0, 10) ?? '';
+        const text =
+            `${thread.subject} ${thread.lastMessage?.preview ?? ''} ${thread.workOrderNumber ?? ''}`.toLowerCase();
+
+        return (
+            (!term || text.includes(term)) &&
+            (!from || day >= from) &&
+            (!to || day <= to)
+        );
+    });
 });
 
 /** Conversations opened on this page; the server records them as read too. */
@@ -1034,7 +1062,10 @@ watch(
                     </div>
 
                     <EmptyState
-                        v-else-if="threads.data.length === 0"
+                        v-else-if="
+                            threads.data.length === 0 &&
+                            listedEarlierTexts.length === 0
+                        "
                         class="p-4"
                         :icon="MessageSquare"
                         :title="isFiltered ? 'No matches' : 'No messages yet'"
@@ -1204,6 +1235,107 @@ watch(
                             </li>
                         </template>
                     </InfiniteScroll>
+
+                    <!-- Work order texts from before the hub: closed, read-only. -->
+                    <template v-if="listedEarlierTexts.length > 0">
+                        <p
+                            class="text-muted-foreground border-border/60 bg-muted/30 border-y px-3 py-2 text-xs font-medium"
+                        >
+                            Earlier work order texts
+                        </p>
+                        <ul class="divide-border/60 divide-y">
+                            <li
+                                v-for="thread in listedEarlierTexts"
+                                :key="thread.id"
+                            >
+                                <button
+                                    type="button"
+                                    class="hover:bg-muted/50 focus-visible:ring-ring/60 flex w-full items-start gap-3 px-3 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                                    :class="{
+                                        'bg-primary/5':
+                                            thread.id === selectedThreadId,
+                                    }"
+                                    :aria-current="
+                                        thread.id === selectedThreadId
+                                            ? 'true'
+                                            : undefined
+                                    "
+                                    @click="open(thread.id)"
+                                >
+                                    <span
+                                        class="bg-muted text-muted-foreground mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full"
+                                    >
+                                        <Wrench
+                                            class="size-4"
+                                            aria-hidden="true"
+                                        />
+                                    </span>
+                                    <span
+                                        class="flex min-w-0 flex-1 flex-col gap-0.5"
+                                    >
+                                        <span
+                                            class="flex items-baseline justify-between gap-2"
+                                        >
+                                            <span
+                                                class="truncate text-sm font-medium"
+                                                >{{ thread.subject }}</span
+                                            >
+                                            <span
+                                                class="text-muted-foreground shrink-0 text-xs"
+                                                >{{
+                                                    listTime(thread.updatedAt)
+                                                }}</span
+                                            >
+                                        </span>
+                                        <span
+                                            v-if="thread.lastMessage"
+                                            class="text-muted-foreground line-clamp-1 text-xs"
+                                        >
+                                            <template
+                                                v-if="
+                                                    thread.lastMessage
+                                                        .fromClient
+                                                "
+                                                >You: </template
+                                            >{{
+                                                thread.lastMessage.preview ||
+                                                (thread.lastMessage
+                                                    .hasAttachment
+                                                    ? 'Sent a file'
+                                                    : '')
+                                            }}
+                                        </span>
+                                        <span
+                                            class="flex flex-wrap items-center gap-1.5 pt-0.5"
+                                        >
+                                            <Badge
+                                                variant="secondary"
+                                                class="h-5 border-transparent px-1.5 text-[10px] font-medium"
+                                                :class="
+                                                    categoryTint.maintenance
+                                                "
+                                            >
+                                                {{ categoryLabel.maintenance }}
+                                            </Badge>
+                                            <Badge
+                                                v-if="thread.workOrderNumber"
+                                                variant="outline"
+                                                class="h-5 px-1.5 text-[10px]"
+                                                >WO #{{
+                                                    thread.workOrderNumber
+                                                }}</Badge
+                                            >
+                                            <Badge
+                                                variant="outline"
+                                                class="h-5 px-1.5 text-[10px]"
+                                                >Closed</Badge
+                                            >
+                                        </span>
+                                    </span>
+                                </button>
+                            </li>
+                        </ul>
+                    </template>
                 </Card>
             </div>
 
@@ -1279,6 +1411,9 @@ watch(
                                             ? 'Maintenance'
                                             : 'Support'
                                     }}
+                                </template>
+                                <template v-if="conversation.thread.isHistory">
+                                    · Texts from before our new messaging
                                 </template>
                                 <template v-if="conversation.thread.phone">
                                     · Also texted to

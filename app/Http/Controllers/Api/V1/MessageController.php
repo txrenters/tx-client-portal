@@ -10,6 +10,7 @@ use App\Http\Requests\Client\StartConversationRequest;
 use App\Models\ClientAccount;
 use App\Services\ChatHub\ChatHubException;
 use App\Services\ChatHub\ClientConversations;
+use App\Services\Maintenance\EarlierWorkOrderTexts;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -74,6 +75,16 @@ class MessageController extends Controller
                 'channel' => "contacts.{$account->propertyware_id}.messages",
             ],
         ]);
+    }
+
+    /**
+     * Work order texts from before the messaging hub, each a closed conversation
+     * with its messages and a negative id. Empty when there are none or
+     * tx-maintenance can't be reached right now.
+     */
+    public function history(ClientAccount $account, EarlierWorkOrderTexts $earlierTexts): JsonResponse
+    {
+        return response()->json(['data' => $earlierTexts->conversations($account) ?? []]);
     }
 
     /**
