@@ -79,7 +79,9 @@ trait ShowsConversationsWithStaff
                     $result = ['threads' => [], 'total' => 0];
                 }
 
-                return new LengthAwarePaginator($result['threads'], $result['total'], 25, $page, [
+                // The page the hub actually reached, which is further on when
+                // pages of empty conversations were skipped.
+                return new LengthAwarePaginator($result['threads'], $result['total'], 25, $result['currentPage'] ?? $page, [
                     'path' => $request->url(),
                     'query' => array_filter($filters),
                 ]);
