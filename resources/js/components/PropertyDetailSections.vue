@@ -14,6 +14,8 @@ const props = defineProps<{
     details: PropertyDetails;
     /** One column, for a sidebar; otherwise two columns on large screens. */
     stacked?: boolean;
+    /** Leave out the "Your property managers" section. */
+    hideManagers?: boolean;
 }>();
 
 type Panel = {
@@ -37,7 +39,7 @@ const panels = computed<Panel[]>(() => [
               },
           ]
         : []),
-    ...(props.details.managers.length > 0
+    ...(!props.hideManagers && props.details.managers.length > 0
         ? [
               {
                   key: 'managers',
