@@ -10,9 +10,10 @@ import {
 } from '@lucide/vue';
 import AppShowcase from '@/components/marketing/AppShowcase.vue';
 import HouseBackdrop from '@/components/marketing/HouseBackdrop.vue';
-import PhoneFrame from '@/components/marketing/PhoneFrame.vue';
+import BrowserFrame from '@/components/marketing/BrowserFrame.vue';
 import SiteFooter from '@/components/marketing/SiteFooter.vue';
 import SiteHeader from '@/components/marketing/SiteHeader.vue';
+import WebShowcase from '@/components/marketing/WebShowcase.vue';
 import { Button } from '@/components/ui/button';
 import { vReveal } from '@/lib/reveal';
 import { computed } from 'vue';
@@ -35,7 +36,7 @@ const steps = [
     {
         title: 'Everything is waiting',
         description:
-            'We match your email to our records, so your property, work orders, lease and documents are already there, on the web and in the app.',
+            'We match your email to our records, so your property, work orders, lease and documents are already there.',
     },
 ];
 
@@ -74,15 +75,15 @@ const securityPoints = [
         <Head title="Client portal">
             <meta
                 name="description"
-                content="The TexasRenters.com client portal for residents and owners: work orders, messages, documents, leases and property information, on the web and in the app."
+                content="The TexasRenters.com client portal for residents and owners: work orders, messages, documents, leases and property information, in any browser."
             />
         </Head>
 
         <SiteHeader />
 
         <main id="top" class="flex-1">
-            <!-- Hero: the words on the left, the real app on the right, its
-                 phones running off the bottom edge. -->
+            <!-- Hero: the words on the left, the real portal on the right,
+                 its windows running off the bottom edge. -->
             <section
                 class="bg-scrim text-scrim-foreground relative isolate overflow-hidden"
             >
@@ -106,8 +107,8 @@ const securityPoints = [
                         >
                             The client portal for TexasRenters.com residents and
                             owners in Houston. Report repairs, message our team,
-                            and find your lease, payments and documents, on the
-                            web or in the app.
+                            and find your lease, payments and documents, from
+                            any browser.
                         </p>
 
                         <div
@@ -155,33 +156,31 @@ const securityPoints = [
                             agreement. Got an invitation? Just open the link in
                             the email.
                         </p>
-
-                        <AppStoreBadges v-reveal="460" />
                     </div>
 
-                    <!-- One resident screen in front, one owner screen behind:
+                    <!-- One resident page in front, one owner page behind:
                          the portal serves both. -->
                     <div
-                        class="relative mx-auto h-[22rem] w-full max-w-md sm:h-[28rem] lg:h-[34rem] lg:self-end"
+                        class="relative mx-auto h-[16rem] w-full max-w-xl sm:h-[24rem] lg:h-[30rem] lg:max-w-none lg:self-end"
                         aria-hidden="true"
                     >
-                        <PhoneFrame
-                            screen="07-financials"
+                        <BrowserFrame
+                            screen="02-owner-dashboard"
                             alt=""
                             eager
-                            class="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-16 motion-safe:fill-mode-both absolute top-20 left-0 w-[50%] -rotate-6 opacity-90 motion-safe:delay-150 motion-safe:duration-1000 sm:top-20"
+                            class="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-16 motion-safe:fill-mode-both absolute top-0 left-0 w-[82%] opacity-80 motion-safe:delay-150 motion-safe:duration-1000 lg:top-6"
                         />
-                        <PhoneFrame
-                            screen="01-home"
+                        <BrowserFrame
+                            screen="01-resident-dashboard"
                             alt=""
                             eager
-                            class="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-16 motion-safe:fill-mode-both absolute top-6 right-[2%] w-[58%] motion-safe:duration-1000"
+                            class="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-16 motion-safe:fill-mode-both absolute top-12 right-0 w-[82%] motion-safe:duration-1000 sm:top-16 lg:top-24 lg:-right-16 lg:w-[95%]"
                         />
                     </div>
                 </div>
             </section>
 
-            <AppShowcase />
+            <WebShowcase />
 
             <!-- Getting started: a real sequence, so the steps are numbered. -->
             <section
@@ -201,8 +200,8 @@ const securityPoints = [
                             Getting in takes a minute
                         </h2>
                         <p class="text-muted-foreground max-w-sm text-pretty">
-                            Use it in any browser, or download the app. There is
-                            nothing to set up.
+                            Use it in any browser, on your computer or phone.
+                            There is nothing to install.
                         </p>
                     </div>
 
@@ -268,6 +267,8 @@ const securityPoints = [
                     </li>
                 </ul>
             </section>
+
+            <AppShowcase />
         </main>
 
         <!-- Navy in both themes: the last call to action and the footer close

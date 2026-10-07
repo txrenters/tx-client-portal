@@ -6,7 +6,9 @@ import {
     usePreferredReducedMotion,
 } from '@vueuse/core';
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
+import AppStoreBadges from '@/components/marketing/AppStoreBadges.vue';
 import PhoneFrame from '@/components/marketing/PhoneFrame.vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { vReveal } from '@/lib/reveal';
@@ -20,21 +22,14 @@ type Screen = {
 };
 
 /**
- * The mobile app's promo video and a tour of its screens, under the landing
- * page hero. The video comes from tx-mobile's store/promo (Remotion),
+ * A preview of the mobile apps, which are not in the stores yet: the promo
+ * video and a tour of its screens, low on the landing page. The video comes from tx-mobile's store/promo (Remotion),
  * compressed into public/videos. The captions are the store listing copy
  * (tx-mobile's store/slides.json), written out as text so they stay readable
  * at any size.
  */
-const tours: Record<Audience, { points: string[]; screens: Screen[] }> = {
+const tours: Record<Audience, { screens: Screen[] }> = {
     residents: {
-        points: [
-            'See the home you rent, your lease dates and your terms',
-            'Report a repair with photos, then follow it to finished',
-            'Message our team and get an alert when we reply',
-            'Read, download and upload your documents',
-            'Refer a property owner you know, and get a reward when they sign',
-        ],
         screens: [
             {
                 screen: '01-home',
@@ -71,13 +66,6 @@ const tours: Record<Audience, { points: string[]; screens: Screen[] }> = {
         ],
     },
     owners: {
-        points: [
-            'Your whole portfolio, with occupied and vacant properties at a glance',
-            'Work orders across every property, and estimates to approve or decline',
-            'Expenses on each property, including what was charged to you',
-            'Message our team, or book a call at a time that suits you',
-            'Property paperwork in one library, with room for your own files',
-        ],
         screens: [
             {
                 screen: '07-financials',
@@ -302,26 +290,35 @@ watch(
 
 <template>
     <div>
-        <!-- The promo video. Landscape from tablets up, portrait on phones,
-             where it fills the screen. preload="none" with a poster means only
-             the one being shown downloads, and only once it is played. -->
+        <!-- The apps are not in the stores yet, so this is a preview: the
+             promo video, then the screens. The promo video is landscape from
+             tablets up and portrait on phones, where it fills the screen.
+             preload="none" with a poster means only the one being shown
+             downloads, and only once it is played. -->
         <section
-            id="tour"
+            id="app"
             class="mx-auto w-full max-w-6xl scroll-mt-24 px-4 pt-20 sm:px-6 sm:pt-28"
+            aria-labelledby="app-heading"
         >
             <div
                 v-reveal
-                class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+                class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between"
             >
-                <h2
-                    class="font-heading max-w-xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl"
-                >
-                    See the app in under a minute
-                </h2>
-                <p class="text-muted-foreground max-w-sm text-pretty">
-                    Reporting a repair, messaging the team, finding your lease
-                    and approving work, start to finish.
-                </p>
+                <div class="flex max-w-xl flex-col items-start gap-3">
+                    <Badge variant="secondary">Coming soon</Badge>
+                    <h2
+                        id="app-heading"
+                        class="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl"
+                    >
+                        The app is on its way
+                    </h2>
+                    <p class="text-muted-foreground text-pretty">
+                        iPhone and Android apps are coming soon. Your portal
+                        account will work in them from day one, with an alert
+                        when we reply or your repair moves along.
+                    </p>
+                </div>
+                <AppStoreBadges />
             </div>
 
             <div
@@ -362,7 +359,7 @@ watch(
                         >
                             <Play class="size-4 translate-x-px fill-current" />
                         </span>
-                        <span class="font-medium">Play the tour</span>
+                        <span class="font-medium">Preview the app</span>
                         <span class="text-primary-foreground/70 tabular-nums">
                             0:57
                         </span>
@@ -371,44 +368,19 @@ watch(
             </div>
         </section>
 
-        <!-- The app's own screens, by who is using it. -->
-        <section
-            id="app"
-            class="scroll-mt-24 py-20 sm:py-28"
-            aria-labelledby="app-heading"
-        >
-            <div
-                class="mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[1fr_1.1fr] lg:gap-16"
-            >
-                <div v-reveal.left class="flex flex-col items-start gap-6">
-                    <h2
-                        id="app-heading"
-                        class="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl"
-                    >
-                        Made for both sides of the lease
-                    </h2>
-                    <Tabs v-model="audience">
-                        <TabsList class="h-11 p-1">
-                            <TabsTrigger value="residents" class="px-4">
-                                For residents
-                            </TabsTrigger>
-                            <TabsTrigger value="owners" class="px-4">
-                                For owners
-                            </TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                </div>
-
-                <ul class="flex flex-col lg:pt-2">
-                    <li
-                        v-for="(point, index) in tour.points"
-                        :key="point"
-                        v-reveal="index * 70"
-                        class="border-border border-b py-3 text-pretty first:pt-0 last:border-b-0"
-                    >
-                        {{ point }}
-                    </li>
-                </ul>
+        <!-- A preview of the app's screens, by who is using it. -->
+        <section class="pt-14 pb-20 sm:pb-28" aria-label="App screens">
+            <div class="flex justify-center px-4">
+                <Tabs v-model="audience">
+                    <TabsList class="h-11 p-1">
+                        <TabsTrigger value="residents" class="px-4">
+                            For residents
+                        </TabsTrigger>
+                        <TabsTrigger value="owners" class="px-4">
+                            For owners
+                        </TabsTrigger>
+                    </TabsList>
+                </Tabs>
             </div>
 
             <!-- Coverflow: the screen in front is flat and full size, its
@@ -416,7 +388,7 @@ watch(
             <div
                 ref="stage"
                 v-reveal.zoom="120"
-                class="focus-visible:ring-ring/50 relative mt-14 [touch-action:pan-y] overflow-hidden px-4 py-6 outline-none select-none [perspective:1600px] focus-visible:ring-4 focus-visible:ring-inset"
+                class="focus-visible:ring-ring/50 relative mt-8 [touch-action:pan-y] overflow-hidden px-4 py-6 outline-none select-none [perspective:1600px] focus-visible:ring-4 focus-visible:ring-inset"
                 :class="isDragging ? 'cursor-grabbing' : 'cursor-grab'"
                 role="region"
                 aria-roledescription="carousel"

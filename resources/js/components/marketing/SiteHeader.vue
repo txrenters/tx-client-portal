@@ -7,10 +7,11 @@ import { dashboard, home, login, register } from '@/routes';
 
 // Sections of the landing page, linked from any page that uses this header.
 const navLinks = [
-    { label: 'The app', href: '#tour' },
-    { label: 'Residents and owners', href: '#app' },
+    { label: 'Tutorial', href: '#tour' },
+    { label: 'Residents and owners', href: '#portal' },
     { label: 'Getting started', href: '#how-it-works' },
     { label: 'Security', href: '#security' },
+    { label: 'The app', href: '#app' },
 ];
 
 const page = usePage();
