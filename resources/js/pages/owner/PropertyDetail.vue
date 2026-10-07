@@ -265,7 +265,12 @@ const facts = [
                 </Tabs>
             </div>
 
-            <PropertyDetailSections v-if="details" :details="details" stacked />
+            <PropertyDetailSections
+                v-if="details"
+                :details="details"
+                stacked
+                hide-managers
+            />
         </div>
     </div>
 </template>
