@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { useHttp } from '@inertiajs/vue3';
 import { Play } from '@lucide/vue';
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
 import BrowserFrame from '@/components/marketing/BrowserFrame.vue';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { vReveal } from '@/lib/reveal';
+import { events as landingEvents } from '@/routes/landing';
 
 type Audience = 'residents' | 'owners';
 
@@ -89,9 +91,13 @@ watch(audience, () => {
 const video = useTemplateRef<HTMLVideoElement>('video');
 const isVideoStarted = ref(false);
 
+/** Tells Insights the tutorial was played; it counts each visitor once a day. */
+const tracker = useHttp({ event: 'tutorial_play' });
+
 /** Swap the poster's play button for the player's own controls. */
 const playVideo = async (): Promise<void> => {
     isVideoStarted.value = true;
+    tracker.post(landingEvents.url());
     await nextTick();
     video.value?.play();
 };

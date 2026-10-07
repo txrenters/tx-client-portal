@@ -5,8 +5,12 @@ import {
     ChevronRight,
     Clock,
     Eye,
+    Globe,
     KeyRound,
     Lock,
+    LogIn,
+    PlayCircle,
+    UserPlus,
     ShieldAlert,
     Link2Off,
     MailQuestion,
@@ -34,7 +38,7 @@ import { appDateFormatter } from '@/lib/timezone';
 import { dashboard as adminHome, insights, properties } from '@/routes/admin';
 import { index as invitationsRoute, resend } from '@/routes/admin/invitations';
 import { show as showUser } from '@/routes/admin/users';
-import { ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import type { AdminInsightList, AdminSignInEvent, Paginated } from '@/types';
 
 /** The trail in the header beside the sidebar's collapse button. */
@@ -73,6 +77,14 @@ const props = defineProps<{
         app: number;
         daily: { date: string; web: number; app: number }[];
     };
+    /** Anonymous visitors to the landing page, and what they went on to do that day. */
+    landing: {
+        visitors: number;
+        tutorialPlays: number;
+        signUps: number;
+        signIns: number;
+        daily: { date: string; visitors: number }[];
+    };
     signIns: {
         successful: number;
         failed: number;
@@ -92,15 +104,19 @@ const props = defineProps<{
 }>();
 
 /** Which tab is open, kept in the address so a reload lands on it again. */
-type InsightTab = 'activity' | 'log' | 'adoption';
+type InsightTab = 'activity' | 'landing' | 'log' | 'adoption';
 
-const tab = ref<InsightTab>(
-    (['activity', 'log', 'adoption'] as const).find(
-        (name) =>
-            typeof window !== 'undefined' &&
-            new URLSearchParams(window.location.search).get('tab') === name,
-    ) ?? 'activity',
-);
+const tab = ref<InsightTab>('activity');
+
+// Read from the address only in the browser: the server renders Activity,
+// and choosing another tab before the page takes over left its panel blank.
+onMounted(() => {
+    tab.value =
+        (['activity', 'landing', 'log', 'adoption'] as const).find(
+            (name) =>
+                new URLSearchParams(window.location.search).get('tab') === name,
+        ) ?? 'activity';
+});
 
 watch(tab, (name) => {
     const url = new URL(window.location.href);
@@ -171,6 +187,40 @@ const stamped = appDateFormatter({
     hour: 'numeric',
     minute: '2-digit',
 });
+
+/** The share of landing page visitors who did something, as "12%". */
+function shareOfVisitors(count: number): string {
+    return props.landing.visitors === 0
+        ? 'No visitors yet'
+        : `${Math.round((count / props.landing.visitors) * 100)}% of visitors`;
+}
+
+const landingTiles = [
+    {
+        label: 'Landing page visitors',
+        value: props.landing.visitors,
+        detail: 'Not signed in, once a day each',
+        icon: Globe,
+    },
+    {
+        label: 'Watched the tutorial',
+        value: props.landing.tutorialPlays,
+        detail: shareOfVisitors(props.landing.tutorialPlays),
+        icon: PlayCircle,
+    },
+    {
+        label: 'Created an account',
+        value: props.landing.signUps,
+        detail: shareOfVisitors(props.landing.signUps),
+        icon: UserPlus,
+    },
+    {
+        label: 'Signed in',
+        value: props.landing.signIns,
+        detail: shareOfVisitors(props.landing.signIns),
+        icon: LogIn,
+    },
+];
 
 const activityTiles = [
     {
@@ -284,6 +334,7 @@ const lists = [
         <Tabs v-model="tab" class="gap-6">
             <TabsList>
                 <TabsTrigger value="activity">Activity</TabsTrigger>
+                <TabsTrigger value="landing">Landing page</TabsTrigger>
                 <TabsTrigger value="log"
                     >Sign-in log
                     <Badge
@@ -414,6 +465,55 @@ const lists = [
                         </ul>
                     </AppCard>
                 </div>
+            </TabsContent>
+
+            <TabsContent value="landing" class="flex flex-col gap-6">
+                <p class="text-muted-foreground -mb-2 text-sm font-medium">
+                    Last {{ activityDays }} days
+                </p>
+                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <AppCard v-for="tile in landingTiles" :key="tile.label">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="space-y-1">
+                                <p
+                                    class="text-muted-foreground text-sm font-medium"
+                                >
+                                    {{ tile.label }}
+                                </p>
+                                <p class="text-3xl font-semibold tabular-nums">
+                                    {{ tile.value }}
+                                </p>
+                                <p class="text-muted-foreground text-sm">
+                                    {{ tile.detail }}
+                                </p>
+                            </div>
+                            <component
+                                :is="tile.icon"
+                                class="text-primary size-5 shrink-0"
+                            />
+                        </div>
+                    </AppCard>
+                </div>
+                <AppCard
+                    title="Landing page visitors per day"
+                    description="People who opened app.texasrenters.com without being signed in, each counted once a day. No cookies; a visitor can't be recognised from one day to the next."
+                >
+                    <DailyBarChart
+                        :days="landing.daily"
+                        :series="[
+                            {
+                                key: 'visitors',
+                                label: 'Visitors',
+                                colorClass: 'bg-chart-1',
+                            },
+                        ]"
+                        unit="visitor"
+                    />
+                    <p class="text-muted-foreground mt-3 text-xs text-pretty">
+                        Created an account and signed in only count someone who
+                        saw the landing page earlier the same day.
+                    </p>
+                </AppCard>
             </TabsContent>
 
             <TabsContent value="log" class="flex flex-col gap-6">
