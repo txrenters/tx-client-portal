@@ -5,7 +5,6 @@ import {
     FileText,
     Fingerprint,
     Lock,
-    Mail,
     ShieldCheck,
 } from '@lucide/vue';
 import AppShowcase from '@/components/marketing/AppShowcase.vue';
@@ -284,9 +283,7 @@ const securityPoints = [
                         Ready to see your property?
                     </h2>
                     <p class="text-scrim-foreground/75 mt-4 text-pretty">
-                        Create your account with the email we have on file. If
-                        your email is not recognized, get in touch and we will
-                        sort it out.
+                        Create your account with the email we have on file.
                     </p>
                 </div>
                 <div v-reveal="150" class="flex flex-wrap items-center gap-3">
@@ -296,17 +293,6 @@ const securityPoints = [
                         class="bg-scrim-foreground text-scrim hover:bg-scrim-foreground/90 h-12 px-6 text-base"
                     >
                         <Link :href="register()">Create your account</Link>
-                    </Button>
-                    <Button
-                        as-child
-                        size="lg"
-                        variant="outline"
-                        class="border-scrim-foreground/30 text-scrim-foreground hover:bg-scrim-foreground/10 hover:text-scrim-foreground h-12 bg-transparent px-6 text-base dark:bg-transparent"
-                    >
-                        <a href="mailto:leasing@texasrenters.com">
-                            <Mail class="size-4" />
-                            Contact us
-                        </a>
                     </Button>
                 </div>
             </div>
