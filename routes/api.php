@@ -133,6 +133,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('maintenance/{workOrder}/approval', [MaintenanceController::class, 'decide'])->middleware('throttle:10,1')->name('maintenance.approval');
             Route::get('maintenance/{workOrder}/documents', [MaintenanceController::class, 'documents'])->name('maintenance.documents.index');
             Route::get('maintenance/{workOrder}/conversations', [MaintenanceController::class, 'conversations'])->name('maintenance.conversations.index');
+            Route::get('maintenance/{workOrder}/texts', [MaintenanceController::class, 'texts'])->name('maintenance.texts');
             Route::get('maintenance/{workOrder}/documents/{document}', [MaintenanceController::class, 'downloadDocument'])->name('maintenance.documents.show');
             Route::get('documents', [DocumentController::class, 'index'])->name('documents.index');
             Route::get('documents/upload-targets', [DocumentController::class, 'uploadTargets'])->name('documents.upload-targets');

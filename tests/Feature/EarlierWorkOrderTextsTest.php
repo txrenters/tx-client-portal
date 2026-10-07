@@ -24,7 +24,16 @@ beforeEach(function () {
         ]],
     ];
 
-    Http::fake(['maintenance.test/*' => Http::response(['data' => $this->history])]);
+    // For one work order, everyone on that side of it, as tx-maintenance answers.
+    $workOrderTexts = [['work_order' => $this->history[0]['work_order'], 'messages' => [
+        ['id' => 31, 'from' => 'staff', 'to_you' => true, 'body' => 'The tech comes Tuesday.', 'media' => [], 'sent_at' => '2026-03-02T15:00:00+00:00'],
+        ['id' => 33, 'from' => 'other', 'to_you' => false, 'body' => 'I will be home.', 'media' => [], 'sent_at' => '2026-03-02T15:30:00+00:00'],
+        ['id' => 34, 'from' => 'staff', 'to_you' => false, 'body' => 'Thanks, see you then.', 'media' => [], 'sent_at' => '2026-03-02T15:40:00+00:00'],
+    ]]];
+
+    Http::fake(['maintenance.test/*' => fn (Request $request) => Http::response([
+        'data' => isset($request->data()['work_order']) ? ($request['work_order'] === '8157' ? $workOrderTexts : []) : $this->history,
+    ])]);
 
     $this->tenant = User::factory()->create();
     $this->account = ClientAccount::factory()->resident()->for($this->tenant)->create(['propertyware_id' => '900']);
@@ -81,11 +90,15 @@ test('asks for an owner\'s side of their work orders, and gives the app every co
     Http::assertSent(fn (Request $request): bool => $request['contact'] === '500' && $request['party'] === 'owner');
 });
 
-test('finds the earlier texts about one work order', function () {
+test('a work order shows everyone\'s texts on the client\'s side of it', function () {
     $texts = app(EarlierWorkOrderTexts::class);
+    $conversation = $texts->forWorkOrder($this->account, '8157');
 
-    expect($texts->forWorkOrder($this->account, '8157')['thread']['id'])->toBe(-7)
+    expect($conversation['thread']['id'])->toBe(-7)
+        ->and(array_column($conversation['messages'], 'author'))->toBe([EarlierWorkOrderTexts::STAFF, 'Another resident', EarlierWorkOrderTexts::STAFF.', to another resident'])
         ->and($texts->forWorkOrder($this->account, '1'))->toBeNull();
+
+    Http::assertSent(fn (Request $request): bool => ($request->data()['work_order'] ?? null) === '8157' && $request['contact'] === '900');
 });
 
 test('shows nothing when tx-maintenance cannot answer, and tries again next time', function () {

@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\Log;
  * tx-maintenance decides what belongs to the client: only their own work
  * orders, their side of them, and texts to or from their own numbers.
  *
+ * The Messages list holds only the client's own texts; a work order's page
+ * holds everyone's on the client's side of it (forWorkOrder).
+ *
  * Each work order's texts are one conversation, shaped like a hub thread but
  * with a negative id (minus tx-maintenance's work order id), so it can never
  * be mistaken for one.
@@ -57,7 +60,7 @@ class EarlierWorkOrderTexts
         }
 
         $conversations = collect($data)
-            ->map(fn (array $item): array => $this->present($item))
+            ->map(fn (array $item): array => $this->present($item, $account))
             ->sortByDesc(fn (array $conversation): string => (string) $conversation['thread']['updatedAt'])
             ->values()
             ->all();
@@ -91,20 +94,41 @@ class EarlierWorkOrderTexts
     }
 
     /**
-     * The earlier texts about one Propertyware work order, if there were any.
+     * Everyone's earlier texts on the client's side of one Propertyware work
+     * order: the household on its lease, or the property's owners. Null when
+     * there were none or tx-maintenance can't be reached.
      *
      * @return array{thread: array<string, mixed>, messages: array<int, array<string, mixed>>}|null
      */
     public function forWorkOrder(ClientAccount $account, string $workOrderId): ?array
     {
-        return collect($this->conversations($account) ?? [])
-            ->first(fn (array $conversation): bool => $conversation['thread']['workOrderId'] === $workOrderId);
+        if (! $this->isAvailable()) {
+            return null;
+        }
+
+        $key = 'maintenance-texts:'.$account->id.':work-order:'.$workOrderId;
+        $cached = Cache::get($key);
+
+        if (is_array($cached)) {
+            return $cached['conversation'];
+        }
+
+        $data = $this->fetch($account, $workOrderId);
+
+        if ($data === null) {
+            return null;
+        }
+
+        $conversation = isset($data[0]) ? $this->present($data[0], $account) : null;
+        Cache::put($key, ['conversation' => $conversation], now()->addMinutes(10));
+
+        return $conversation;
     }
 
     /**
      * @return array<int, array<string, mixed>>|null
      */
-    private function fetch(ClientAccount $account): ?array
+    private function fetch(ClientAccount $account, ?string $workOrderId = null): ?array
     {
         try {
             $response = Http::baseUrl(rtrim((string) config('services.tx_maintenance.url'), '/'))
@@ -113,10 +137,11 @@ class EarlierWorkOrderTexts
                 ->acceptJson()
                 ->connectTimeout(3)
                 ->timeout(8)
-                ->get('/api/portal/v1/message-history', [
+                ->get('/api/portal/v1/message-history', array_filter([
                     'contact' => $account->propertyware_id,
                     'party' => $account->role === ClientRole::Owner ? 'owner' : 'tenant',
-                ]);
+                    'work_order' => $workOrderId,
+                ]));
         } catch (ConnectionException $exception) {
             Log::warning('Could not reach tx-maintenance for earlier work order texts.', ['message' => $exception->getMessage()]);
 
@@ -136,16 +161,21 @@ class EarlierWorkOrderTexts
      * @param  array{work_order: array<string, mixed>, messages: array<int, array<string, mixed>>}  $item
      * @return array{thread: array<string, mixed>, messages: array<int, array<string, mixed>>}
      */
-    private function present(array $item): array
+    private function present(array $item, ClientAccount $account): array
     {
         $workOrder = $item['work_order'];
+        $someoneElse = $account->role === ClientRole::Owner ? 'another owner' : 'another resident';
         $messages = array_map(fn (array $message): array => [
             'id' => (int) $message['id'],
             'body' => (string) ($message['body'] ?? ''),
             'mediaUrls' => array_values(array_filter((array) ($message['media'] ?? []), 'is_string')),
             'number' => null,
             'fromClient' => ($message['from'] ?? null) === 'client',
-            'author' => ($message['from'] ?? null) === 'client' ? null : self::STAFF,
+            'author' => match ($message['from'] ?? null) {
+                'client' => null,
+                'other' => ucfirst($someoneElse),
+                default => ($message['to_you'] ?? true) ? self::STAFF : self::STAFF.', to '.$someoneElse,
+            },
             'authorPhotoUrl' => null,
             'at' => $message['sent_at'] ?? null,
         ], $item['messages']);

@@ -9,6 +9,7 @@ use App\Http\Requests\Client\CreateWorkOrderRequest;
 use App\Http\Requests\Client\MaintenanceIndexRequest;
 use App\Http\Requests\Client\WorkOrderApprovalRequest;
 use App\Models\ClientAccount;
+use App\Services\Maintenance\EarlierWorkOrderTexts;
 use App\Services\Propertyware\ConversationLibrary;
 use App\Services\Propertyware\Data\ClientScope;
 use App\Services\Propertyware\Data\Document;
@@ -161,6 +162,20 @@ class MaintenanceController extends Controller
         return response()->json([
             'data' => $conversations->forWorkOrder($scope, $record['buildingId'], $record['number']),
         ]);
+    }
+
+    /**
+     * The texts about the work order from before the messaging hub, from
+     * everyone on the account's side of it, as one closed conversation; null
+     * when there were none.
+     *
+     * @throws PropertywareException
+     */
+    public function texts(ClientAccount $account, string $workOrder, PropertywareDirectory $directory, MaintenanceSummary $maintenance, EarlierWorkOrderTexts $earlierTexts): JsonResponse
+    {
+        $this->findWorkOrder($directory->scopeFor($account), $workOrder, $maintenance);
+
+        return response()->json(['data' => $earlierTexts->forWorkOrder($account, $workOrder)]);
     }
 
     /**
