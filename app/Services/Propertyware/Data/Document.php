@@ -11,6 +11,15 @@ use Illuminate\Support\Carbon;
  */
 class Document
 {
+    /**
+     * The file types the portal shows in the browser. Anything else downloads,
+     * so a file that can carry script (an SVG or HTML page, say) never runs on
+     * the portal's own domain.
+     */
+    public const VIEWABLE_TYPES = [
+        'application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif',
+    ];
+
     public function __construct(
         public readonly string $id,
         public readonly string $fileName,
@@ -62,8 +71,7 @@ class Document
      */
     public function isViewable(): bool
     {
-        return $this->fileType === 'application/pdf'
-            || str_starts_with((string) $this->fileType, 'image/');
+        return in_array(strtolower((string) $this->fileType), self::VIEWABLE_TYPES, true);
     }
 
     /**
