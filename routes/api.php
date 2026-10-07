@@ -116,6 +116,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('contact-details', ContactDetailsController::class)->name('contact-details');
             Route::get('messages', [MessageController::class, 'index'])->name('messages.index');
             Route::get('messages/history', [MessageController::class, 'history'])->name('messages.history');
+            Route::get('messages/earlier-media/{media}/{name}', [MessageController::class, 'earlierMedia'])->whereNumber('media')->name('messages.earlier-media');
             Route::get('realtime', [MessageController::class, 'realtime'])->name('realtime');
             Route::get('referrals', [ReferralController::class, 'index'])->name('referrals.index');
             Route::get('promotion', [PromotionController::class, 'show'])->name('promotion.show');

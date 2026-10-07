@@ -175,7 +175,7 @@ class MaintenanceController extends Controller
     {
         $this->findWorkOrder($directory->scopeFor($account), $workOrder, $maintenance);
 
-        return response()->json(['data' => $earlierTexts->forWorkOrder($account, $workOrder)]);
+        return response()->json(['data' => $earlierTexts->forWorkOrder($account, $workOrder, EarlierWorkOrderTexts::API)]);
     }
 
     /**

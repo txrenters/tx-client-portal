@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
  * The Messages page: the client's conversations with TexasRenters.com support
@@ -108,6 +109,18 @@ trait ShowsConversationsWithStaff
                 }
             }, 'conversation'),
         ]);
+    }
+
+    /**
+     * A file on one of the client's earlier work order texts, passed on from
+     * tx-maintenance, which checks the client may see the text it came with.
+     */
+    protected function earlierTextAttachment(Request $request, ClientRole $role, int $media, string $name, EarlierWorkOrderTexts $earlierTexts): SymfonyResponse
+    {
+        $account = $this->activeClientAccount($request, $role);
+        abort_if($account === null, 403);
+
+        return $earlierTexts->attachment($account, $media, $name) ?? abort(404);
     }
 
     protected function startConversation(StartConversationRequest $request, ClientRole $role, ClientConversations $conversations): RedirectResponse

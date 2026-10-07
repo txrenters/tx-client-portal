@@ -17,7 +17,7 @@ beforeEach(function () {
     $this->history = [
         ['work_order' => ['id' => 7, 'propertyware_id' => '8157', 'number' => '1001', 'title' => 'AC not cooling', 'status' => 'Closed'], 'messages' => [
             ['id' => 31, 'from' => 'staff', 'body' => 'The tech comes Tuesday.', 'media' => [], 'sent_at' => '2026-03-02T15:00:00+00:00'],
-            ['id' => 32, 'from' => 'client', 'body' => 'Thanks!', 'media' => ['https://maintenance.test/media/5'], 'sent_at' => '2026-03-02T16:00:00+00:00'],
+            ['id' => 32, 'from' => 'client', 'body' => 'Thanks!', 'media' => [['id' => 5, 'name' => 'leak photo.jpg', 'type' => 'image/jpeg']], 'sent_at' => '2026-03-02T16:00:00+00:00'],
         ]],
         ['work_order' => ['id' => 9, 'propertyware_id' => '8200', 'number' => '1002', 'title' => null, 'status' => 'Closed'], 'messages' => [
             ['id' => 40, 'from' => 'staff', 'body' => 'Fixed.', 'media' => [], 'sent_at' => '2026-05-01T15:00:00+00:00'],
@@ -31,6 +31,8 @@ beforeEach(function () {
         ['id' => 34, 'from' => 'staff', 'to_you' => false, 'body' => 'Thanks, see you then.', 'media' => [], 'sent_at' => '2026-03-02T15:40:00+00:00'],
     ]]];
 
+    Http::fake(['maintenance.test/api/portal/v1/message-media/5*' => Http::response('jpeg-bytes', 200, ['Content-Type' => 'image/jpeg'])]);
+    Http::fake(['maintenance.test/api/portal/v1/message-media/*' => Http::response(['message' => 'Not Found'], 404)]);
     Http::fake(['maintenance.test/*' => fn (Request $request) => Http::response([
         'data' => isset($request->data()['work_order']) ? ($request['work_order'] === '8157' ? $workOrderTexts : []) : $this->history,
     ])]);
@@ -67,7 +69,8 @@ test('opens an earlier conversation read-only by its negative id', function () {
     expect($conversation['thread']['isClosed'])->toBeTrue()
         ->and($conversation['messages'])->toHaveCount(2)
         ->and($conversation['messages'][0])->toMatchArray(['body' => 'The tech comes Tuesday.', 'fromClient' => false, 'author' => EarlierWorkOrderTexts::STAFF])
-        ->and($conversation['messages'][1])->toMatchArray(['fromClient' => true, 'author' => null, 'mediaUrls' => ['https://maintenance.test/media/5']]);
+        ->and($conversation['messages'][1])->toMatchArray(['fromClient' => true, 'author' => null, 'mediaUrls' => [route('resident.messages.earlier-media', ['media' => 5, 'name' => 'leak photo.jpg'])]])
+        ->and($conversation['messages'][1])->not->toHaveKey('attachments');
 });
 
 test('an earlier conversation that is not the client\'s is not found', function () {
@@ -85,7 +88,12 @@ test('asks for an owner\'s side of their work orders, and gives the app every co
         ->assertOk()
         ->assertJsonCount(2, 'data')
         ->assertJsonPath('data.1.thread.id', -7)
-        ->assertJsonPath('data.1.messages.0.body', 'The tech comes Tuesday.');
+        ->assertJsonPath('data.1.messages.0.body', 'The tech comes Tuesday.')
+        ->assertJsonPath('data.1.messages.1.mediaUrls.0', "accounts/{$account->id}/messages/earlier-media/5/leak%20photo.jpg");
+
+    $this->get(route('api.v1.accounts.messages.earlier-media', [$account, 5, 'leak photo.jpg']))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/jpeg');
 
     Http::assertSent(fn (Request $request): bool => $request['contact'] === '500' && $request['party'] === 'owner');
 });
@@ -115,4 +123,20 @@ test('asks nothing when tx-maintenance is not set up', function () {
 
     expect(app(EarlierWorkOrderTexts::class)->conversations($this->account))->toBe([]);
     Http::assertNothingSent();
+});
+
+test('passes an earlier text\'s attachment on to the client, and only what tx-maintenance hands over', function () {
+    $this->actingAs($this->tenant);
+
+    $response = $this->get(route('resident.messages.earlier-media', ['media' => 5, 'name' => 'leak photo.jpg']))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/jpeg')
+        ->assertHeader('Cache-Control', 'max-age=300, private');
+
+    expect($response->getContent())->toBe('jpeg-bytes')
+        ->and($response->headers->get('Content-Disposition'))->toContain('inline');
+    Http::assertSent(fn (Request $request): bool => str_contains($request->url(), '/api/portal/v1/message-media/5')
+        && $request['contact'] === '900' && $request['party'] === 'tenant' && $request->hasHeader('Authorization', 'Bearer portal-token'));
+
+    $this->get(route('resident.messages.earlier-media', ['media' => 6, 'name' => 'x.jpg']))->assertNotFound();
 });

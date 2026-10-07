@@ -13,6 +13,7 @@ use App\Services\ChatHub\ClientConversations;
 use App\Services\Maintenance\EarlierWorkOrderTexts;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
  * The account's conversations with TexasRenters.com support and maintenance.
@@ -84,7 +85,16 @@ class MessageController extends Controller
      */
     public function history(ClientAccount $account, EarlierWorkOrderTexts $earlierTexts): JsonResponse
     {
-        return response()->json(['data' => $earlierTexts->conversations($account) ?? []]);
+        return response()->json(['data' => $earlierTexts->conversations($account, EarlierWorkOrderTexts::API) ?? []]);
+    }
+
+    /**
+     * A file on one of the account's earlier work order texts. The paths in
+     * the history's mediaUrls point here.
+     */
+    public function earlierMedia(ClientAccount $account, int $media, string $name, EarlierWorkOrderTexts $earlierTexts): SymfonyResponse
+    {
+        return $earlierTexts->attachment($account, $media, $name) ?? abort(404);
     }
 
     /**

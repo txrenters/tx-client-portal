@@ -5,9 +5,13 @@ namespace App\Services\Maintenance;
 use App\Enums\ClientRole;
 use App\Models\ClientAccount;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 
 /**
  * The texts a client exchanged with our maintenance team about their work
@@ -29,6 +33,12 @@ class EarlierWorkOrderTexts
     /** What the client sees as the author of our texts. */
     public const STAFF = 'Maintenance team';
 
+    /** Attachment links for the website, through the signed-in session. */
+    public const WEB = 'web';
+
+    /** Attachment links for the app: API paths it opens with its token. */
+    public const API = 'api';
+
     public function isAvailable(): bool
     {
         return filled(config('services.tx_maintenance.url')) && filled(config('services.tx_maintenance.token'));
@@ -40,34 +50,32 @@ class EarlierWorkOrderTexts
      *
      * @return array<int, array{thread: array<string, mixed>, messages: array<int, array<string, mixed>>}>|null
      */
-    public function conversations(ClientAccount $account): ?array
+    public function conversations(ClientAccount $account, string $surface = self::WEB): ?array
     {
         if (! $this->isAvailable()) {
             return [];
         }
 
         $key = 'maintenance-texts:'.$account->id;
-        $cached = Cache::get($key);
+        $conversations = Cache::get($key);
 
-        if (is_array($cached)) {
-            return $cached;
+        if (! is_array($conversations)) {
+            $data = $this->fetch($account);
+
+            if ($data === null) {
+                return null;
+            }
+
+            $conversations = collect($data)
+                ->map(fn (array $item): array => $this->present($item, $account))
+                ->sortByDesc(fn (array $conversation): string => (string) $conversation['thread']['updatedAt'])
+                ->values()
+                ->all();
+
+            Cache::put($key, $conversations, now()->addMinutes(10));
         }
 
-        $data = $this->fetch($account);
-
-        if ($data === null) {
-            return null;
-        }
-
-        $conversations = collect($data)
-            ->map(fn (array $item): array => $this->present($item, $account))
-            ->sortByDesc(fn (array $conversation): string => (string) $conversation['thread']['updatedAt'])
-            ->values()
-            ->all();
-
-        Cache::put($key, $conversations, now()->addMinutes(10));
-
-        return $conversations;
+        return array_map(fn (array $conversation): array => $this->linkAttachments($conversation, $account, $surface), $conversations);
     }
 
     /**
@@ -87,9 +95,9 @@ class EarlierWorkOrderTexts
      *
      * @return array{thread: array<string, mixed>, messages: array<int, array<string, mixed>>}|null
      */
-    public function conversation(ClientAccount $account, int $threadId): ?array
+    public function conversation(ClientAccount $account, int $threadId, string $surface = self::WEB): ?array
     {
-        return collect($this->conversations($account) ?? [])
+        return collect($this->conversations($account, $surface) ?? [])
             ->first(fn (array $conversation): bool => $conversation['thread']['id'] === $threadId);
     }
 
@@ -100,7 +108,7 @@ class EarlierWorkOrderTexts
      *
      * @return array{thread: array<string, mixed>, messages: array<int, array<string, mixed>>}|null
      */
-    public function forWorkOrder(ClientAccount $account, string $workOrderId): ?array
+    public function forWorkOrder(ClientAccount $account, string $workOrderId, string $surface = self::WEB): ?array
     {
         if (! $this->isAvailable()) {
             return null;
@@ -110,17 +118,72 @@ class EarlierWorkOrderTexts
         $cached = Cache::get($key);
 
         if (is_array($cached)) {
-            return $cached['conversation'];
+            $conversation = $cached['conversation'];
+        } else {
+            $data = $this->fetch($account, $workOrderId);
+
+            if ($data === null) {
+                return null;
+            }
+
+            $conversation = isset($data[0]) ? $this->present($data[0], $account) : null;
+            Cache::put($key, ['conversation' => $conversation], now()->addMinutes(10));
         }
 
-        $data = $this->fetch($account, $workOrderId);
+        return $conversation === null ? null : $this->linkAttachments($conversation, $account, $surface);
+    }
 
-        if ($data === null) {
+    /**
+     * Stream one attachment of the client's earlier texts from tx-maintenance,
+     * which only hands over a file on a text the client may see. Null when it
+     * won't, or can't be reached.
+     */
+    public function attachment(ClientAccount $account, int $mediaId, string $fileName): ?Response
+    {
+        if (! $this->isAvailable()) {
             return null;
         }
 
-        $conversation = isset($data[0]) ? $this->present($data[0], $account) : null;
-        Cache::put($key, ['conversation' => $conversation], now()->addMinutes(10));
+        try {
+            $response = $this->client()->get('/api/portal/v1/message-media/'.$mediaId, [
+                'contact' => $account->propertyware_id,
+                'party' => $this->party($account),
+            ]);
+        } catch (ConnectionException $exception) {
+            Log::warning('Could not reach tx-maintenance for an earlier text attachment.', ['message' => $exception->getMessage()]);
+
+            return null;
+        }
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        return response($response->body(), 200, [
+            'Content-Type' => $response->header('Content-Type') ?: 'application/octet-stream',
+            'Content-Disposition' => HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_INLINE, $fileName, Str::ascii($fileName) ?: 'attachment'),
+            'Cache-Control' => 'private, max-age=300',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    /**
+     * Point each message's attachments at the portal, never at tx-maintenance.
+     *
+     * @param  array{thread: array<string, mixed>, messages: array<int, array<string, mixed>>}  $conversation
+     * @return array{thread: array<string, mixed>, messages: array<int, array<string, mixed>>}
+     */
+    private function linkAttachments(array $conversation, ClientAccount $account, string $surface): array
+    {
+        $conversation['messages'] = array_map(function (array $message) use ($account, $surface): array {
+            $message['mediaUrls'] = array_map(fn (array $media): string => $surface === self::API
+                ? 'accounts/'.$account->id.'/messages/earlier-media/'.$media['id'].'/'.rawurlencode((string) $media['name'])
+                : route($account->role->value.'.messages.earlier-media', ['media' => $media['id'], 'name' => $media['name']]),
+                $message['attachments'] ?? []);
+            unset($message['attachments']);
+
+            return $message;
+        }, $conversation['messages']);
 
         return $conversation;
     }
@@ -131,17 +194,11 @@ class EarlierWorkOrderTexts
     private function fetch(ClientAccount $account, ?string $workOrderId = null): ?array
     {
         try {
-            $response = Http::baseUrl(rtrim((string) config('services.tx_maintenance.url'), '/'))
-                ->withToken((string) config('services.tx_maintenance.token'))
-                ->withOptions(['verify' => config('services.tx_maintenance.verify', true)])
-                ->acceptJson()
-                ->connectTimeout(3)
-                ->timeout(8)
-                ->get('/api/portal/v1/message-history', array_filter([
-                    'contact' => $account->propertyware_id,
-                    'party' => $account->role === ClientRole::Owner ? 'owner' : 'tenant',
-                    'work_order' => $workOrderId,
-                ]));
+            $response = $this->client()->get('/api/portal/v1/message-history', array_filter([
+                'contact' => $account->propertyware_id,
+                'party' => $this->party($account),
+                'work_order' => $workOrderId,
+            ]));
         } catch (ConnectionException $exception) {
             Log::warning('Could not reach tx-maintenance for earlier work order texts.', ['message' => $exception->getMessage()]);
 
@@ -157,6 +214,21 @@ class EarlierWorkOrderTexts
         return $response->json('data');
     }
 
+    private function client(): PendingRequest
+    {
+        return Http::baseUrl(rtrim((string) config('services.tx_maintenance.url'), '/'))
+            ->withToken((string) config('services.tx_maintenance.token'))
+            ->withOptions(['verify' => config('services.tx_maintenance.verify', true)])
+            ->acceptJson()
+            ->connectTimeout(3)
+            ->timeout(20);
+    }
+
+    private function party(ClientAccount $account): string
+    {
+        return $account->role === ClientRole::Owner ? 'owner' : 'tenant';
+    }
+
     /**
      * @param  array{work_order: array<string, mixed>, messages: array<int, array<string, mixed>>}  $item
      * @return array{thread: array<string, mixed>, messages: array<int, array<string, mixed>>}
@@ -168,7 +240,12 @@ class EarlierWorkOrderTexts
         $messages = array_map(fn (array $message): array => [
             'id' => (int) $message['id'],
             'body' => (string) ($message['body'] ?? ''),
-            'mediaUrls' => array_values(array_filter((array) ($message['media'] ?? []), 'is_string')),
+            // Linked for the website or the app when read (linkAttachments).
+            'mediaUrls' => [],
+            'attachments' => array_values(array_filter(
+                (array) ($message['media'] ?? []),
+                fn (mixed $media): bool => is_array($media) && isset($media['id'], $media['name']),
+            )),
             'number' => null,
             'fromClient' => ($message['from'] ?? null) === 'client',
             'author' => match ($message['from'] ?? null) {
@@ -201,7 +278,7 @@ class EarlierWorkOrderTexts
                     'author' => $latest['author'],
                     'preview' => $latest['body'],
                     'fromClient' => $latest['fromClient'],
-                    'hasAttachment' => $latest['mediaUrls'] !== [],
+                    'hasAttachment' => $latest['attachments'] !== [],
                 ],
                 'unread' => false,
                 'category' => 'maintenance',
