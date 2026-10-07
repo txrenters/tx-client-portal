@@ -21,6 +21,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 trait ShowsClientDocuments
 {
+    /** The policy on a served file: nothing in it may run or load. */
+    private const NOTHING_RUNS = "default-src 'none'; img-src 'self'; media-src 'self'; sandbox";
+
     use ResolvesClientScope;
 
     /**
@@ -124,7 +127,7 @@ trait ShowsClientDocuments
     protected function streamFile(DocumentLibrary $documents, Document $document, bool $inline, bool $thumbnail = false): StreamedResponse
     {
         if ($thumbnail) {
-            abort_unless(str_starts_with($document->fileType ?? '', 'image/'), 404);
+            abort_unless($document->isViewable() && str_starts_with((string) $document->fileType, 'image/'), 404);
 
             $thumbnail = $documents->thumbnail($document);
 
@@ -137,6 +140,7 @@ trait ShowsClientDocuments
                     'Content-Type' => $thumbnail['mimeType'],
                     'X-Content-Type-Options' => 'nosniff',
                     'Cache-Control' => 'private, no-store',
+                    'Content-Security-Policy' => self::NOTHING_RUNS,
                 ],
                 disposition: 'inline',
             );
@@ -150,8 +154,11 @@ trait ShowsClientDocuments
             },
             $document->fileName,
             [
-                'Content-Type' => $document->fileType ?? 'application/octet-stream',
+                // Only a type the browser may show is ever named; anything else is plain bytes.
+                'Content-Type' => $document->isViewable() ? (string) $document->fileType : 'application/octet-stream',
                 'X-Content-Type-Options' => 'nosniff',
+                // Nothing in a file may run; PDFs are left to the browser's own viewer.
+                ...($document->fileType === 'application/pdf' ? [] : ['Content-Security-Policy' => self::NOTHING_RUNS]),
             ],
             disposition: $inline ? 'inline' : 'attachment',
         );
