@@ -23,13 +23,12 @@ import {
 } from '@lucide/vue';
 import { watchDebounced } from '@vueuse/core';
 import { computed, nextTick, ref, watch } from 'vue';
-import ConversationList from '@/components/ConversationList.vue';
+import AccountConversations from '@/components/AccountConversations.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import FilePreviewInput from '@/components/FilePreviewInput.vue';
 import InputError from '@/components/InputError.vue';
 import LinkifiedText from '@/components/LinkifiedText.vue';
-import LoadingSkeleton from '@/components/LoadingSkeleton.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -516,6 +515,11 @@ const listedEarlierTexts = computed<ChatThread[]>(() => {
             (!to || day <= to)
         );
     });
+});
+
+/** Every call and email logged on the client's own record. */
+const accountConversationsUrl = routes.conversations.url({
+    query: { property: 'account' },
 });
 
 /** Conversations opened on this page; the server records them as read too. */
@@ -1353,12 +1357,21 @@ watch(
             >
                 <div
                     v-if="selectedThreadId === null"
-                    class="flex flex-1 items-center justify-center p-6"
+                    class="flex flex-1 flex-col gap-8 overflow-y-auto overscroll-contain p-6"
                 >
                     <EmptyState
+                        class="my-auto"
                         :icon="MessageSquare"
                         title="Pick a conversation"
                         description="Choose one from the list, or start a new message."
+                    />
+                    <!-- Wide screens: in this otherwise empty panel, so it is in view. -->
+                    <AccountConversations
+                        v-if="available"
+                        class="hidden lg:flex"
+                        :account-conversations="accountConversations"
+                        :work-order-href="routes.workOrder"
+                        :all-href="accountConversationsUrl"
                     />
                 </div>
 
@@ -1699,55 +1712,13 @@ watch(
             </Card>
         </div>
 
-        <!--
-          Calls and emails our office logged against the client's record rather
-          than one of their properties; a property's own are on its page.
-        -->
-        <section
+        <!-- Phones: below the list. Wide screens show it in the empty conversation panel. -->
+        <AccountConversations
             v-if="available && selectedThreadId === null"
-            class="flex flex-col gap-3"
-        >
-            <h2 class="text-base font-semibold">About your account</h2>
-
-            <LoadingSkeleton
-                v-if="accountConversations === undefined"
-                :rows="2"
-            />
-
-            <ErrorState
-                v-else-if="accountConversations === null"
-                description="We couldn't load calls and emails about your account right now."
-            />
-
-            <p
-                v-else-if="accountConversations.total === 0"
-                class="text-muted-foreground text-sm"
-            >
-                Calls and emails our office logs about your account will appear
-                here.
-            </p>
-
-            <template v-else>
-                <ConversationList
-                    :conversations="accountConversations.conversations"
-                    :work-order-href="routes.workOrder"
-                    :show-property="false"
-                />
-                <Link
-                    v-if="
-                        accountConversations.total >
-                        accountConversations.conversations.length
-                    "
-                    :href="
-                        routes.conversations.url({
-                            query: { property: 'account' },
-                        })
-                    "
-                    class="text-primary self-start text-sm font-medium hover:underline"
-                >
-                    View all {{ accountConversations.total }} conversations
-                </Link>
-            </template>
-        </section>
+            class="lg:hidden"
+            :account-conversations="accountConversations"
+            :work-order-href="routes.workOrder"
+            :all-href="accountConversationsUrl"
+        />
     </div>
 </template>
