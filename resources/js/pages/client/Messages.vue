@@ -22,7 +22,8 @@ import {
     X,
 } from '@lucide/vue';
 import { watchDebounced } from '@vueuse/core';
-import { computed, nextTick, ref, watch } from 'vue';
+import type { ComponentPublicInstance } from 'vue';
+import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import FilePreviewInput from '@/components/FilePreviewInput.vue';
@@ -654,6 +655,51 @@ watch(
     { immediate: true },
 );
 
+/** The conversation list's own scroll box (wide screens; phones scroll the page). */
+const listCard = useTemplateRef<ComponentPublicInstance>('listCard');
+
+/** A change arrived while the client was scrolled down the list. */
+const hasNewActivity = ref(false);
+
+/** Whether the client has scrolled away from the top of the list. */
+function isListScrolled(): boolean {
+    const box = listCard.value?.$el as HTMLElement | undefined;
+
+    return (box?.scrollTop ?? 0) > 40 || window.scrollY > 200;
+}
+
+/** The list from its first page again, newest change first, scrolled to the top. */
+function showNewActivity(): void {
+    hasNewActivity.value = false;
+
+    // Without the list's page number, which it keeps in the address as it
+    // scrolls: a plain reload would start over at that page, not the newest.
+    router.get(
+        routes.index.url(),
+        {
+            ...filterQuery(),
+            ...(props.selectedThreadId
+                ? { thread: props.selectedThreadId }
+                : {}),
+        },
+        {
+            only: ['threads'],
+            reset: ['threads'],
+            preserveState: true,
+            replace: true,
+            // After the list is back: the visit puts back where it was scrolled.
+            onSuccess: () => {
+                nextTick(() => {
+                    (listCard.value?.$el as HTMLElement | undefined)?.scrollTo({
+                        top: 0,
+                    });
+                    window.scrollTo({ top: 0 });
+                });
+            },
+        },
+    );
+}
+
 if (props.available) {
     useEcho<{ threadId: number }>(
         `contacts.${props.contactId}.messages`,
@@ -663,14 +709,21 @@ if (props.available) {
                 return;
             }
 
-            router.reload({
-                only:
-                    event.threadId === props.selectedThreadId
-                        ? ['threads', 'conversation']
-                        : ['threads'],
-                // The updated conversation moves to the top, so the list starts over.
-                reset: ['threads'],
-            });
+            if (event.threadId === props.selectedThreadId) {
+                router.reload({ only: ['conversation'] });
+            }
+
+            // Starting the list over moves it back to its first page, which
+            // threw the client back up while they were scrolling down (every
+            // delivery update does this). Offer it instead, unless they are at
+            // the top anyway.
+            if (isListScrolled()) {
+                hasNewActivity.value = true;
+
+                return;
+            }
+
+            showNewActivity();
         },
     );
 }
@@ -1037,8 +1090,22 @@ watch(
                 </Dialog>
 
                 <Card
-                    class="glass gap-0 overflow-hidden rounded-2xl py-0 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain"
+                    ref="listCard"
+                    class="glass relative gap-0 overflow-hidden rounded-2xl py-0 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain"
                 >
+                    <!-- Changes that came in while the client was scrolled down. -->
+                    <div
+                        v-if="hasNewActivity"
+                        class="sticky top-2 z-10 flex justify-center px-3 pt-2"
+                    >
+                        <Button
+                            size="sm"
+                            class="rounded-full shadow-md"
+                            @click="showNewActivity"
+                        >
+                            New activity · Show
+                        </Button>
+                    </div>
                     <div
                         v-if="threads === undefined"
                         class="flex flex-col gap-2 p-3"
