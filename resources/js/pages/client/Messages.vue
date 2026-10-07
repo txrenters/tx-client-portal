@@ -882,13 +882,18 @@ watch(
             />
         </Card>
 
+        <!--
+          On wide screens both columns share one height that fits the window and
+          scroll on their own, and reaching the end of one never scrolls the
+          page (overscroll-contain), so nothing jumps or slips under the top bar.
+        -->
         <div
             v-else
-            class="grid items-start gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]"
+            class="grid items-start gap-4 lg:h-[calc(100dvh-12rem)] lg:min-h-[28rem] lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-stretch"
         >
-            <!-- Conversation list: its own length, paged. -->
+            <!-- Conversation list: paged as it scrolls. -->
             <div
-                class="flex flex-col gap-3"
+                class="flex flex-col gap-3 lg:min-h-0"
                 :class="{ 'hidden lg:flex': selectedThreadId !== null }"
             >
                 <div class="flex items-center gap-2">
@@ -1047,7 +1052,9 @@ watch(
                     </DialogContent>
                 </Dialog>
 
-                <Card class="glass gap-0 overflow-hidden rounded-2xl py-0">
+                <Card
+                    class="glass gap-0 overflow-hidden rounded-2xl py-0 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain"
+                >
                     <div
                         v-if="threads === undefined"
                         class="flex flex-col gap-2 p-3"
@@ -1339,9 +1346,9 @@ watch(
                 </Card>
             </div>
 
-            <!-- Selected conversation: fits the screen and stays in view. -->
+            <!-- Selected conversation: fits the screen, beside the list on wide screens. -->
             <Card
-                class="glass flex h-[calc(100dvh-10rem)] min-h-[26rem] min-w-0 flex-col gap-0 overflow-hidden rounded-2xl py-0 lg:sticky lg:top-4"
+                class="glass flex h-[calc(100dvh-10rem)] min-h-[26rem] min-w-0 flex-col gap-0 overflow-hidden rounded-2xl py-0 lg:h-auto lg:min-h-0"
                 :class="{ 'hidden lg:flex': selectedThreadId === null }"
             >
                 <div
@@ -1430,7 +1437,7 @@ watch(
 
                     <ol
                         ref="messageList"
-                        class="bg-muted/20 flex flex-1 flex-col gap-1.5 overflow-y-auto px-4 py-4"
+                        class="bg-muted/20 flex flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain px-4 py-4"
                         aria-live="polite"
                     >
                         <template v-for="row in rows" :key="row.message.id">
