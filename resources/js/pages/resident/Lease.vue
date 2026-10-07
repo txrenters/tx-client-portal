@@ -124,7 +124,14 @@ const term = computed(() => [
     ...(props.lease?.moveOutDate
         ? [{ label: 'Moving out', value: formatDate(props.lease.moveOutDate) }]
         : []),
-    // "Notice given" is paused for now; the API still sends noticeGivenDate.
+    ...(props.lease?.noticeGivenDate
+        ? [
+              {
+                  label: 'Notice given',
+                  value: formatDate(props.lease.noticeGivenDate),
+              },
+          ]
+        : []),
 ]);
 </script>
 
