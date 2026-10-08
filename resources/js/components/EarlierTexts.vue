@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { FileText } from '@lucide/vue';
 import LinkifiedText from '@/components/LinkifiedText.vue';
+import MessageAttachment from '@/components/MessageAttachment.vue';
 import { Bubble, BubbleContent } from '@/components/ui/bubble';
 import { formatInAppZone } from '@/lib/timezone';
 import type { ChatThreadMessage } from '@/types';
@@ -12,13 +12,6 @@ import type { ChatThreadMessage } from '@/types';
 defineProps<{
     messages: ChatThreadMessage[];
 }>();
-
-/** Photos show as pictures; anything else as a file chip with its name. */
-const isImage = (url: string): boolean =>
-    /\.(jpe?g|png|gif|webp|heic|heif)(\?|$)/i.test(url);
-
-const fileName = (url: string): string =>
-    decodeURIComponent(url.split('?')[0].split('/').pop() ?? 'File');
 
 const sentAt = (value: string | null): string =>
     formatInAppZone(value, {
@@ -56,30 +49,7 @@ const sentAt = (value: string | null): string =>
                         class="whitespace-pre-line"
                     />
                     <template v-for="url in message.mediaUrls" :key="url">
-                        <a
-                            v-if="isImage(url)"
-                            :href="url"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="block w-56 max-w-full overflow-hidden rounded-xl"
-                        >
-                            <img
-                                :src="url"
-                                alt="Attached photo"
-                                loading="lazy"
-                                class="w-full object-cover"
-                            />
-                        </a>
-                        <a
-                            v-else
-                            :href="url"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="bg-card text-foreground hover:bg-muted/60 flex max-w-64 items-center gap-2 rounded-xl border px-3 py-2 text-sm"
-                        >
-                            <FileText class="text-primary size-4 shrink-0" />
-                            <span class="truncate">{{ fileName(url) }}</span>
-                        </a>
+                        <MessageAttachment :url="url" />
                     </template>
                 </BubbleContent>
             </Bubble>

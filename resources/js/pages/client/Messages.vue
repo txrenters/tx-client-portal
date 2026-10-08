@@ -11,7 +11,6 @@ import { useEcho } from '@laravel/echo-vue';
 import {
     ArrowLeft,
     Check,
-    FileText,
     MessageSquare,
     Paperclip,
     Plus,
@@ -29,6 +28,7 @@ import ErrorState from '@/components/ErrorState.vue';
 import FilePreviewInput from '@/components/FilePreviewInput.vue';
 import InputError from '@/components/InputError.vue';
 import LinkifiedText from '@/components/LinkifiedText.vue';
+import MessageAttachment from '@/components/MessageAttachment.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -364,14 +364,6 @@ function initials(name: string | null): string {
         .join('')
         .slice(0, 2)
         .toUpperCase();
-}
-
-function isImage(url: string): boolean {
-    return /\.(jpe?g|png|gif|webp|heic|heif)(\?|$)/i.test(url);
-}
-
-function fileName(url: string): string {
-    return decodeURIComponent(url.split('?')[0].split('/').pop() ?? 'File');
 }
 
 type Row = {
@@ -1578,34 +1570,7 @@ watch(
                                                 v-for="url in row.media"
                                                 :key="url"
                                             >
-                                                <a
-                                                    v-if="isImage(url)"
-                                                    :href="url"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    class="block w-56 max-w-full overflow-hidden rounded-xl"
-                                                >
-                                                    <img
-                                                        :src="url"
-                                                        alt="Attached photo"
-                                                        loading="lazy"
-                                                        class="w-full object-cover"
-                                                    />
-                                                </a>
-                                                <a
-                                                    v-else
-                                                    :href="url"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    class="bg-card text-foreground hover:bg-muted/60 flex max-w-64 items-center gap-2 rounded-xl border px-3 py-2 text-sm"
-                                                >
-                                                    <FileText
-                                                        class="text-primary size-4 shrink-0"
-                                                    />
-                                                    <span class="truncate">{{
-                                                        fileName(url)
-                                                    }}</span>
-                                                </a>
+                                                <MessageAttachment :url="url" />
                                             </template>
                                         </BubbleContent>
                                     </Bubble>
