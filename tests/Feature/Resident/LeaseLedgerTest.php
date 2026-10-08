@@ -102,6 +102,42 @@ test('pages the transactions, counting every one in the totals', function () {
         ->and($last->json('props.ledger.results.current_page'))->toBe(3);
 });
 
+test('narrows the transactions and their totals to the period the tenant picks', function () {
+    $this->travelTo('2026-10-15 12:00:00');
+    $this->actingAs($this->tenant);
+
+    $response = partialGet(route('resident.lease', ['range' => 'last-month', 'from' => '2026-09-01', 'to' => '2026-09-30']), 'resident/Lease', 'ledger')->assertOk();
+
+    expect(collect($response->json('props.ledger.entries'))->pluck('date')->all())->toBe(['2026-09-03', '2026-09-01'])
+        ->and($response->json('props.ledger.results.total'))->toBe(2)
+        ->and($response->json('props.ledger.charged'))->toEqual(1400.0)
+        ->and($response->json('props.ledger.paid'))->toEqual(1400.0)
+        ->and($response->json('props.ledger.from'))->toBe('2026-09-01')
+        ->and($response->json('props.ledger.to'))->toBe('2026-09-30')
+        // The chart still covers the year, whatever the list shows.
+        ->and($response->json('props.ledger.months'))->toHaveCount(12);
+
+    $this->actingAs($this->tenant)
+        ->get(route('resident.lease', ['range' => 'last-month', 'from' => '2026-09-01', 'to' => '2026-09-30']))
+        ->assertInertia(fn ($page) => $page->where('filters', ['range' => 'last-month', 'from' => '2026-09-01', 'to' => '2026-09-30']));
+});
+
+test('the app narrows the ledger to a period too, and refuses one that ends before it starts', function () {
+    Sanctum::actingAs($this->tenant);
+
+    $this->getJson(route('api.v1.accounts.payments', ['account' => $this->account, 'from' => '2026-08-01', 'to' => '2026-08-31']))
+        ->assertOk()
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('meta.total', 2)
+        ->assertJsonPath('meta.charged', 40)
+        ->assertJsonPath('meta.paid', 0)
+        ->assertJsonPath('meta.from', '2026-08-01');
+
+    $this->getJson(route('api.v1.accounts.payments', ['account' => $this->account, 'from' => '2026-09-01', 'to' => '2026-08-01']))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('to');
+});
+
 test('the app reads the same ledger with the lease balance', function () {
     Sanctum::actingAs($this->tenant);
 

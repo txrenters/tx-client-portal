@@ -49,7 +49,9 @@ class LeaseLedger
      * The tenant's ledger, newest first, one page at a time.
      *
      * A long tenancy runs to hundreds of entries, so the page holds ten of
-     * them while the totals still count every one.
+     * them while the totals still count every one. A period narrows the list
+     * and its totals to what happened between those days; the whole tenancy is
+     * still what gets synced, so changing the period never waits on a fetch.
      *
      * @return array{syncing: bool, entries: array<int, array<string, mixed>>, results: array<string, mixed>, charged: float, paid: float, months: array<int, array{month: string, charged: float, paid: float}>, from: string, to: string}|null
      *
@@ -64,11 +66,11 @@ class LeaseLedger
         }
 
         $zone = config('app.display_timezone');
-        $to ??= CarbonImmutable::now($zone)->toDateString();
-        $from ??= CarbonImmutable::parse($to, $zone)->subMonths(self::MONTHS)->toDateString();
+        $today = CarbonImmutable::now($zone)->toDateString();
+        $earliest = CarbonImmutable::parse($today, $zone)->subMonths(self::MONTHS)->toDateString();
 
-        $syncing = $this->store->isEmpty($leaseId) && $this->store->isStale($leaseId, $from, $to);
-        $entries = $this->store->entries($leaseId, $from, $to)
+        $syncing = $this->store->isEmpty($leaseId) && $this->store->isStale($leaseId, $earliest, $today);
+        $tenancy = $this->store->entries($leaseId, $earliest, $today)
             ->map(fn (LeaseLedgerEntry $entry): array => [
                 'id' => (string) $entry->id,
                 'date' => $entry->occurred_on->toDateString(),
@@ -80,6 +82,13 @@ class LeaseLedger
                 'reference' => $entry->reference,
             ])
             ->all();
+
+        $from ??= $earliest;
+        $to ??= $today;
+        $entries = array_values(array_filter(
+            $tenancy,
+            fn (array $entry): bool => $entry['date'] >= $from && $entry['date'] <= $to,
+        ));
 
         $page = max($page, 1);
         $paginator = new LengthAwarePaginator(
@@ -103,7 +112,8 @@ class LeaseLedger
             // A returned payment takes its money back out again.
             'paid' => $this->paid($entries),
             // The same two totals month by month, for the dashboard chart.
-            'months' => $this->months($entries, $to, $zone),
+            // The chart always ends with this month, whatever the list shows.
+            'months' => $this->months($tenancy, $today, $zone),
             'from' => $from,
             'to' => $to,
         ];
