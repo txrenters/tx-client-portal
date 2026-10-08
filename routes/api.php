@@ -81,6 +81,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         // Also not behind "verified", for the same reason as the web Help page.
         Route::get('me/help-requests', [HelpRequestController::class, 'index'])->name('help-requests.index');
         Route::post('me/help-requests', [HelpRequestController::class, 'store'])->middleware('throttle:5,1')->name('help-requests.store');
+        Route::get('me/help-requests/attachments/{attachment}', [HelpRequestController::class, 'attachment'])->name('help-requests.attachments.show');
 
         Route::middleware('verified')->group(function () {
             Route::get('me/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');

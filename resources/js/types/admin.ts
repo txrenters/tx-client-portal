@@ -5,6 +5,8 @@
  * service, never from Propertyware.
  */
 
+import type { HelpRequestAttachment } from "./portal";
+
 export type AdminStats = {
     users: {
         total: number;
@@ -26,10 +28,7 @@ export type AdminStats = {
 
 /** Configured and answering, configured but untestable, or not set up at all. */
 export type AdminIntegrationStatus =
-    | 'ok'
-    | 'failing'
-    | 'configured'
-    | 'not_configured';
+    "ok" | "failing" | "configured" | "not_configured";
 
 export type AdminIntegration = {
     key: string;
@@ -83,8 +82,8 @@ export type AdminReferral = {
     propertyDetails: string | null;
     source: string;
     referrerName: string;
-    referrerRole: 'owner' | 'resident';
-    status: 'new' | 'contacted' | 'signed' | 'not_a_fit';
+    referrerRole: "owner" | "resident";
+    status: "new" | "contacted" | "signed" | "not_a_fit";
     statusLabel: string;
     statusChangedAt: string | null;
     sentAt: string;
@@ -102,8 +101,8 @@ export type AdminPromotion = {
     buttonLink: string;
     theme: string;
     icon: string;
-    link: { type: 'referrals' } | { type: 'url'; url: string };
-    audience: 'all' | 'owner' | 'resident';
+    link: { type: "referrals" } | { type: "url"; url: string };
+    audience: "all" | "owner" | "resident";
     startsAt: string | null;
     endsAt: string | null;
     isActive: boolean;
@@ -113,7 +112,7 @@ export type AdminPromotion = {
 };
 
 /** One person in full, for their page in the admin area. */
-export type AdminUserDetail = Omit<AdminUser, 'accounts'> & {
+export type AdminUserDetail = Omit<AdminUser, "accounts"> & {
     accounts: {
         id: number;
         role: string;
@@ -148,7 +147,7 @@ export type AdminHelpRequest = {
     topicLabel: string;
     message: string;
     platform: string;
-    status: 'open' | 'resolved';
+    status: "open" | "resolved";
     statusLabel: string;
     staffNote: string | null;
     resolvedAt: string | null;
@@ -156,6 +155,7 @@ export type AdminHelpRequest = {
     sentAt: string;
     appVersion: string | null;
     userAgent: string | null;
+    attachments: HelpRequestAttachment[];
     user: { id: number; name: string; email: string };
 };
 
@@ -164,9 +164,9 @@ export type AdminInvitation = {
     id: number;
     email: string;
     name: string;
-    role: 'owner' | 'resident';
+    role: "owner" | "resident";
     propertywareId: string | null;
-    status: 'pending' | 'accepted' | 'expired' | 'cancelled';
+    status: "pending" | "accepted" | "expired" | "cancelled";
     sentAt: string | null;
     expiresAt: string | null;
     acceptedAt: string | null;
@@ -184,7 +184,7 @@ export type AdminPortalStatus = {
 /** A Propertyware contact using an email address, for the invite dialog. */
 export type AdminContactMatch = AdminPortalStatus & {
     id: string;
-    role: 'owner' | 'resident';
+    role: "owner" | "resident";
     name: string;
     portfolios: number;
     leases: number;
@@ -193,7 +193,7 @@ export type AdminContactMatch = AdminPortalStatus & {
 /** An owner or tenant attached to a property. */
 export type AdminPropertyPerson = AdminPortalStatus & {
     contactId: string;
-    role: 'owner' | 'resident';
+    role: "owner" | "resident";
     name: string;
     email: string | null;
 };
@@ -212,8 +212,8 @@ export type AdminAnnouncement = {
     id: number;
     title: string;
     body: string;
-    tone: 'info' | 'warning';
-    audience: 'all' | 'owner' | 'resident';
+    tone: "info" | "warning";
+    audience: "all" | "owner" | "resident";
     postedAt: string;
     startsAt: string | null;
     endsAt: string | null;
@@ -243,7 +243,7 @@ export type AdminStaffMember = {
     id: number | null;
     name: string;
     email: string;
-    role: 'owner' | 'admin' | 'staff';
+    role: "owner" | "admin" | "staff";
     fixed: boolean;
     lastSeenAt: string | null;
     twoFactor: boolean;
@@ -253,14 +253,10 @@ export type AdminStaffMember = {
 export type AdminSignInEvent = {
     id: number;
     event:
-        | 'signed_in'
-        | 'failed'
-        | 'failed_two_factor'
-        | 'locked_out'
-        | 'blocked';
+        "signed_in" | "failed" | "failed_two_factor" | "locked_out" | "blocked";
     email: string | null;
     user: { id: number; name: string } | null;
-    channel: 'web' | 'app';
+    channel: "web" | "app";
     method: string | null;
     ipAddress: string | null;
     /** e.g. "Chrome on Mac". */
@@ -284,7 +280,7 @@ export type AdminBlockedIp = {
     id: number;
     ip: string;
     reason: string;
-    source: 'manual' | 'automatic';
+    source: "manual" | "automatic";
     active: boolean;
     expiresAt: string | null;
     blockedBy: string | null;

@@ -6,6 +6,7 @@ use App\Enums\HelpRequestStatus;
 use App\Http\Controllers\Concerns\FlashesToasts;
 use App\Http\Controllers\Controller;
 use App\Models\HelpRequest;
+use App\Models\HelpRequestAttachment;
 use App\Services\Admin\AdminAudit;
 use App\Services\Help\HelpDesk;
 use Illuminate\Http\RedirectResponse;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * What clients have asked for help with, from the Help page on the web and in
@@ -43,6 +45,14 @@ class HelpRequestController extends Controller
             'openCount' => $desk->openCount(),
             'requests' => $desk->forStaff($status, $search === '' ? null : $search),
         ]);
+    }
+
+    /**
+     * A screenshot or file a client attached to their request.
+     */
+    public function attachment(HelpRequestAttachment $attachment, HelpDesk $desk): StreamedResponse
+    {
+        return $desk->attachmentResponse($attachment);
     }
 
     /**

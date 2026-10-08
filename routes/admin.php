@@ -74,6 +74,7 @@ Route::middleware(['auth', 'verified', LogDeniedAdminAccess::class, 'can:admin']
 
     Route::get('help-requests', [HelpRequestController::class, 'index'])->name('help-requests.index');
     Route::patch('help-requests/{helpRequest}', [HelpRequestController::class, 'update'])->name('help-requests.update');
+    Route::get('help-requests/attachments/{attachment}', [HelpRequestController::class, 'attachment'])->name('help-requests.attachments.show');
 
     Route::resource('promotions', PromotionController::class)->only(['index', 'store', 'update', 'destroy']);
 

@@ -1,4 +1,4 @@
-export type WorkOrderStatus = 'open' | 'scheduled' | 'completed' | 'canceled';
+export type WorkOrderStatus = "open" | "scheduled" | "completed" | "canceled";
 
 export type WorkOrder = {
     id: string;
@@ -67,14 +67,14 @@ export type PortalDocument = {
 };
 
 export type MaintenanceGroups = {
-    status: 'ready' | 'error';
+    status: "ready" | "error";
     groups: Record<WorkOrderStatus, WorkOrder[]>;
     counts: Partial<Record<WorkOrderStatus, number>>;
 };
 
 export type MaintenanceFilterValues = {
     status: WorkOrderStatus | null;
-    approval?: 'needed' | null;
+    approval?: "needed" | null;
     search: string | null;
     property: string | null;
 };
@@ -92,7 +92,7 @@ export type Paginated<T> = {
 export type PaginatedWorkOrders = Paginated<WorkOrder>;
 
 export type MaintenancePage = {
-    status: 'ready' | 'error';
+    status: "ready" | "error";
     counts: Partial<Record<WorkOrderStatus, number>>;
     total: number;
     properties: string[];
@@ -109,22 +109,22 @@ export type ApprovalSummary = {
 export type DocumentFilterValues = {
     search: string | null;
     category: string | null;
-    type: 'images' | 'pdf' | 'other' | null;
+    type: "images" | "pdf" | "other" | null;
     from: string | null;
     to: string | null;
-    range: '30' | '90' | '365' | 'year' | 'custom' | null;
+    range: "30" | "90" | "365" | "year" | "custom" | null;
     property: number | null;
     work_order: string | null;
 };
 
-export type DocumentsImporting = { status: 'importing' };
+export type DocumentsImporting = { status: "importing" };
 
 export type UploadTarget = { id: number; label: string };
 
 export type WorkOrderApprovalState = {
     canDecide: boolean;
     awaiting: boolean;
-    decision: 'approved' | 'declined' | null;
+    decision: "approved" | "declined" | null;
     decidedAt: string | null;
     decidedBy: string | null;
     note: string | null;
@@ -146,10 +146,10 @@ export type UploadTargets = {
 };
 
 export type DocumentsPage = {
-    status: 'ready';
+    status: "ready";
     total: number;
     categories: string[];
-    typeCounts: Record<'images' | 'pdf' | 'other', number>;
+    typeCounts: Record<"images" | "pdf" | "other", number>;
     properties: { id: number; name: string }[];
     workOrders: {
         id: string;
@@ -161,7 +161,7 @@ export type DocumentsPage = {
 };
 
 export type MaintenanceSummary = {
-    status: 'ready' | 'error';
+    status: "ready" | "error";
     counts: Partial<Record<WorkOrderStatus, number>>;
     recent: WorkOrder[];
 };
@@ -174,11 +174,11 @@ export type PropertyDetails = {
 
 export type PropertyHistoryEvent = {
     type:
-        | 'work_order_opened'
-        | 'work_order_scheduled'
-        | 'work_order_completed'
-        | 'work_order_canceled'
-        | 'document_added';
+        | "work_order_opened"
+        | "work_order_scheduled"
+        | "work_order_completed"
+        | "work_order_canceled"
+        | "document_added";
     title: string;
     detail: string | null;
     occurredAt: string;
@@ -188,9 +188,9 @@ export type PropertyHistoryEvent = {
 
 export type PropertyFilterValues = {
     search: string | null;
-    occupancy: 'occupied' | 'vacant' | null;
+    occupancy: "occupied" | "vacant" | null;
     city: string | null;
-    bedrooms: '1' | '2' | '3' | '4' | null;
+    bedrooms: "1" | "2" | "3" | "4" | null;
 };
 
 export type PropertiesPage = {
@@ -241,7 +241,7 @@ export type Conversation = {
     id: string;
     subject: string;
     /** On one of the client's properties, or on their own account. */
-    about: 'property' | 'account';
+    about: "property" | "account";
     buildingId: number | null;
     property: string | null;
     createdAt: string | null;
@@ -256,7 +256,7 @@ export type Conversation = {
 
 export type ConversationFilterValues = {
     search: string | null;
-    property: number | 'account' | null;
+    property: number | "account" | null;
 };
 
 export type ConversationsPage = {
@@ -269,7 +269,7 @@ export type ConversationsPage = {
 export type ChatThread = {
     id: number;
     subject: string;
-    kind: 'support' | 'maintenance';
+    kind: "support" | "maintenance";
     workOrderId: string | null;
     workOrderNumber: string | null;
     isClosed: boolean;
@@ -290,7 +290,7 @@ export type ChatThread = {
     /** The client's own number, on the open conversation only. */
     phone?: string | null;
     /** What the conversation is about, when the client picked a category. */
-    category?: 'leasing' | 'accounting' | 'maintenance' | null;
+    category?: "leasing" | "accounting" | "maintenance" | null;
     /** Work order texts from before the messaging hub: closed, with a negative id. */
     isHistory?: boolean;
 };
@@ -326,7 +326,7 @@ export type DashboardMessage = {
 
 /** The dashboard's newest documents, or an import still running. */
 export type DashboardDocuments = {
-    status: 'ready' | 'importing';
+    status: "ready" | "importing";
     items: {
         id: string;
         fileName: string;
@@ -340,7 +340,7 @@ export type DashboardDocuments = {
 
 /** One line of the dashboard's recent activity feed. */
 export type DashboardActivityEntry = {
-    type: 'maintenance' | 'document' | 'message';
+    type: "maintenance" | "document" | "message";
     id: string;
     title: string;
     detail: string | null;
@@ -375,9 +375,9 @@ export type LeaseLedgerEntry = {
      * What it was: billed, money received, a payment that came back (an NSF
      * return), a credit, or prepaid money applied.
      */
-    kind: 'charge' | 'payment' | 'return' | 'credit' | 'prepayment';
+    kind: "charge" | "payment" | "return" | "credit" | "prepayment";
     /** Credits come off the balance, debits add to it. */
-    direction: 'credit' | 'debit';
+    direction: "credit" | "debit";
     amount: number;
     description: string;
     detail: string | null;
@@ -427,7 +427,7 @@ export type OwnerFinancials = {
         unit: string | null;
         amount: number;
         paid: number;
-        status: 'paid' | 'part-paid' | 'unpaid';
+        status: "paid" | "part-paid" | "unpaid";
         workOrderId: string | null;
         portfolios: string[];
     }[];
@@ -542,7 +542,7 @@ export type Referral = {
     id: number;
     name: string;
     propertyAddress: string;
-    status: 'new' | 'contacted' | 'signed' | 'not_a_fit';
+    status: "new" | "contacted" | "signed" | "not_a_fit";
     statusLabel: string;
     sentAt: string;
 };
@@ -552,24 +552,36 @@ export type Announcement = {
     id: number;
     title: string;
     body: string;
-    tone: 'info' | 'warning';
-    audience: 'all' | 'owner' | 'resident';
+    tone: "info" | "warning";
+    audience: "all" | "owner" | "resident";
     postedAt: string;
 };
 
 /** A request for help with the portal or the app, as the client sees it. */
+/** A screenshot or file sent with a help request, behind a checked link. */
+export type HelpRequestAttachment = {
+    id: number;
+    name: string;
+    mimeType: string;
+    size: number;
+    /** Whether a browser can draw it, so it is shown as a thumbnail. */
+    isImage: boolean;
+    url: string;
+};
+
 export type HelpRequest = {
     id: number;
     topic: string;
     topicLabel: string;
     message: string;
     platform: string;
-    status: 'open' | 'resolved';
+    status: "open" | "resolved";
     statusLabel: string;
     /** What staff did about it; only set once resolved. */
     staffNote: string | null;
     resolvedAt: string | null;
     sentAt: string;
+    attachments: HelpRequestAttachment[];
 };
 
 /** A promotion popping up for the client today (the referral program first). */
@@ -582,5 +594,5 @@ export type Promotion = {
     theme?: string;
     /** A name from promotionDesign.ts; older promotions are "gift". */
     icon?: string;
-    link: { type: 'referrals' } | { type: 'url'; url: string };
+    link: { type: "referrals" } | { type: "url"; url: string };
 };

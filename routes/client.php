@@ -119,4 +119,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('help', [HelpController::class, 'index'])->name('help');
     Route::post('help', [HelpController::class, 'store'])->middleware('throttle:5,1')->name('help.store');
+    Route::get('help/attachments/{attachment}', [HelpController::class, 'attachment'])->name('help.attachments.show');
 });

@@ -39,6 +39,10 @@ class HelpRequestReceivedNotification extends Notification implements ShouldQueu
                 'platform' => $request->platform === 'web' ? 'web portal' : $request->platform.' app',
             ]))
             ->line(Str::limit($request->message, 500))
+            ->when($request->attachments()->exists(), fn (MailMessage $mail): MailMessage => $mail->line(trans_choice(
+                '{1} They attached a file; see it in the admin area.|[2,*] They attached :count files; see them in the admin area.',
+                $request->attachments()->count(),
+            )))
             ->action(__('Open help requests'), route('admin.help-requests.index'));
     }
 }

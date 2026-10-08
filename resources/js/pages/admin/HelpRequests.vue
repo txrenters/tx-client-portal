@@ -1,41 +1,42 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { CircleCheck, LifeBuoy, RotateCcw, Search } from '@lucide/vue';
-import { refDebounced } from '@vueuse/core';
-import { reactive, ref, watch } from 'vue';
-import AppCard from '@/components/AppCard.vue';
-import EmptyState from '@/components/EmptyState.vue';
-import PageHeader from '@/components/PageHeader.vue';
-import ResultsPagination from '@/components/ResultsPagination.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { appDateFormatter } from '@/lib/timezone';
+import { Head, Link, router } from "@inertiajs/vue3";
+import { CircleCheck, LifeBuoy, RotateCcw, Search } from "@lucide/vue";
+import { refDebounced } from "@vueuse/core";
+import { reactive, ref, watch } from "vue";
+import AppCard from "@/components/AppCard.vue";
+import EmptyState from "@/components/EmptyState.vue";
+import HelpAttachments from "@/components/HelpAttachments.vue";
+import PageHeader from "@/components/PageHeader.vue";
+import ResultsPagination from "@/components/ResultsPagination.vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { appDateFormatter } from "@/lib/timezone";
 import {
     index as helpRequestsRoute,
     update as updateRoute,
-} from '@/routes/admin/help-requests';
-import { show as showUser } from '@/routes/admin/users';
-import type { AdminHelpRequest, Paginated } from '@/types';
-import { dashboard as adminHome } from '@/routes/admin';
-import { index as helpRequestsCrumb } from '@/routes/admin/help-requests';
+} from "@/routes/admin/help-requests";
+import { show as showUser } from "@/routes/admin/users";
+import type { AdminHelpRequest, Paginated } from "@/types";
+import { dashboard as adminHome } from "@/routes/admin";
+import { index as helpRequestsCrumb } from "@/routes/admin/help-requests";
 
 /** The trail in the header beside the sidebar's collapse button. */
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Admin', href: adminHome() },
-            { title: 'Help requests', href: helpRequestsCrumb() },
+            { title: "Admin", href: adminHome() },
+            { title: "Help requests", href: helpRequestsCrumb() },
         ],
     },
 });
 
 const props = defineProps<{
-    status: 'open' | 'resolved' | 'all';
+    status: "open" | "resolved" | "all";
     search: string;
     openCount: number;
     requests: Paginated<AdminHelpRequest>;
@@ -59,7 +60,7 @@ watch([status, debouncedSearch], () => reload());
 const notes = reactive<Record<number, string>>({});
 const saving = ref<number | null>(null);
 
-function settle(request: AdminHelpRequest, next: 'open' | 'resolved'): void {
+function settle(request: AdminHelpRequest, next: "open" | "resolved"): void {
     router.patch(
         updateRoute(request.id).url,
         { status: next, staff_note: notes[request.id] ?? null },
@@ -73,13 +74,13 @@ function settle(request: AdminHelpRequest, next: 'open' | 'resolved'): void {
 }
 
 const platformLabels: Record<string, string> = {
-    web: 'Web portal',
-    ios: 'iPhone app',
-    android: 'Android app',
-    app: 'App',
+    web: "Web portal",
+    ios: "iPhone app",
+    android: "Android app",
+    app: "App",
 };
 
-const sent = appDateFormatter({ dateStyle: 'medium', timeStyle: 'short' });
+const sent = appDateFormatter({ dateStyle: "medium", timeStyle: "short" });
 </script>
 
 <template>
@@ -163,6 +164,8 @@ const sent = appDateFormatter({ dateStyle: 'medium', timeStyle: 'short' });
                 </div>
 
                 <p class="text-sm whitespace-pre-line">{{ request.message }}</p>
+
+                <HelpAttachments :attachments="request.attachments" />
 
                 <p
                     v-if="request.appVersion || request.userAgent"
