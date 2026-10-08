@@ -16,22 +16,28 @@ class PropertyFinderController extends Controller
 {
     public function __invoke(Request $request, PropertyFinder $finder): Response
     {
-        $validated = $request->validate(['search' => ['nullable', 'string', 'max:100']]);
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
         $search = trim((string) ($validated['search'] ?? ''));
 
         return Inertia::render('admin/PropertyFinder', [
             'search' => $search,
             'maxResults' => PropertyFinder::MAX_RESULTS,
             // Deferred: a search reads Propertyware, which can take a while.
-            'found' => Inertia::defer(function () use ($finder, $search): ?array {
-                if (mb_strlen($search) < 3) {
+            // With nothing typed yet, the properties of the people on the portal.
+            'found' => Inertia::defer(function () use ($finder, $search, $request): ?array {
+                if ($search !== '' && mb_strlen($search) < 3) {
                     return null;
                 }
 
                 try {
-                    return [...$finder->search($search), 'error' => null];
+                    return $search === ''
+                        ? [...$finder->onPortal(max(1, $request->integer('page', 1))), 'mode' => 'portal', 'error' => null]
+                        : [...$finder->search($search), 'mode' => 'search', 'error' => null];
                 } catch (PropertywareException) {
-                    return ['results' => [], 'total' => 0, 'error' => 'Propertyware could not be reached. Try again in a moment.'];
+                    return ['results' => [], 'total' => 0, 'mode' => $search === '' ? 'portal' : 'search', 'error' => 'Propertyware could not be reached. Try again in a moment.'];
                 }
             }),
         ]);

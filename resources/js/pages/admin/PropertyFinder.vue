@@ -1,26 +1,31 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { Building2, MailPlus, Search } from '@lucide/vue';
-import { refDebounced } from '@vueuse/core';
-import { ref, watch } from 'vue';
-import AppCard from '@/components/AppCard.vue';
-import EmptyState from '@/components/EmptyState.vue';
-import PageHeader from '@/components/PageHeader.vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
-import { dashboard as adminHome, properties } from '@/routes/admin';
-import { index as invitationsRoute } from '@/routes/admin/invitations';
-import { show as showUser } from '@/routes/admin/users';
-import type { AdminPropertyMatch, AdminPropertyPerson } from '@/types';
+import { Head, Link, router } from "@inertiajs/vue3";
+import { Building2, MailPlus, Search } from "@lucide/vue";
+import { refDebounced } from "@vueuse/core";
+import { ref, watch } from "vue";
+import AppCard from "@/components/AppCard.vue";
+import EmptyState from "@/components/EmptyState.vue";
+import PageHeader from "@/components/PageHeader.vue";
+import ResultsPagination from "@/components/ResultsPagination.vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { dashboard as adminHome, properties } from "@/routes/admin";
+import { index as invitationsRoute } from "@/routes/admin/invitations";
+import { show as showUser } from "@/routes/admin/users";
+import type {
+    AdminPropertyMatch,
+    AdminPropertyPerson,
+    Paginated,
+} from "@/types";
 
 /** The trail in the header beside the sidebar's collapse button. */
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Admin', href: adminHome() },
-            { title: 'Find by property', href: properties() },
+            { title: "Admin", href: adminHome() },
+            { title: "Find by property", href: properties() },
         ],
     },
 });
@@ -28,10 +33,17 @@ defineOptions({
 const props = defineProps<{
     search: string;
     maxResults: number;
-    /** Undefined while Propertyware is being searched; null before a search. */
+    /**
+     * Undefined while Propertyware is being read; null while the search is
+     * too short. With nothing typed, the properties of people on the portal.
+     */
     found?: {
+        mode: "search" | "portal";
         results: AdminPropertyMatch[];
-        total: number;
+        /** Search only: how many properties matched in all. */
+        total?: number;
+        /** Portal only: the logins, a page at a time. */
+        pages?: Paginated<never>;
         error: string | null;
     } | null;
 }>();
@@ -47,11 +59,19 @@ watch(debounced, (value) => {
     );
 });
 
+function showPortalPage(page: number): void {
+    router.get(
+        properties().url,
+        { page },
+        { preserveState: true, preserveScroll: false },
+    );
+}
+
 function inviteLink(person: AdminPropertyPerson) {
     return invitationsRoute({
         query: {
-            invite: '1',
-            email: person.email ?? '',
+            invite: "1",
+            email: person.email ?? "",
             name: person.name,
             role: person.role,
             contact: person.contactId,
@@ -66,7 +86,7 @@ function inviteLink(person: AdminPropertyPerson) {
 
         <PageHeader
             title="Find by property"
-            description="Search an address to see its owners and current tenants, and whether each of them is on the portal."
+            description="The properties of people on the portal, or search an address to see its owners and current tenants and whether each of them is on the portal."
         />
 
         <div class="relative w-full max-w-md">
@@ -81,7 +101,7 @@ function inviteLink(person: AdminPropertyPerson) {
             />
         </div>
 
-        <AppCard v-if="search.trim().length < 3">
+        <AppCard v-if="search.trim().length > 0 && search.trim().length < 3">
             <EmptyState
                 :icon="Building2"
                 title="Search for a property"
@@ -102,6 +122,18 @@ function inviteLink(person: AdminPropertyPerson) {
                 <p class="text-destructive text-sm">{{ found.error }}</p>
             </AppCard>
 
+            <AppCard
+                v-else-if="
+                    found.results.length === 0 && found.mode === 'portal'
+                "
+            >
+                <EmptyState
+                    :icon="Building2"
+                    title="No one on the portal yet"
+                    description="Their properties will show here once people join. Search an address to find anyone else."
+                />
+            </AppCard>
+
             <AppCard v-else-if="found.results.length === 0">
                 <EmptyState
                     :icon="Building2"
@@ -112,7 +144,20 @@ function inviteLink(person: AdminPropertyPerson) {
 
             <template v-else>
                 <p
-                    v-if="found.total > found.results.length"
+                    v-if="found.mode === 'portal' && found.pages"
+                    class="text-muted-foreground text-sm"
+                >
+                    Properties of the people on the portal, newest logins first
+                    ({{ found.pages.from }}–{{ found.pages.to }} of
+                    {{ found.pages.total }} logins). Search an address to find
+                    anyone else.
+                </p>
+
+                <p
+                    v-else-if="
+                        found.total !== undefined &&
+                        found.total > found.results.length
+                    "
                     class="text-muted-foreground text-sm"
                 >
                     Showing the first {{ found.results.length }} of
@@ -137,7 +182,7 @@ function inviteLink(person: AdminPropertyPerson) {
                     <Badge
                         :variant="property.occupied ? 'secondary' : 'outline'"
                         class="mb-4"
-                        >{{ property.occupied ? 'Leased' : 'Vacant' }}</Badge
+                        >{{ property.occupied ? "Leased" : "Vacant" }}</Badge
                     >
 
                     <div class="grid gap-6 md:grid-cols-2">
@@ -175,7 +220,7 @@ function inviteLink(person: AdminPropertyPerson) {
                                         <p
                                             class="text-muted-foreground text-xs"
                                         >
-                                            {{ person.email ?? 'No email' }} ·
+                                            {{ person.email ?? "No email" }} ·
                                             #{{ person.contactId }}
                                         </p>
                                     </div>
@@ -215,6 +260,12 @@ function inviteLink(person: AdminPropertyPerson) {
                         </div>
                     </div>
                 </AppCard>
+
+                <ResultsPagination
+                    v-if="found.mode === 'portal' && found.pages"
+                    :results="found.pages"
+                    @change="showPortalPage"
+                />
             </template>
         </template>
     </div>
