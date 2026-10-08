@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
-import AdminSidebar from '@/components/AdminSidebar.vue';
-import AnnouncementBanner from '@/components/AnnouncementBanner.vue';
-import AppContent from '@/components/AppContent.vue';
-import AppShell from '@/components/AppShell.vue';
-import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
-import ImpersonationBanner from '@/components/ImpersonationBanner.vue';
-import ClientSidebar from '@/components/ClientSidebar.vue';
-import MobileNavigation from '@/components/MobileNavigation.vue';
-import PageGlow from '@/components/PageGlow.vue';
-import PromotionPopup from '@/components/PromotionPopup.vue';
-import { Toaster } from '@/components/ui/sonner';
-import type { BreadcrumbItem } from '@/types';
+import { usePage } from "@inertiajs/vue3";
+import { computed } from "vue";
+import AdminSidebar from "@/components/AdminSidebar.vue";
+import AnnouncementBanner from "@/components/AnnouncementBanner.vue";
+import AppContent from "@/components/AppContent.vue";
+import AppShell from "@/components/AppShell.vue";
+import AppSidebarHeader from "@/components/AppSidebarHeader.vue";
+import ImpersonationBanner from "@/components/ImpersonationBanner.vue";
+import ClientSidebar from "@/components/ClientSidebar.vue";
+import MobileNavigation from "@/components/MobileNavigation.vue";
+import PageGlow from "@/components/PageGlow.vue";
+import PromotionPopup from "@/components/PromotionPopup.vue";
+import { Toaster } from "@/components/ui/sonner";
+import type { BreadcrumbItem } from "@/types";
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
@@ -32,8 +32,9 @@ const page = usePage();
 const staffSettings = computed(
     () =>
         page.props.auth.isAdmin &&
+        page.props.auth.portalSide === "staff" &&
         !page.props.auth.impersonating &&
-        page.url.startsWith('/settings'),
+        page.url.startsWith("/settings"),
 );
 </script>
 
