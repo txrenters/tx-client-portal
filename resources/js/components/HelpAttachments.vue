@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { FileText } from "@lucide/vue";
-import type { HelpRequestAttachment } from "@/types";
+import { FileText } from '@lucide/vue';
+import type { HelpRequestAttachment } from '@/types';
 
 /**
  * The files sent with a help request: pictures as thumbnails, anything else

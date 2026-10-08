@@ -90,7 +90,11 @@ class PropertyFinder
             ->keyBy(fn (array $building): int => (int) $building['id']);
 
         return [
-            'results' => $this->present($buildingIds->map(fn (int $id): ?array => $buildings->get($id))->filter()->values()),
+            // In login order; a building Propertyware no longer lists is skipped.
+            'results' => $this->present($buildings
+                ->only($buildingIds->all())
+                ->sortBy(fn (array $building, int $id): int => (int) $buildingIds->search($id))
+                ->values()),
             'pages' => [
                 'data' => [],
                 'current_page' => $accounts->currentPage(),

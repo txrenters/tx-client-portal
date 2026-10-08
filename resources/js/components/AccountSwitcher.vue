@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { router, usePage } from "@inertiajs/vue3";
-import { Building2, Check, ChevronsUpDown, ShieldCheck } from "@lucide/vue";
-import { computed } from "vue";
+import { router, usePage } from '@inertiajs/vue3';
+import { Building2, Check, ChevronsUpDown, ShieldCheck } from '@lucide/vue';
+import { computed } from 'vue';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -9,14 +9,14 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import { dashboard as adminDashboard } from "@/routes/admin";
-import { update } from "@/routes/accounts";
+} from '@/components/ui/sidebar';
+import { dashboard as adminDashboard } from '@/routes/admin';
+import { update } from '@/routes/accounts';
 
 const page = usePage();
 const accounts = computed(() => page.props.client?.accounts ?? []);
@@ -61,7 +61,7 @@ const select = (id: number): void => {
                                 >Switch account</span
                             >
                             <span class="truncate">{{
-                                active?.label ?? "Select account"
+                                active?.label ?? 'Select account'
                             }}</span>
                             <span
                                 v-if="active"

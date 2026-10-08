@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, usePage } from "@inertiajs/vue3";
+import { Link, usePage } from '@inertiajs/vue3';
 import {
     Activity,
     ArrowLeftRight,
@@ -17,11 +17,11 @@ import {
     ScrollText,
     Sparkles,
     Users,
-} from "@lucide/vue";
-import { computed } from "vue";
-import NavMain from "@/components/NavMain.vue";
-import NavUser from "@/components/NavUser.vue";
-import SidebarBrand from "@/components/SidebarBrand.vue";
+} from '@lucide/vue';
+import { computed } from 'vue';
+import NavMain from '@/components/NavMain.vue';
+import NavUser from '@/components/NavUser.vue';
+import SidebarBrand from '@/components/SidebarBrand.vue';
 import {
     Sidebar,
     SidebarContent,
@@ -30,25 +30,25 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import { update as switchToAccount } from "@/routes/accounts";
+} from '@/components/ui/sidebar';
+import { update as switchToAccount } from '@/routes/accounts';
 import {
     activity,
     dashboard,
     insights,
     properties,
     security,
-} from "@/routes/admin";
-import { index as announcements } from "@/routes/admin/announcements";
-import { index as helpRequests } from "@/routes/admin/help-requests";
-import { index as integrations } from "@/routes/admin/integrations";
-import { index as invitations } from "@/routes/admin/invitations";
-import { index as meetings } from "@/routes/admin/meetings";
-import { index as promotions } from "@/routes/admin/promotions";
-import { index as staff } from "@/routes/admin/staff";
-import { index as referrals } from "@/routes/admin/referrals";
-import { index as users } from "@/routes/admin/users";
-import type { NavItem } from "@/types";
+} from '@/routes/admin';
+import { index as announcements } from '@/routes/admin/announcements';
+import { index as helpRequests } from '@/routes/admin/help-requests';
+import { index as integrations } from '@/routes/admin/integrations';
+import { index as invitations } from '@/routes/admin/invitations';
+import { index as meetings } from '@/routes/admin/meetings';
+import { index as promotions } from '@/routes/admin/promotions';
+import { index as staff } from '@/routes/admin/staff';
+import { index as referrals } from '@/routes/admin/referrals';
+import { index as users } from '@/routes/admin/users';
+import type { NavItem } from '@/types';
 
 /**
  * The staff side's own navigation.
@@ -59,19 +59,19 @@ import type { NavItem } from "@/types";
  * accounts of their own.
  */
 const clientItems = computed<NavItem[]>(() => [
-    { title: "Overview", href: dashboard(), icon: LayoutGrid },
-    { title: "Users", href: users(), icon: Users },
-    { title: "Invitations", href: invitations(), icon: Mail },
-    { title: "Find by property", href: properties(), icon: Building2 },
-    { title: "Help requests", href: helpRequests(), icon: LifeBuoy },
-    { title: "Insights", href: insights(), icon: ChartColumn },
+    { title: 'Overview', href: dashboard(), icon: LayoutGrid },
+    { title: 'Users', href: users(), icon: Users },
+    { title: 'Invitations', href: invitations(), icon: Mail },
+    { title: 'Find by property', href: properties(), icon: Building2 },
+    { title: 'Help requests', href: helpRequests(), icon: LifeBuoy },
+    { title: 'Insights', href: insights(), icon: ChartColumn },
 ]);
 
 const outreachItems = computed<NavItem[]>(() => [
-    { title: "Announcements", href: announcements(), icon: Megaphone },
-    { title: "Meetings", href: meetings(), icon: CalendarClock },
-    { title: "Promotions", href: promotions(), icon: Sparkles },
-    { title: "Referrals", href: referrals(), icon: Gift },
+    { title: 'Announcements', href: announcements(), icon: Megaphone },
+    { title: 'Meetings', href: meetings(), icon: CalendarClock },
+    { title: 'Promotions', href: promotions(), icon: Sparkles },
+    { title: 'Referrals', href: referrals(), icon: Gift },
 ]);
 
 const page = usePage();
@@ -90,11 +90,11 @@ const clientAccount = computed(() => {
 /** Staff only shows for those who may manage it: owners and admins. */
 const systemItems = computed<NavItem[]>(() => [
     ...(page.props.auth.canManageStaff
-        ? [{ title: "Staff", href: staff(), icon: ShieldCheck }]
+        ? [{ title: 'Staff', href: staff(), icon: ShieldCheck }]
         : []),
-    { title: "Security", href: security(), icon: ShieldAlert },
-    { title: "Integrations", href: integrations(), icon: Plug },
-    { title: "Activity", href: activity(), icon: Activity },
+    { title: 'Security', href: security(), icon: ShieldAlert },
+    { title: 'Integrations', href: integrations(), icon: Plug },
+    { title: 'Activity', href: activity(), icon: Activity },
 ]);
 </script>
 

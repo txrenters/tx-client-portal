@@ -22,7 +22,7 @@ export type Auth = {
      * Staff who also hold client accounts are on the client side after picking
      * one of them, and on the staff side otherwise. Clients are always "client".
      */
-    portalSide: "staff" | "client";
+    portalSide: 'staff' | 'client';
 };
 
 export type Passkey = {

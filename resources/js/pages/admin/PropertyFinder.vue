@@ -1,31 +1,31 @@
 <script setup lang="ts">
-import { Head, Link, router } from "@inertiajs/vue3";
-import { Building2, MailPlus, Search } from "@lucide/vue";
-import { refDebounced } from "@vueuse/core";
-import { ref, watch } from "vue";
-import AppCard from "@/components/AppCard.vue";
-import EmptyState from "@/components/EmptyState.vue";
-import PageHeader from "@/components/PageHeader.vue";
-import ResultsPagination from "@/components/ResultsPagination.vue";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { dashboard as adminHome, properties } from "@/routes/admin";
-import { index as invitationsRoute } from "@/routes/admin/invitations";
-import { show as showUser } from "@/routes/admin/users";
+import { Head, Link, router } from '@inertiajs/vue3';
+import { Building2, MailPlus, Search } from '@lucide/vue';
+import { refDebounced } from '@vueuse/core';
+import { ref, watch } from 'vue';
+import AppCard from '@/components/AppCard.vue';
+import EmptyState from '@/components/EmptyState.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import ResultsPagination from '@/components/ResultsPagination.vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { dashboard as adminHome, properties } from '@/routes/admin';
+import { index as invitationsRoute } from '@/routes/admin/invitations';
+import { show as showUser } from '@/routes/admin/users';
 import type {
     AdminPropertyMatch,
     AdminPropertyPerson,
     Paginated,
-} from "@/types";
+} from '@/types';
 
 /** The trail in the header beside the sidebar's collapse button. */
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: "Admin", href: adminHome() },
-            { title: "Find by property", href: properties() },
+            { title: 'Admin', href: adminHome() },
+            { title: 'Find by property', href: properties() },
         ],
     },
 });
@@ -38,7 +38,7 @@ const props = defineProps<{
      * too short. With nothing typed, the properties of people on the portal.
      */
     found?: {
-        mode: "search" | "portal";
+        mode: 'search' | 'portal';
         results: AdminPropertyMatch[];
         /** Search only: how many properties matched in all. */
         total?: number;
@@ -70,8 +70,8 @@ function showPortalPage(page: number): void {
 function inviteLink(person: AdminPropertyPerson) {
     return invitationsRoute({
         query: {
-            invite: "1",
-            email: person.email ?? "",
+            invite: '1',
+            email: person.email ?? '',
             name: person.name,
             role: person.role,
             contact: person.contactId,
@@ -182,7 +182,7 @@ function inviteLink(person: AdminPropertyPerson) {
                     <Badge
                         :variant="property.occupied ? 'secondary' : 'outline'"
                         class="mb-4"
-                        >{{ property.occupied ? "Leased" : "Vacant" }}</Badge
+                        >{{ property.occupied ? 'Leased' : 'Vacant' }}</Badge
                     >
 
                     <div class="grid gap-6 md:grid-cols-2">
@@ -220,7 +220,7 @@ function inviteLink(person: AdminPropertyPerson) {
                                         <p
                                             class="text-muted-foreground text-xs"
                                         >
-                                            {{ person.email ?? "No email" }} ·
+                                            {{ person.email ?? 'No email' }} ·
                                             #{{ person.contactId }}
                                         </p>
                                     </div>

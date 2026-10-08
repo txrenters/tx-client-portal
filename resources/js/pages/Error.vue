@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Head, Link, usePage } from "@inertiajs/vue3";
-import { ArrowLeft, House, LifeBuoy } from "@lucide/vue";
-import { computed } from "vue";
-import SiteFooter from "@/components/marketing/SiteFooter.vue";
-import SiteHeader from "@/components/marketing/SiteHeader.vue";
-import { Button } from "@/components/ui/button";
-import { dashboard, help, home, support } from "@/routes";
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { ArrowLeft, House, LifeBuoy } from '@lucide/vue';
+import { computed } from 'vue';
+import SiteFooter from '@/components/marketing/SiteFooter.vue';
+import SiteHeader from '@/components/marketing/SiteHeader.vue';
+import { Button } from '@/components/ui/button';
+import { dashboard, help, home, support } from '@/routes';
 
 /**
  * What a visitor sees when something goes wrong, in the same header, navy
@@ -20,35 +20,35 @@ const messages: Record<number, { title: string; description: string }> = {
     403: {
         title: "You don't have access to this page",
         description:
-            "It may belong to another account, or need a different role. If you think you should be able to see it, let us know.",
+            'It may belong to another account, or need a different role. If you think you should be able to see it, let us know.',
     },
     404: {
         title: "We couldn't find that page",
         description:
-            "The link may be old or mistyped, or the page may have moved.",
+            'The link may be old or mistyped, or the page may have moved.',
     },
     429: {
-        title: "Too many tries in a row",
+        title: 'Too many tries in a row',
         description:
-            "Please wait a minute, then try again. This keeps your account safe.",
+            'Please wait a minute, then try again. This keeps your account safe.',
     },
     500: {
-        title: "Something went wrong on our side",
+        title: 'Something went wrong on our side',
         description:
             "We've been told about it and are looking into it. Please try again in a few minutes.",
     },
     503: {
         title: "We'll be right back",
         description:
-            "The portal is down for a short update. Please check back in a few minutes.",
+            'The portal is down for a short update. Please check back in a few minutes.',
     },
 };
 
 const message = computed(
     () =>
         messages[props.status] ?? {
-            title: "Something went wrong",
-            description: "Please try again in a few minutes.",
+            title: 'Something went wrong',
+            description: 'Please try again in a few minutes.',
         },
 );
 
@@ -100,8 +100,8 @@ function goBack(): void {
                             <House class="size-4" />
                             {{
                                 isSignedIn
-                                    ? "Go to your dashboard"
-                                    : "Go to the home page"
+                                    ? 'Go to your dashboard'
+                                    : 'Go to the home page'
                             }}
                         </Link>
                     </Button>

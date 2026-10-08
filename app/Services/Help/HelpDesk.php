@@ -102,14 +102,14 @@ class HelpDesk
             'sentAt' => $request->created_at->toIso8601String(),
             // Each behind a route that checks who is asking: the web page, the
             // apps and the admin area each name their own.
-            'attachments' => $request->attachments->map(fn (HelpRequestAttachment $attachment): array => [
+            'attachments' => array_values($request->attachments->map(fn (HelpRequestAttachment $attachment): array => [
                 'id' => $attachment->id,
                 'name' => $attachment->name,
                 'mimeType' => $attachment->mime_type,
                 'size' => $attachment->size,
                 'isImage' => $attachment->isImage(),
                 'url' => route($attachmentRoute, $attachment),
-            ])->values()->all(),
+            ])->all()),
         ];
     }
 
