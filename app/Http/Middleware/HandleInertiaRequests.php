@@ -51,7 +51,8 @@ class HandleInertiaRequests extends Middleware
                 'canManageStaff' => $request->user() !== null && Gate::forUser($request->user())->allows('manage-staff'),
                 // Set only while an admin is signed in as someone else, so
                 // every page can say so rather than looking like a normal visit.
-                'impersonating' => $request->session()->has(ImpersonationController::SESSION_KEY),
+                // No session on an error raised before the session started.
+                'impersonating' => $request->hasSession() && $request->session()->has(ImpersonationController::SESSION_KEY),
             ],
             'client' => fn (): ?array => $this->clientPortal($request),
             // Staff notices for the banner; none on the admin side.

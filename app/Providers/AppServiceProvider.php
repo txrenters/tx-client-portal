@@ -25,6 +25,9 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Inertia\ExceptionResponse;
+use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -121,6 +124,38 @@ class AppServiceProvider extends ServiceProvider
 
         $this->configureDefaults();
         $this->configureEmails();
+        $this->configureErrorPages();
+    }
+
+    /**
+     * Show errors in the portal's own design rather than Laravel's plain pages.
+     *
+     * A server error keeps Laravel's debug page while debugging, the apps and
+     * anything else asking for JSON keep their JSON errors, and an expired form
+     * goes back where it was with a toast rather than to a dead end.
+     */
+    protected function configureErrorPages(): void
+    {
+        Inertia::handleExceptionsUsing(function (ExceptionResponse $error): ExceptionResponse|Response|null {
+            $request = $error->request;
+            $status = $error->statusCode();
+
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return null;
+            }
+
+            if ($status === 419) {
+                Inertia::flash('toast', ['type' => 'error', 'message' => __('This page expired, so nothing was saved. Please try again.')]);
+
+                return back();
+            }
+
+            if (! in_array($status, [403, 404, 429, 500, 503], true) || ($status >= 500 && config('app.debug'))) {
+                return null;
+            }
+
+            return $error->render('Error', ['status' => $status])->withSharedData();
+        });
     }
 
     /**
