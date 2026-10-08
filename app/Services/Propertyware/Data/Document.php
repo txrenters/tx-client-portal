@@ -20,6 +20,17 @@ class Document
         'application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif',
     ];
 
+    /**
+     * Propertyware's names for types that have a standard one. It calls most
+     * photos "image/jpg", which no browser or MIME list knows, so they would
+     * otherwise neither preview nor get a thumbnail.
+     */
+    private const TYPE_ALIASES = [
+        'image/jpg' => 'image/jpeg',
+        'image/pjpeg' => 'image/jpeg',
+        'image/x-png' => 'image/png',
+    ];
+
     public function __construct(
         public readonly string $id,
         public readonly string $fileName,
@@ -48,7 +59,7 @@ class Document
         return new self(
             id: (string) ($record['id'] ?? ''),
             fileName: (string) ($record['fileName'] ?? 'Document'),
-            fileType: $record['fileType'] ?? null,
+            fileType: self::standardType($record['fileType'] ?? null),
             description: filled($record['description'] ?? null) ? $record['description'] : null,
             entityType: (string) ($record['entityType'] ?? ''),
             entityId: isset($record['entityId']) ? (int) $record['entityId'] : null,
@@ -56,6 +67,20 @@ class Document
             visibleToOwner: (bool) ($record['publishToOwnerPortal'] ?? false),
             createdAt: $createdAt,
         );
+    }
+
+    /**
+     * The file's type under its standard name, or null when Propertyware gave none.
+     */
+    private static function standardType(mixed $type): ?string
+    {
+        if (! is_string($type) || trim($type) === '') {
+            return null;
+        }
+
+        $type = strtolower(trim($type));
+
+        return self::TYPE_ALIASES[$type] ?? $type;
     }
 
     /**
