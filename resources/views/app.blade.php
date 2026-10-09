@@ -42,9 +42,47 @@
 
         @fonts
 
+        {{-- Search and link-preview tags, rendered here because production runs
+             without SSR: crawlers and chat apps never see what <Head> adds.
+             Only the public pages are indexed; everything else is behind a login. --}}
+        @php
+            $publicPages = [
+                'Welcome' => [
+                    'title' => 'Client portal',
+                    'description' => 'The TexasRenters.com client portal for residents and owners: work orders, messages, documents, leases and property information, in any browser.',
+                ],
+                'Privacy' => [
+                    'title' => 'Privacy policy',
+                    'description' => 'How the TexasRenters.com client portal collects, uses and protects your information.',
+                ],
+                'Support' => [
+                    'title' => 'Support',
+                    'description' => 'Get help with the TexasRenters.com client portal.',
+                ],
+            ];
+            $seo = $publicPages[$page['component']] ?? null;
+            $appName = config('app.name', 'Laravel');
+        @endphp
+
+        @if ($seo)
+            <meta name="description" content="{{ $seo['description'] }}">
+            <link rel="canonical" href="{{ url()->current() }}">
+            <meta property="og:type" content="website">
+            <meta property="og:site_name" content="{{ $appName }}">
+            <meta property="og:title" content="{{ $seo['title'] }} - {{ $appName }}">
+            <meta property="og:description" content="{{ $seo['description'] }}">
+            <meta property="og:url" content="{{ url()->current() }}">
+            <meta property="og:image" content="{{ asset('images/share/portal.jpg') }}">
+            <meta property="og:image:width" content="1200">
+            <meta property="og:image:height" content="630">
+            <meta name="twitter:card" content="summary_large_image">
+        @else
+            <meta name="robots" content="noindex">
+        @endif
+
         @vite(['resources/css/app.css', 'resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
         <x-inertia::head>
-            <title>{{ config('app.name', 'Laravel') }}</title>
+            <title>{{ $seo ? "{$seo['title']} - {$appName}" : $appName }}</title>
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">

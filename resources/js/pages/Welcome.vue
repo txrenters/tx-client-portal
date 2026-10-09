@@ -71,12 +71,8 @@ const securityPoints = [
     <div
         class="bg-background text-foreground flex min-h-svh flex-col overflow-x-clip"
     >
-        <Head title="Client portal">
-            <meta
-                name="description"
-                content="The TexasRenters.com client portal for residents and owners: work orders, messages, documents, leases and property information, in any browser."
-            />
-        </Head>
+        <!-- The description and share tags are rendered in app.blade.php. -->
+        <Head title="Client portal" />
 
         <SiteHeader />
 
