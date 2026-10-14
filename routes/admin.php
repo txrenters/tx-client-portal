@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\SecurityController;
 use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Middleware\LogDeniedAdminAccess;
+use App\Http\Middleware\RememberStaffSide;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -25,7 +26,7 @@ use Illuminate\Support\Facades\Route;
  * acts on a portal account and is recoverable, is written to the admin audit
  * trail (AdminAudit), and none of them touch Propertyware.
  */
-Route::middleware(['auth', 'verified', LogDeniedAdminAccess::class, 'can:admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'verified', LogDeniedAdminAccess::class, 'can:admin', RememberStaffSide::class])->prefix('admin')->name('admin.')->group(function () {
     Route::redirect('/', '/admin/dashboard');
     Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::get('activity', ActivityController::class)->name('activity');
@@ -74,6 +75,7 @@ Route::middleware(['auth', 'verified', LogDeniedAdminAccess::class, 'can:admin']
 
     Route::get('help-requests', [HelpRequestController::class, 'index'])->name('help-requests.index');
     Route::patch('help-requests/{helpRequest}', [HelpRequestController::class, 'update'])->name('help-requests.update');
+    Route::get('help-requests/attachments/{attachment}', [HelpRequestController::class, 'attachment'])->name('help-requests.attachments.show');
 
     Route::resource('promotions', PromotionController::class)->only(['index', 'store', 'update', 'destroy']);
 

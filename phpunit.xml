@@ -47,6 +47,8 @@
         <env name="CHAT_HUB_WEBHOOK_SECRET" value=""/>
         <!-- Like the hub above: blank, so no test reaches the real listings,
              scheduling or Microsoft services with a developer's .env keys. -->
+        <env name="TX_MAINTENANCE_URL" value=""/>
+        <env name="TX_MAINTENANCE_TOKEN" value=""/>
         <env name="TX_CMA_URL" value=""/>
         <env name="TX_CMA_TOKEN" value=""/>
         <env name="SCHEDULING_URL" value=""/>

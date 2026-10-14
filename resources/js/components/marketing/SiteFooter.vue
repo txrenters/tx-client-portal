@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Globe, LineChart, Mail } from '@lucide/vue';
+import { Globe, LineChart } from '@lucide/vue';
 import AppStoreBadges from '@/components/marketing/AppStoreBadges.vue';
 import { home, login, privacy, register, support } from '@/routes';
 </script>
@@ -40,6 +40,12 @@ import { home, login, privacy, register, support } from '@/routes';
                 Sign in
             </Link>
             <a
+                :href="`${home().url}#tour`"
+                class="text-scrim-foreground/70 hover:text-scrim-foreground"
+            >
+                Watch the tutorial
+            </a>
+            <a
                 :href="`${home().url}#how-it-works`"
                 class="text-scrim-foreground/70 hover:text-scrim-foreground"
             >
@@ -56,29 +62,16 @@ import { home, login, privacy, register, support } from '@/routes';
         <div class="flex flex-col gap-2 text-sm">
             <p class="font-medium">The app</p>
             <a
-                :href="`${home().url}#tour`"
-                class="text-scrim-foreground/70 hover:text-scrim-foreground"
-            >
-                Watch the tour
-            </a>
-            <a
                 :href="`${home().url}#app`"
                 class="text-scrim-foreground/70 hover:text-scrim-foreground"
             >
-                For residents and owners
+                Preview the app
             </a>
             <AppStoreBadges class="pt-2" />
         </div>
 
         <div class="flex flex-col gap-2 text-sm">
             <p class="font-medium">Contact</p>
-            <a
-                href="mailto:leasing@texasrenters.com"
-                class="text-scrim-foreground/70 hover:text-scrim-foreground flex items-center gap-2"
-            >
-                <Mail class="size-3.5" />
-                leasing@texasrenters.com
-            </a>
             <a
                 href="https://www.texasrenters.com"
                 class="text-scrim-foreground/70 hover:text-scrim-foreground flex items-center gap-2"

@@ -82,6 +82,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         // Also not behind "verified", for the same reason as the web Help page.
         Route::get('me/help-requests', [HelpRequestController::class, 'index'])->name('help-requests.index');
         Route::post('me/help-requests', [HelpRequestController::class, 'store'])->middleware('throttle:5,1')->name('help-requests.store');
+        Route::get('me/help-requests/attachments/{attachment}', [HelpRequestController::class, 'attachment'])->name('help-requests.attachments.show');
 
         Route::middleware('verified')->group(function () {
             Route::get('me/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
@@ -119,6 +120,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('notifications/{notification}/read', [NotificationController::class, 'read'])->whereUuid('notification')->name('notifications.read');
             Route::get('contact-details', ContactDetailsController::class)->name('contact-details');
             Route::get('messages', [MessageController::class, 'index'])->name('messages.index');
+            Route::get('messages/history', [MessageController::class, 'history'])->name('messages.history');
+            Route::get('messages/earlier-media/{media}/{name}', [MessageController::class, 'earlierMedia'])->whereNumber('media')->name('messages.earlier-media');
             Route::get('realtime', [MessageController::class, 'realtime'])->name('realtime');
             Route::get('referrals', [ReferralController::class, 'index'])->name('referrals.index');
             Route::get('promotion', [PromotionController::class, 'show'])->name('promotion.show');
@@ -136,6 +139,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('maintenance/{workOrder}/approval', [MaintenanceController::class, 'decide'])->middleware('throttle:10,1')->name('maintenance.approval');
             Route::get('maintenance/{workOrder}/documents', [MaintenanceController::class, 'documents'])->name('maintenance.documents.index');
             Route::get('maintenance/{workOrder}/conversations', [MaintenanceController::class, 'conversations'])->name('maintenance.conversations.index');
+            Route::get('maintenance/{workOrder}/texts', [MaintenanceController::class, 'texts'])->name('maintenance.texts');
             Route::get('maintenance/{workOrder}/documents/{document}', [MaintenanceController::class, 'downloadDocument'])->name('maintenance.documents.show');
             Route::get('documents', [DocumentController::class, 'index'])->name('documents.index');
             Route::get('documents/upload-targets', [DocumentController::class, 'uploadTargets'])->name('documents.upload-targets');

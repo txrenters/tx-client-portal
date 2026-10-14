@@ -5,6 +5,7 @@ import { refDebounced } from '@vueuse/core';
 import { reactive, ref, watch } from 'vue';
 import AppCard from '@/components/AppCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import HelpAttachments from '@/components/HelpAttachments.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import ResultsPagination from '@/components/ResultsPagination.vue';
 import { Badge } from '@/components/ui/badge';
@@ -163,6 +164,8 @@ const sent = appDateFormatter({ dateStyle: 'medium', timeStyle: 'short' });
                 </div>
 
                 <p class="text-sm whitespace-pre-line">{{ request.message }}</p>
+
+                <HelpAttachments :attachments="request.attachments" />
 
                 <p
                     v-if="request.appVersion || request.userAgent"

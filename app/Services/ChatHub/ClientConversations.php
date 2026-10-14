@@ -18,6 +18,9 @@ use Illuminate\Support\Str;
  */
 class ClientConversations
 {
+    /** Further pages read when one holds only conversations without messages. */
+    private const EMPTY_PAGES_READ_AHEAD = 10;
+
     public function __construct(private ChatHubClient $hub) {}
 
     public function isAvailable(): bool
@@ -33,8 +36,22 @@ class ClientConversations
      */
     public function threads(ClientAccount $account, int $page = 1, array $filters = [], ?User $reader = null): array
     {
-        $result = $this->hub->threads($account->propertyware_id, $page, $filters);
-        $threads = array_map(fn (array $thread): array => $this->presentThread($thread), $result['data'] ?? []);
+        // A session the support app opened without a single message in it (a
+        // number shared with the office can pile up hundreds) says nothing, so
+        // it is left out. A page of nothing but those would stop the list
+        // there, so the next pages are read until one has something to show;
+        // currentPage says how far that went, for the list to carry on from.
+        $hubPage = $page;
+        $result = $this->hub->threads($account->propertyware_id, $hubPage, $filters);
+        $withMessages = $this->withMessages($result);
+
+        while ($withMessages === [] && $hubPage < (int) ($result['meta']['last_page'] ?? 1) && $hubPage - $page < self::EMPTY_PAGES_READ_AHEAD) {
+            $hubPage++;
+            $result = $this->hub->threads($account->propertyware_id, $hubPage, $filters);
+            $withMessages = $this->withMessages($result);
+        }
+
+        $threads = array_values(array_map(fn (array $thread): array => $this->presentThread($thread), $withMessages));
 
         return [
             'threads' => $reader === null ? $threads : $this->withUnread($reader, $threads),
@@ -42,6 +59,20 @@ class ClientConversations
             'lastPage' => (int) ($result['meta']['last_page'] ?? 1),
             'total' => (int) ($result['meta']['total'] ?? 0),
         ];
+    }
+
+    /**
+     * The threads on one page of the hub's answer that hold at least one message.
+     *
+     * @param  array<string, mixed>  $result
+     * @return array<int, array<string, mixed>>
+     */
+    private function withMessages(array $result): array
+    {
+        return array_values(array_filter(
+            is_array($result['data'] ?? null) ? $result['data'] : [],
+            fn (mixed $thread): bool => is_array($thread) && isset($thread['last_message']),
+        ));
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Services\Admin;
 
 use App\Enums\ClientRole;
+use App\Models\ClientAccount;
 use App\Services\Propertyware\Data\Property;
 use App\Services\Propertyware\PropertywareClient;
 use App\Services\Propertyware\PropertywareDirectory;
@@ -16,7 +17,9 @@ use Illuminate\Support\Facades\Cache;
  * of them is on the portal yet.
  *
  * Answers "my tenant at 12 Elm says they can't see their lease" in one
- * search. Every read is cached briefly, like the rest of the Propertyware
+ * search. With nothing searched yet it lists the properties of the people
+ * already on the portal instead, so the page starts with something useful.
+ * Every read is cached briefly, like the rest of the Propertyware
  * lookups, and the number of properties opened per search is capped so a
  * vague search does not fan out into hundreds of API calls.
  */
@@ -52,7 +55,73 @@ class PropertyFinder
             })
             ->values();
 
-        $shown = $matches->take(self::MAX_RESULTS);
+        return [
+            'total' => $matches->count(),
+            'results' => $this->present($matches->take(self::MAX_RESULTS)),
+        ];
+    }
+
+    /**
+     * The properties held by the people on the portal, a page of logins at a
+     * time with the newest first. A property two of them share is listed once.
+     *
+     * Paged by login rather than by property: each login's properties come from
+     * its own Propertyware contact, so a page costs at most MAX_RESULTS lookups.
+     *
+     * @return array{results: array<int, array<string, mixed>>, pages: array{data: array{}, current_page: int, last_page: int, per_page: int, total: int, from: ?int, to: ?int}}
+     *
+     * @throws PropertywareException
+     */
+    public function onPortal(int $page = 1): array
+    {
+        $accounts = ClientAccount::query()
+            // The App Review logins only ever see made-up properties.
+            ->whereHas('user', fn ($query) => $query->where('is_demo', false))
+            ->latest()
+            ->latest('id')
+            ->paginate(self::MAX_RESULTS, page: $page);
+
+        $buildingIds = collect($accounts->items())
+            ->flatMap(fn (ClientAccount $account): array => $this->directory->scopeFor($account)->buildingIds)
+            ->unique()
+            ->values();
+
+        $buildings = $buildingIds->isEmpty() ? collect() : collect($this->directory->buildings())
+            ->keyBy(fn (array $building): int => (int) $building['id']);
+
+        return [
+            // In login order; a building Propertyware no longer lists is skipped.
+            'results' => $this->present($buildings
+                ->only($buildingIds->all())
+                ->sortBy(fn (array $building, int $id): int => (int) $buildingIds->search($id))
+                ->values()),
+            'pages' => [
+                'data' => [],
+                'current_page' => $accounts->currentPage(),
+                'last_page' => $accounts->lastPage(),
+                'per_page' => $accounts->perPage(),
+                'total' => $accounts->total(),
+                'from' => $accounts->firstItem(),
+                'to' => $accounts->lastItem(),
+            ],
+        ];
+    }
+
+    /**
+     * Each building with the owners on its portfolio and the tenants on its
+     * current leases, and whether each of them is on the portal.
+     *
+     * @param  Collection<int, array<string, mixed>>  $shown
+     * @return array<int, array<string, mixed>>
+     *
+     * @throws PropertywareException
+     */
+    private function present(Collection $shown): array
+    {
+        if ($shown->isEmpty()) {
+            return [];
+        }
+
         $units = collect($this->directory->units())->groupBy(fn (array $unit): int => (int) ($unit['buildingID'] ?? 0));
 
         $leaseIds = $shown
@@ -74,29 +143,26 @@ class PropertyFinder
         $leases = $this->records('leases', $leaseIds);
         $portfolios = $this->records('portfolios', $portfolioIds);
 
-        return [
-            'total' => $matches->count(),
-            'results' => $shown->map(function (array $building) use ($units, $leases, $portfolios): array {
-                $property = Property::fromArray($building);
-                $buildingLeases = collect([$building['leaseID'] ?? null, ...$units->get((int) $building['id'], collect())->pluck('leaseID')->all()])
-                    ->filter()->map(fn ($id): int => (int) $id)->unique();
+        return $shown->map(function (array $building) use ($units, $leases, $portfolios): array {
+            $property = Property::fromArray($building);
+            $buildingLeases = collect([$building['leaseID'] ?? null, ...$units->get((int) $building['id'], collect())->pluck('leaseID')->all()])
+                ->filter()->map(fn ($id): int => (int) $id)->unique();
 
-                return [
-                    'id' => $property->id,
-                    'address' => $property->fullAddress(),
-                    'name' => $property->name,
-                    'occupied' => $buildingLeases->isNotEmpty(),
-                    'owners' => $this->people(
-                        $portfolios->get((int) ($building['portfolioID'] ?? 0))['owners'] ?? [],
-                        ClientRole::Owner,
-                    ),
-                    'residents' => $this->people(
-                        $buildingLeases->flatMap(fn (int $id): array => $leases->get($id)['contacts'] ?? [])->all(),
-                        ClientRole::Resident,
-                    ),
-                ];
-            })->all(),
-        ];
+            return [
+                'id' => $property->id,
+                'address' => $property->fullAddress(),
+                'name' => $property->name,
+                'occupied' => $buildingLeases->isNotEmpty(),
+                'owners' => $this->people(
+                    $portfolios->get((int) ($building['portfolioID'] ?? 0))['owners'] ?? [],
+                    ClientRole::Owner,
+                ),
+                'residents' => $this->people(
+                    $buildingLeases->flatMap(fn (int $id): array => $leases->get($id)['contacts'] ?? [])->all(),
+                    ClientRole::Resident,
+                ),
+            ];
+        })->values()->all();
     }
 
     /**

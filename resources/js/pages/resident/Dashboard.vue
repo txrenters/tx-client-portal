@@ -22,6 +22,9 @@ import MaintenanceList from '@/components/MaintenanceList.vue';
 import AppCard from '@/components/AppCard.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue';
+import MonthlyMoneyChart from '@/components/MonthlyMoneyChart.vue';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { ChartConfig } from '@/components/ui/chart';
 import DashboardFeeds from '@/components/DashboardFeeds.vue';
 import DashboardMetrics from '@/components/DashboardMetrics.vue';
 import type { Metric } from '@/components/DashboardMetrics.vue';
@@ -50,6 +53,12 @@ defineOptions({
         breadcrumbs: [{ title: 'Home', href: dashboard() }],
     },
 });
+
+/** A tenant's chart: what was billed against what they paid. */
+const paymentSeries = {
+    charged: { label: 'Charged', color: 'var(--chart-expense)' },
+    paid: { label: 'Paid', color: 'var(--chart-income)' },
+} satisfies ChartConfig;
 
 const props = defineProps<{
     property?: PortalProperty | null;
@@ -148,6 +157,48 @@ function refreshDashboard(): void {
         </DashboardHeader>
 
         <DashboardMetrics :metrics="metrics" />
+
+        <AppCard
+            title="Your payments"
+            description="Charges and payments for the last 12 months."
+            :href="leaseRoute()"
+            link-label="View lease"
+        >
+            <!-- Shaped like the totals and chart it stands in for. -->
+            <div v-if="ledger === undefined" class="flex flex-col gap-4">
+                <div
+                    class="border-border grid grid-cols-3 gap-px overflow-hidden rounded-lg border sm:max-w-lg"
+                >
+                    <div
+                        v-for="tile in 3"
+                        :key="tile"
+                        class="bg-card flex flex-col gap-2 px-4 py-3"
+                    >
+                        <Skeleton class="h-3 w-16" />
+                        <Skeleton class="h-6 w-24" />
+                    </div>
+                </div>
+                <Skeleton class="h-72 w-full" />
+            </div>
+
+            <ErrorState
+                v-else-if="ledger === null"
+                description="We couldn't load your charges and payments right now."
+            />
+
+            <MonthlyMoneyChart
+                v-else-if="ledger.entries.length > 0"
+                :months="ledger.months"
+                :series="paymentSeries"
+            />
+
+            <EmptyState
+                v-else
+                :icon="Receipt"
+                title="Nothing yet"
+                description="Rent charges and payments will appear here as they happen."
+            />
+        </AppCard>
 
         <!-- Messages and activity first, then maintenance beside what they have paid. -->
         <DashboardFeeds

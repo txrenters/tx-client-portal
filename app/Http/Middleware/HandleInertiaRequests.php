@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Enums\ClientRole;
 use App\Http\Controllers\Admin\ImpersonationController;
+use App\Http\Controllers\DashboardController;
 use App\Models\ClientAccount;
 use App\Services\Announcements\AnnouncementBoard;
 use Illuminate\Http\Request;
@@ -48,10 +49,17 @@ class HandleInertiaRequests extends Middleware
                 // Only decides whether the admin link is shown; every admin
                 // route checks the gate again for itself.
                 'isAdmin' => $request->user() !== null && Gate::forUser($request->user())->allows('admin'),
+                // Staff are on the staff side unless they picked one of their own client accounts.
+                'portalSide' => $request->user() !== null
+                    && Gate::forUser($request->user())->allows('admin')
+                    && ! ($request->hasSession() && $request->session()->get(DashboardController::SIDE_SESSION_KEY) === DashboardController::CLIENT_SIDE)
+                    ? DashboardController::STAFF_SIDE
+                    : DashboardController::CLIENT_SIDE,
                 'canManageStaff' => $request->user() !== null && Gate::forUser($request->user())->allows('manage-staff'),
                 // Set only while an admin is signed in as someone else, so
                 // every page can say so rather than looking like a normal visit.
-                'impersonating' => $request->session()->has(ImpersonationController::SESSION_KEY),
+                // No session on an error raised before the session started.
+                'impersonating' => $request->hasSession() && $request->session()->has(ImpersonationController::SESSION_KEY),
             ],
             'client' => fn (): ?array => $this->clientPortal($request),
             // Staff notices for the banner; none on the admin side.

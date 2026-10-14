@@ -49,6 +49,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('maintenance/{workOrder}/documents/{document}/preview', [ResidentMaintenanceController::class, 'previewDocument'])
             ->name('maintenance.documents.preview');
         Route::get('messages', [ResidentMessageController::class, 'index'])->name('messages.index');
+        Route::get('messages/earlier-media/{media}/{name}', [ResidentMessageController::class, 'earlierMedia'])->whereNumber('media')->name('messages.earlier-media');
         Route::post('messages', [ResidentMessageController::class, 'store'])->middleware('throttle:10,1')->name('messages.store');
         Route::post('messages/{thread}/replies', [ResidentMessageController::class, 'reply'])->whereNumber('thread')->middleware('throttle:30,1')->name('messages.reply');
         Route::get('conversations', [ResidentConversationController::class, 'index'])->name('conversations.index');
@@ -87,6 +88,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('meetings', [OwnerMeetingController::class, 'index'])->name('meetings.index');
 
         Route::get('messages', [OwnerMessageController::class, 'index'])->name('messages.index');
+        Route::get('messages/earlier-media/{media}/{name}', [OwnerMessageController::class, 'earlierMedia'])->whereNumber('media')->name('messages.earlier-media');
         Route::post('messages', [OwnerMessageController::class, 'store'])->middleware('throttle:10,1')->name('messages.store');
         Route::post('messages/{thread}/replies', [OwnerMessageController::class, 'reply'])->whereNumber('thread')->middleware('throttle:30,1')->name('messages.reply');
         Route::get('conversations', [OwnerConversationController::class, 'index'])->name('conversations.index');
@@ -118,4 +120,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('help', [HelpController::class, 'index'])->name('help');
     Route::post('help', [HelpController::class, 'store'])->middleware('throttle:5,1')->name('help.store');
+    Route::get('help/attachments/{attachment}', [HelpController::class, 'attachment'])->name('help.attachments.show');
 });

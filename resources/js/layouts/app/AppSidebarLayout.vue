@@ -32,6 +32,7 @@ const page = usePage();
 const staffSettings = computed(
     () =>
         page.props.auth.isAdmin &&
+        page.props.auth.portalSide === 'staff' &&
         !page.props.auth.impersonating &&
         page.url.startsWith('/settings'),
 );

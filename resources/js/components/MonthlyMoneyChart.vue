@@ -9,21 +9,34 @@ import {
     ChartTooltipContent,
     componentToString,
 } from '@/components/ui/chart';
-import type { OwnerMonthlyTotals } from '@/types';
 
 /**
- * Income against expense, month by month.
+ * Two dollar series, month by month: an owner's income against expense, or
+ * a tenant's charges against payments.
  *
  * Bars rather than a ring: the question is which is bigger and by how much,
  * which length answers and angle does not. Both series are dollars, so they
  * share one axis — never two scales on one chart.
  *
  * Picking a series in the header focuses it, and the scale re-fits so a small
- * series is not left as a sliver against a large one.
+ * series is not left as a sliver against a large one. "All" shows the first
+ * series less the second.
  */
-const props = defineProps<{
-    months: OwnerMonthlyTotals[];
-}>();
+type MonthTotals = { month: string; [series: string]: string | number };
+
+const props = withDefaults(
+    defineProps<{
+        months: MonthTotals[];
+        /** The two series, keyed by their field on each month. */
+        series?: ChartConfig;
+    }>(),
+    {
+        series: () => ({
+            income: { label: 'Income', color: 'var(--chart-income)' },
+            expense: { label: 'Expense', color: 'var(--chart-expense)' },
+        }),
+    },
+);
 
 const money = new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -36,41 +49,48 @@ const exact = new Intl.NumberFormat('en-US', {
     currency: 'USD',
 });
 
-const config = {
-    income: { label: 'Income', color: 'var(--chart-income)' },
-    expense: { label: 'Expense', color: 'var(--chart-expense)' },
-} satisfies ChartConfig;
+const config = computed(() => props.series);
 
-type SeriesKey = keyof typeof config;
+type SeriesKey = string;
 
-const SERIES: SeriesKey[] = ['income', 'expense'];
+const SERIES = computed<SeriesKey[]>(() => Object.keys(props.series));
 
 /** Which series the chart is focused on; both, until one is picked. */
 const focused = ref<SeriesKey | null>(null);
 
 const shown = computed<SeriesKey[]>(() =>
-    focused.value === null ? SERIES : [focused.value],
+    focused.value === null ? SERIES.value : [focused.value],
 );
 
-const totals = computed(() => {
-    const income = props.months.reduce((sum, month) => sum + month.income, 0);
-    const expense = props.months.reduce((sum, month) => sum + month.expense, 0);
+const totals = computed<Record<SeriesKey, number>>(() =>
+    Object.fromEntries(
+        SERIES.value.map((key) => [
+            key,
+            props.months.reduce((sum, month) => sum + Number(month[key]), 0),
+        ]),
+    ),
+);
 
-    return { income, expense, net: income - expense };
+const net = computed(() => {
+    const [first, second] = SERIES.value;
+
+    return (totals.value[first] ?? 0) - (totals.value[second] ?? 0);
 });
 
 /** Unovis plots against numbers, so each month is its position in the list. */
-const data = computed(() =>
+type Datum = MonthTotals & { index: number };
+
+const data = computed<Datum[]>(() =>
     props.months.map((month, index) => ({ ...month, index })),
 );
 
-type Datum = (typeof data.value)[number];
-
 const accessors = computed(() =>
-    shown.value.map((key) => (datum: Datum) => datum[key]),
+    shown.value.map((key) => (datum: Datum) => Number(datum[key])),
 );
 
-const colors = computed(() => shown.value.map((key) => config[key].color));
+const colors = computed(() =>
+    shown.value.map((key) => config.value[key].color),
+);
 
 function monthLabel(month: string): string {
     const [year, monthNumber] = month.split('-').map(Number);
@@ -111,7 +131,7 @@ function focus(key: SeriesKey | null): void {
                     All
                 </span>
                 <span class="text-xl font-semibold tabular-nums">
-                    {{ exact.format(totals.net) }}
+                    {{ exact.format(net) }}
                 </span>
             </button>
             <button

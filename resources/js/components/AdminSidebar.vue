@@ -31,7 +31,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard as clientDashboard } from '@/routes';
+import { update as switchToAccount } from '@/routes/accounts';
 import {
     activity,
     dashboard,
@@ -76,6 +76,17 @@ const outreachItems = computed<NavItem[]>(() => [
 
 const page = usePage();
 
+/**
+ * The way into the client portal, for staff whose login also holds owner or
+ * resident accounts: the one they last used, or their first. Picking it keeps
+ * them on the client side until they come back here.
+ */
+const clientAccount = computed(() => {
+    const accounts = page.props.client?.accounts ?? [];
+
+    return accounts.find((account) => account.active) ?? accounts[0] ?? null;
+});
+
 /** Staff only shows for those who may manage it: owners and admins. */
 const systemItems = computed<NavItem[]>(() => [
     ...(page.props.auth.canManageStaff
@@ -109,9 +120,13 @@ const systemItems = computed<NavItem[]>(() => [
                         </a>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
+                <SidebarMenuItem v-if="clientAccount">
                     <SidebarMenuButton as-child>
-                        <Link :href="clientDashboard()">
+                        <Link
+                            :href="switchToAccount(clientAccount.id)"
+                            as="button"
+                            data-test="client-portal"
+                        >
                             <ArrowLeftRight />
                             <span>Client portal</span>
                         </Link>

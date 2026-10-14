@@ -76,7 +76,7 @@ class DemoMode
         $default = config('cache.default');
 
         // Captured before the config below is overwritten: the real systems a demo request must never reach.
-        $real = collect(['services.propertyware.base_url', 'services.chat_hub.url', 'services.tx_cma.url', 'services.leads.webhook_url', 'services.expo.url'])
+        $real = collect(['services.propertyware.base_url', 'services.chat_hub.url', 'services.tx_cma.url', 'services.tx_maintenance.url', 'services.leads.webhook_url', 'services.expo.url'])
             ->map(fn (string $key): mixed => parse_url((string) config($key), PHP_URL_HOST))
             ->filter(fn (mixed $host): bool => is_string($host) && $host !== '' && ! str_ends_with($host, '.demo.invalid'))
             ->values()
@@ -92,6 +92,8 @@ class DemoMode
             'services.chat_hub.token' => 'demo',
             'services.tx_cma.url' => 'https://'.DemoBackend::LISTINGS,
             'services.tx_cma.token' => 'demo',
+            // Demo logins have no earlier work order texts.
+            'services.tx_maintenance.url' => null,
             'services.leads.webhook_url' => 'https://'.DemoBackend::LEADS.'/referrals',
             'services.expo.url' => 'https://'.DemoBackend::EXPO,
             // The same store under its own prefix, so a shared key such as the

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { Building2, Search, SearchX } from '@lucide/vue';
+import { Building2, ExternalLink, Search, SearchX } from '@lucide/vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -35,6 +35,10 @@ const props = defineProps<{
     properties?: PropertiesPage | null;
 }>();
 
+// Onboarding lives in the maintenance site, not the portal, so owners finish it in a new tab.
+const onboardingUrl =
+    'https://maintenance.texasrenters.com/onboarding/building';
+
 const { filters, isLoading, isFiltered, clearFilters, goToPage } =
     useServerFilters({
         url: propertiesRoute.url(),
@@ -50,7 +54,16 @@ const { filters, isLoading, isFiltered, clearFilters, goToPage } =
         <PageHeader
             title="Properties"
             description="Every property TexasRenters.com manages for you, with occupancy at a glance."
-        />
+        >
+            <template #actions>
+                <Button as-child class="shrink-0">
+                    <a :href="onboardingUrl" target="_blank" rel="noreferrer">
+                        Onboard a new property
+                        <ExternalLink />
+                    </a>
+                </Button>
+            </template>
+        </PageHeader>
 
         <div
             v-if="properties === undefined"

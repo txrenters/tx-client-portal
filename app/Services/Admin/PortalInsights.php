@@ -4,6 +4,7 @@ namespace App\Services\Admin;
 
 use App\Models\ClientAccount;
 use App\Models\ClientInvitation;
+use App\Models\LandingPageEvent;
 use App\Models\PortalVisit;
 use App\Models\SignInEvent;
 use App\Models\User;
@@ -61,6 +62,38 @@ class PortalInsights
                     $day = $byDay->get($date, collect());
 
                     return ['date' => $date, 'web' => $day->where('channel', 'web')->count(), 'app' => $day->where('channel', 'app')->count()];
+                })
+                ->all(),
+        ];
+    }
+
+    /**
+     * Anonymous landing page visitors over the last month, and how many went
+     * on to play the tutorial, sign up or sign in the same day.
+     *
+     * @return array{visitors: int, tutorialPlays: int, signUps: int, signIns: int, daily: array<int, array{date: string, visitors: int}>}
+     */
+    public function landing(): array
+    {
+        $zone = config('app.display_timezone', config('app.timezone'));
+        $from = now($zone)->subDays(self::ACTIVITY_DAYS - 1)->toDateString();
+        $counts = LandingPageEvent::query()
+            ->where('day', '>=', $from)
+            ->get(['day', 'event'])
+            ->groupBy('event');
+        $visitorsByDay = ($counts->get(LandingPageTracker::VIEW) ?? collect())
+            ->countBy(fn (LandingPageEvent $event): string => $event->day->toDateString());
+
+        return [
+            'visitors' => ($counts->get(LandingPageTracker::VIEW) ?? collect())->count(),
+            'tutorialPlays' => ($counts->get(LandingPageTracker::TUTORIAL_PLAY) ?? collect())->count(),
+            'signUps' => ($counts->get(LandingPageTracker::SIGN_UP) ?? collect())->count(),
+            'signIns' => ($counts->get(LandingPageTracker::SIGN_IN) ?? collect())->count(),
+            'daily' => collect(range(self::ACTIVITY_DAYS - 1, 0))
+                ->map(function (int $daysAgo) use ($visitorsByDay, $zone): array {
+                    $date = now($zone)->subDays($daysAgo)->toDateString();
+
+                    return ['date' => $date, 'visitors' => (int) $visitorsByDay->get($date, 0)];
                 })
                 ->all(),
         ];

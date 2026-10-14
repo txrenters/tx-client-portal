@@ -10,6 +10,7 @@ import VendorList from '@/components/VendorList.vue';
 import MaintenanceStatusBadge from '@/components/MaintenanceStatusBadge.vue';
 import AppCard from '@/components/AppCard.vue';
 import ConversationList from '@/components/ConversationList.vue';
+import EarlierTexts from '@/components/EarlierTexts.vue';
 import CollapsibleCard from '@/components/CollapsibleCard.vue';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFormattedDate } from '@/composables/useFormattedDate';
@@ -20,7 +21,12 @@ import {
     download as downloadDocument,
     preview as previewDocument,
 } from '@/routes/resident/maintenance/documents';
-import type { Conversation, PortalDocument, WorkOrderDetail } from '@/types';
+import type {
+    ChatConversation,
+    Conversation,
+    PortalDocument,
+    WorkOrderDetail,
+} from '@/types';
 
 defineOptions({
     layout: {
@@ -36,6 +42,8 @@ const props = defineProps<{
     documents?: PortalDocument[] | null;
     /** Undefined while loading, null when it failed. */
     conversations?: Conversation[] | null;
+    /** Texts about this work order from before the messaging hub. */
+    earlierTexts?: ChatConversation | null;
 }>();
 
 const downloadUrl = (id: string): string =>
@@ -140,6 +148,9 @@ const heading = props.workOrder.number
                                 ({{ conversations.length }})
                             </template>
                         </TabsTrigger>
+                        <TabsTrigger v-if="earlierTexts" value="texts">
+                            Texts ({{ earlierTexts.messages.length }})
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="attachments">
@@ -196,6 +207,15 @@ const heading = props.workOrder.number
                                 :conversations="conversations"
                                 :show-property="false"
                             />
+                        </AppCard>
+                    </TabsContent>
+
+                    <TabsContent v-if="earlierTexts" value="texts">
+                        <AppCard
+                            title="Earlier texts"
+                            description="Texts about this work order from before our new messaging."
+                        >
+                            <EarlierTexts :messages="earlierTexts.messages" />
                         </AppCard>
                     </TabsContent>
                 </Tabs>

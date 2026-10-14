@@ -291,6 +291,8 @@ export type ChatThread = {
     phone?: string | null;
     /** What the conversation is about, when the client picked a category. */
     category?: 'leasing' | 'accounting' | 'maintenance' | null;
+    /** Work order texts from before the messaging hub: closed, with a negative id. */
+    isHistory?: boolean;
 };
 
 export type ChatThreadMessage = {
@@ -390,8 +392,16 @@ export type LeaseLedger = {
     results: Paginated<LeaseLedgerEntry>;
     charged: number;
     paid: number;
+    /** The last 12 months, oldest first, for the dashboard chart. */
+    months: LeaseMonthlyTotals[];
     from: string;
     to: string;
+};
+
+export type LeaseMonthlyTotals = {
+    month: string;
+    charged: number;
+    paid: number;
 };
 
 /** What an owner has been billed, by portfolio. */
@@ -548,6 +558,17 @@ export type Announcement = {
 };
 
 /** A request for help with the portal or the app, as the client sees it. */
+/** A screenshot or file sent with a help request, behind a checked link. */
+export type HelpRequestAttachment = {
+    id: number;
+    name: string;
+    mimeType: string;
+    size: number;
+    /** Whether a browser can draw it, so it is shown as a thumbnail. */
+    isImage: boolean;
+    url: string;
+};
+
 export type HelpRequest = {
     id: number;
     topic: string;
@@ -560,6 +581,7 @@ export type HelpRequest = {
     staffNote: string | null;
     resolvedAt: string | null;
     sentAt: string;
+    attachments: HelpRequestAttachment[];
 };
 
 /** A promotion popping up for the client today (the referral program first). */

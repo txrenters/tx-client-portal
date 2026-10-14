@@ -30,6 +30,15 @@ return [
         'verify' => env('CHAT_HUB_VERIFY', true),
     ],
 
+    // tx-maintenance: the texts a client exchanged about their work orders
+    // before the messaging hub took over, shown as closed history.
+    'tx_maintenance' => [
+        'url' => env('TX_MAINTENANCE_URL'),
+        'token' => env('TX_MAINTENANCE_TOKEN'),
+        // TLS check: true by default, or a CA bundle path for local .test sites.
+        'verify' => env('TX_MAINTENANCE_VERIFY', true),
+    ],
+
     // tx-cma: our MLS listing data, used for property photos.
     'tx_cma' => [
         'url' => env('TX_CMA_URL'),

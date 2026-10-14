@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Client;
 
 use App\Enums\ClientRole;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\DashboardController;
 use App\Http\Middleware\EnsureClientRole;
 use App\Models\ClientAccount;
 use Illuminate\Http\RedirectResponse;
@@ -44,6 +45,8 @@ class AccountController extends Controller
         $role = $clientAccount->role;
 
         $request->session()->put(EnsureClientRole::SESSION_KEY, $role->value);
+        // Staff who also hold client accounts stay on this side until they go back to the admin area.
+        $request->session()->put(DashboardController::SIDE_SESSION_KEY, DashboardController::CLIENT_SIDE);
 
         $request->session()->put(
             EnsureClientRole::ACCOUNT_SESSION_KEY.':'.$role->value,

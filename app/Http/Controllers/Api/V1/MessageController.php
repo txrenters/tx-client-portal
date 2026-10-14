@@ -10,8 +10,10 @@ use App\Http\Requests\Client\StartConversationRequest;
 use App\Models\ClientAccount;
 use App\Services\ChatHub\ChatHubException;
 use App\Services\ChatHub\ClientConversations;
+use App\Services\Maintenance\EarlierWorkOrderTexts;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
  * The account's conversations with TexasRenters.com support and maintenance.
@@ -74,6 +76,25 @@ class MessageController extends Controller
                 'channel' => "contacts.{$account->propertyware_id}.messages",
             ],
         ]);
+    }
+
+    /**
+     * Work order texts from before the messaging hub, each a closed conversation
+     * with its messages and a negative id. Empty when there are none or
+     * tx-maintenance can't be reached right now.
+     */
+    public function history(ClientAccount $account, EarlierWorkOrderTexts $earlierTexts): JsonResponse
+    {
+        return response()->json(['data' => $earlierTexts->conversations($account, EarlierWorkOrderTexts::API) ?? []]);
+    }
+
+    /**
+     * A file on one of the account's earlier work order texts. The paths in
+     * the history's mediaUrls point here.
+     */
+    public function earlierMedia(ClientAccount $account, int $media, string $name, EarlierWorkOrderTexts $earlierTexts): SymfonyResponse
+    {
+        return $earlierTexts->attachment($account, $media, $name) ?? abort(404);
     }
 
     /**

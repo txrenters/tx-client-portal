@@ -341,7 +341,9 @@ function when(value: string | null): string {
         </AppCard>
 
         <Dialog v-model:open="dialogOpen">
-            <DialogContent class="sm:max-w-lg">
+            <DialogContent
+                class="flex max-h-[calc(100dvh-2rem)] flex-col sm:max-w-lg"
+            >
                 <DialogHeader>
                     <DialogTitle>Invite a client</DialogTitle>
                     <DialogDescription>
@@ -351,141 +353,165 @@ function when(value: string | null): string {
                     </DialogDescription>
                 </DialogHeader>
 
-                <form class="grid gap-4" @submit.prevent="send">
-                    <div class="grid gap-2">
-                        <Label for="invite-email">Email address</Label>
-                        <Input
-                            id="invite-email"
-                            v-model="form.email"
-                            type="email"
-                            autocomplete="off"
-                            required
-                        />
-                        <InputError :message="form.errors.email" />
-                    </div>
-
+                <form
+                    class="flex min-h-0 flex-col gap-4"
+                    @submit.prevent="send"
+                >
+                    <!-- Only the fields scroll; the title and buttons stay put. -->
                     <div
-                        v-if="looking"
-                        class="text-muted-foreground flex items-center gap-2 text-sm"
+                        class="-mx-4 grid min-h-0 gap-4 overflow-y-auto px-4 py-1"
                     >
-                        <Spinner class="size-4" /> Looking in Propertyware…
-                    </div>
-                    <template
-                        v-else-if="contacts && contacts.email === form.email"
-                    >
-                        <p
-                            v-if="contacts.error"
-                            class="text-destructive text-sm"
-                        >
-                            {{ contacts.error }}
-                        </p>
-                        <p
-                            v-else-if="contacts.results.length === 0"
-                            class="text-muted-foreground text-sm"
-                        >
-                            No Propertyware tenant or owner uses this address.
-                            Enter the contact ID by hand if you know it.
-                        </p>
-                        <div v-else class="grid gap-2">
-                            <p class="text-sm font-medium">
-                                Propertyware records with this email
-                            </p>
-                            <button
-                                v-for="contact in contacts.results"
-                                :key="`${contact.role}-${contact.id}`"
-                                type="button"
-                                class="border-border hover:bg-muted data-[chosen=true]:border-primary data-[chosen=true]:bg-primary/5 flex items-start justify-between gap-3 rounded-lg border p-3 text-left disabled:cursor-not-allowed disabled:opacity-60"
-                                :data-chosen="
-                                    form.propertyware_id === contact.id &&
-                                    form.role === contact.role
-                                "
-                                :disabled="
-                                    contact.linkedTo !== null ||
-                                    contact.pendingInvitation
-                                "
-                                @click="choose(contact)"
-                            >
-                                <span class="min-w-0">
-                                    <span class="block text-sm font-medium">{{
-                                        contact.name || 'Unnamed'
-                                    }}</span>
-                                    <span
-                                        class="text-muted-foreground block text-xs"
-                                    >
-                                        #{{ contact.id }} ·
-                                        <template
-                                            v-if="contact.role === 'owner'"
-                                            >{{
-                                                contact.portfolios
-                                            }}
-                                            portfolio(s)</template
-                                        ><template v-else
-                                            >{{
-                                                contact.leases
-                                            }}
-                                            lease(s)</template
-                                        >
-                                    </span>
-                                    <span
-                                        v-if="contact.linkedTo"
-                                        class="text-muted-foreground block text-xs"
-                                        >Already on the portal as
-                                        {{ contact.linkedTo }}</span
-                                    >
-                                    <span
-                                        v-else-if="contact.pendingInvitation"
-                                        class="text-muted-foreground block text-xs"
-                                        >Already has a pending invitation</span
-                                    >
-                                </span>
-                                <Badge variant="outline" class="capitalize">{{
-                                    contact.role
-                                }}</Badge>
-                            </button>
-                        </div>
-                    </template>
-
-                    <div class="grid gap-2">
-                        <Label for="invite-name">Name for the email</Label>
-                        <Input
-                            id="invite-name"
-                            v-model="form.name"
-                            autocomplete="off"
-                            required
-                        />
-                        <InputError :message="form.errors.name" />
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
                         <div class="grid gap-2">
-                            <Label for="invite-role">Portal</Label>
-                            <Select v-model="form.role">
-                                <SelectTrigger id="invite-role" class="w-full">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="resident"
-                                        >Resident</SelectItem
-                                    >
-                                    <SelectItem value="owner">Owner</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <InputError :message="form.errors.role" />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="invite-contact"
-                                >Propertyware contact ID</Label
-                            >
+                            <Label for="invite-email">Email address</Label>
                             <Input
-                                id="invite-contact"
-                                v-model="form.propertyware_id"
-                                inputmode="numeric"
+                                id="invite-email"
+                                v-model="form.email"
+                                type="email"
                                 autocomplete="off"
                                 required
                             />
+                            <InputError :message="form.errors.email" />
                         </div>
+
+                        <div
+                            v-if="looking"
+                            class="text-muted-foreground flex items-center gap-2 text-sm"
+                        >
+                            <Spinner class="size-4" /> Looking in Propertyware…
+                        </div>
+                        <template
+                            v-else-if="
+                                contacts && contacts.email === form.email
+                            "
+                        >
+                            <p
+                                v-if="contacts.error"
+                                class="text-destructive text-sm"
+                            >
+                                {{ contacts.error }}
+                            </p>
+                            <p
+                                v-else-if="contacts.results.length === 0"
+                                class="text-muted-foreground text-sm"
+                            >
+                                No Propertyware tenant or owner uses this
+                                address. Enter the contact ID by hand if you
+                                know it.
+                            </p>
+                            <div v-else class="grid gap-2">
+                                <p class="text-sm font-medium">
+                                    Propertyware records with this email
+                                </p>
+                                <button
+                                    v-for="contact in contacts.results"
+                                    :key="`${contact.role}-${contact.id}`"
+                                    type="button"
+                                    class="border-border hover:bg-muted data-[chosen=true]:border-primary data-[chosen=true]:bg-primary/5 flex items-start justify-between gap-3 rounded-lg border p-3 text-left disabled:cursor-not-allowed disabled:opacity-60"
+                                    :data-chosen="
+                                        form.propertyware_id === contact.id &&
+                                        form.role === contact.role
+                                    "
+                                    :disabled="
+                                        contact.linkedTo !== null ||
+                                        contact.pendingInvitation
+                                    "
+                                    @click="choose(contact)"
+                                >
+                                    <span class="min-w-0">
+                                        <span
+                                            class="block text-sm font-medium"
+                                            >{{
+                                                contact.name || 'Unnamed'
+                                            }}</span
+                                        >
+                                        <span
+                                            class="text-muted-foreground block text-xs"
+                                        >
+                                            #{{ contact.id }} ·
+                                            <template
+                                                v-if="contact.role === 'owner'"
+                                                >{{
+                                                    contact.portfolios
+                                                }}
+                                                portfolio(s)</template
+                                            ><template v-else
+                                                >{{
+                                                    contact.leases
+                                                }}
+                                                lease(s)</template
+                                            >
+                                        </span>
+                                        <span
+                                            v-if="contact.linkedTo"
+                                            class="text-muted-foreground block text-xs"
+                                            >Already on the portal as
+                                            {{ contact.linkedTo }}</span
+                                        >
+                                        <span
+                                            v-else-if="
+                                                contact.pendingInvitation
+                                            "
+                                            class="text-muted-foreground block text-xs"
+                                            >Already has a pending
+                                            invitation</span
+                                        >
+                                    </span>
+                                    <Badge
+                                        variant="outline"
+                                        class="capitalize"
+                                        >{{ contact.role }}</Badge
+                                    >
+                                </button>
+                            </div>
+                        </template>
+
+                        <div class="grid gap-2">
+                            <Label for="invite-name">Name for the email</Label>
+                            <Input
+                                id="invite-name"
+                                v-model="form.name"
+                                autocomplete="off"
+                                required
+                            />
+                            <InputError :message="form.errors.name" />
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="grid gap-2">
+                                <Label for="invite-role">Portal</Label>
+                                <Select v-model="form.role">
+                                    <SelectTrigger
+                                        id="invite-role"
+                                        class="w-full"
+                                    >
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="resident"
+                                            >Resident</SelectItem
+                                        >
+                                        <SelectItem value="owner"
+                                            >Owner</SelectItem
+                                        >
+                                    </SelectContent>
+                                </Select>
+                                <InputError :message="form.errors.role" />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label for="invite-contact"
+                                    >Propertyware contact ID</Label
+                                >
+                                <Input
+                                    id="invite-contact"
+                                    v-model="form.propertyware_id"
+                                    inputmode="numeric"
+                                    autocomplete="off"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <InputError :message="form.errors.propertyware_id" />
                     </div>
-                    <InputError :message="form.errors.propertyware_id" />
 
                     <DialogFooter>
                         <Button

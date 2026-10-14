@@ -43,7 +43,6 @@ import type { ClientRole, NavGroup, NavItem } from '@/types';
 
 export type UseClientNavigationReturn = {
     activeRole: ComputedRef<ClientRole | null>;
-    availableRoles: ComputedRef<ClientRole[]>;
     mainNavGroups: ComputedRef<NavGroup[]>;
     secondaryNavItems: ComputedRef<NavItem[]>;
     mobileNavItems: ComputedRef<NavItem[]>;
@@ -144,7 +143,6 @@ const referralNavItems = (role: ClientRole | null): NavItem[] => {
 export function useClientNavigation(): UseClientNavigationReturn {
     const page = usePage();
     const activeRole = computed(() => page.props.client?.activeRole ?? null);
-    const availableRoles = computed(() => page.props.client?.roles ?? []);
 
     const mainNavGroups = computed<NavGroup[]>(() => {
         if (activeRole.value === 'owner') {
@@ -157,7 +155,9 @@ export function useClientNavigation(): UseClientNavigationReturn {
     const secondaryNavItems = computed<NavItem[]>(() => [
         ...referralNavItems(activeRole.value),
         // Staff only; the server decides, and every admin route checks again.
-        ...(page.props.auth?.isAdmin
+        // Staff with client accounts of their own switch with the account switcher instead.
+        ...(page.props.auth?.isAdmin &&
+        (page.props.client?.accounts ?? []).length === 0
             ? [{ title: 'Admin', href: adminDashboard(), icon: ShieldCheck }]
             : []),
         { title: 'Help', href: help(), icon: CircleQuestionMark },
@@ -200,7 +200,6 @@ export function useClientNavigation(): UseClientNavigationReturn {
 
     return {
         activeRole,
-        availableRoles,
         mainNavGroups,
         secondaryNavItems,
         mobileNavItems,

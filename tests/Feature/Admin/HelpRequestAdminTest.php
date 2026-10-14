@@ -3,7 +3,9 @@
 use App\Enums\HelpRequestStatus;
 use App\Models\AdminAction;
 use App\Models\HelpRequest;
+use App\Models\HelpRequestAttachment;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia;
 
 beforeEach(function () {
@@ -67,4 +69,18 @@ test('clients cannot see or settle help requests', function () {
     $this->actingAs($client)->patch(route('admin.help-requests.update', $request), ['status' => 'resolved'])->assertForbidden();
 
     expect($request->fresh()->status)->toBe(HelpRequestStatus::Open);
+});
+
+test('staff see and open the files a client attached', function () {
+    Storage::fake('local');
+    $attachment = HelpRequestAttachment::factory()->create(['path' => 'help-requests/9/shot.png']);
+    Storage::disk('local')->put('help-requests/9/shot.png', 'png-bytes');
+
+    $this->actingAs($this->admin)->get(route('admin.help-requests.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('requests.data.0.attachments.0.url', route('admin.help-requests.attachments.show', $attachment)));
+
+    $this->actingAs($this->admin)->get(route('admin.help-requests.attachments.show', $attachment))->assertOk();
+
+    $this->actingAs(User::factory()->create())->get(route('admin.help-requests.attachments.show', $attachment))->assertForbidden();
 });

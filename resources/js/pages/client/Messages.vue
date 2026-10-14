@@ -11,7 +11,6 @@ import { useEcho } from '@laravel/echo-vue';
 import {
     ArrowLeft,
     Check,
-    FileText,
     MessageSquare,
     Paperclip,
     Plus,
@@ -22,14 +21,14 @@ import {
     X,
 } from '@lucide/vue';
 import { watchDebounced } from '@vueuse/core';
-import { computed, nextTick, ref, watch } from 'vue';
-import ConversationList from '@/components/ConversationList.vue';
+import type { ComponentPublicInstance } from 'vue';
+import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import FilePreviewInput from '@/components/FilePreviewInput.vue';
 import InputError from '@/components/InputError.vue';
 import LinkifiedText from '@/components/LinkifiedText.vue';
-import LoadingSkeleton from '@/components/LoadingSkeleton.vue';
+import MessageAttachment from '@/components/MessageAttachment.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -79,7 +78,6 @@ import {
 } from '@/components/ui/tooltip';
 import { Textarea } from '@/components/ui/textarea';
 import { dashboard as ownerDashboard } from '@/routes/owner';
-import { index as ownerConversations } from '@/routes/owner/conversations';
 import { show as ownerWorkOrder } from '@/routes/owner/maintenance';
 import {
     index as ownerMessages,
@@ -87,7 +85,6 @@ import {
     store as ownerStore,
 } from '@/routes/owner/messages';
 import { dashboard as residentDashboard } from '@/routes/resident';
-import { index as residentConversations } from '@/routes/resident/conversations';
 import { show as residentWorkOrder } from '@/routes/resident/maintenance';
 import {
     index as residentMessages,
@@ -101,12 +98,7 @@ import {
     appDayOffset,
     isSameAppDay,
 } from '@/lib/timezone';
-import type {
-    ChatConversation,
-    ChatThreadMessage,
-    ChatThread,
-    Conversation,
-} from '@/types';
+import type { ChatConversation, ChatThreadMessage, ChatThread } from '@/types';
 
 /**
  * Conversations with TexasRenters.com support and maintenance. They live in
@@ -150,11 +142,8 @@ const props = defineProps<{
     /** Loaded after the page, then page by page as the list scrolls. */
     threads?: { data: ChatThread[] };
     conversation?: ChatConversation | null;
-    /** Calls and emails our office logged against the client's own record. */
-    accountConversations?: {
-        total: number;
-        conversations: Conversation[];
-    } | null;
+    /** Work order texts from before the messaging hub, as closed conversations. */
+    earlierTexts?: ChatThread[] | null;
 }>();
 
 const routes =
@@ -164,14 +153,12 @@ const routes =
               reply: ownerReply,
               store: ownerStore,
               workOrder: ownerWorkOrder,
-              conversations: ownerConversations,
           }
         : {
               index: residentMessages,
               reply: residentReply,
               store: residentStore,
               workOrder: residentWorkOrder,
-              conversations: residentConversations,
           };
 
 /**
@@ -379,14 +366,6 @@ function initials(name: string | null): string {
         .toUpperCase();
 }
 
-function isImage(url: string): boolean {
-    return /\.(jpe?g|png|gif|webp|heic|heif)(\?|$)/i.test(url);
-}
-
-function fileName(url: string): string {
-    return decodeURIComponent(url.split('?')[0].split('/').pop() ?? 'File');
-}
-
 type Row = {
     message: ChatThreadMessage;
     /** The message's attachments, plus those of attachment-only messages folded into it. */
@@ -488,6 +467,32 @@ const listedThreads = computed<ChatThread[]>(() => {
                   },
               },
     );
+});
+
+/**
+ * The earlier work order texts the applied filters allow. They are all closed,
+ * so they drop out when only open conversations are asked for.
+ */
+const listedEarlierTexts = computed<ChatThread[]>(() => {
+    const { search, status: shownStatus, from, to } = props.filters;
+
+    if (!props.earlierTexts || shownStatus === 'open') {
+        return [];
+    }
+
+    const term = (search ?? '').trim().toLowerCase();
+
+    return props.earlierTexts.filter((thread) => {
+        const day = thread.updatedAt?.slice(0, 10) ?? '';
+        const text =
+            `${thread.subject} ${thread.lastMessage?.preview ?? ''} ${thread.workOrderNumber ?? ''}`.toLowerCase();
+
+        return (
+            (!term || text.includes(term)) &&
+            (!from || day >= from) &&
+            (!to || day <= to)
+        );
+    });
 });
 
 /** Conversations opened on this page; the server records them as read too. */
@@ -642,6 +647,51 @@ watch(
     { immediate: true },
 );
 
+/** The conversation list's own scroll box (wide screens; phones scroll the page). */
+const listCard = useTemplateRef<ComponentPublicInstance>('listCard');
+
+/** A change arrived while the client was scrolled down the list. */
+const hasNewActivity = ref(false);
+
+/** Whether the client has scrolled away from the top of the list. */
+function isListScrolled(): boolean {
+    const box = listCard.value?.$el as HTMLElement | undefined;
+
+    return (box?.scrollTop ?? 0) > 40 || window.scrollY > 200;
+}
+
+/** The list from its first page again, newest change first, scrolled to the top. */
+function showNewActivity(): void {
+    hasNewActivity.value = false;
+
+    // Without the list's page number, which it keeps in the address as it
+    // scrolls: a plain reload would start over at that page, not the newest.
+    router.get(
+        routes.index.url(),
+        {
+            ...filterQuery(),
+            ...(props.selectedThreadId
+                ? { thread: props.selectedThreadId }
+                : {}),
+        },
+        {
+            only: ['threads'],
+            reset: ['threads'],
+            preserveState: true,
+            replace: true,
+            // After the list is back: the visit puts back where it was scrolled.
+            onSuccess: () => {
+                nextTick(() => {
+                    (listCard.value?.$el as HTMLElement | undefined)?.scrollTo({
+                        top: 0,
+                    });
+                    window.scrollTo({ top: 0 });
+                });
+            },
+        },
+    );
+}
+
 if (props.available) {
     useEcho<{ threadId: number }>(
         `contacts.${props.contactId}.messages`,
@@ -651,14 +701,21 @@ if (props.available) {
                 return;
             }
 
-            router.reload({
-                only:
-                    event.threadId === props.selectedThreadId
-                        ? ['threads', 'conversation']
-                        : ['threads'],
-                // The updated conversation moves to the top, so the list starts over.
-                reset: ['threads'],
-            });
+            if (event.threadId === props.selectedThreadId) {
+                router.reload({ only: ['conversation'] });
+            }
+
+            // Starting the list over moves it back to its first page, which
+            // threw the client back up while they were scrolling down (every
+            // delivery update does this). Offer it instead, unless they are at
+            // the top anyway.
+            if (isListScrolled()) {
+                hasNewActivity.value = true;
+
+                return;
+            }
+
+            showNewActivity();
         },
     );
 }
@@ -854,13 +911,18 @@ watch(
             />
         </Card>
 
+        <!--
+          On wide screens both columns share one height that fits the window and
+          scroll on their own, and reaching the end of one never scrolls the
+          page (overscroll-contain), so nothing jumps or slips under the top bar.
+        -->
         <div
             v-else
-            class="grid items-start gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]"
+            class="grid items-start gap-4 lg:h-[calc(100dvh-12rem)] lg:min-h-[28rem] lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-stretch"
         >
-            <!-- Conversation list: its own length, paged. -->
+            <!-- Conversation list: paged as it scrolls. -->
             <div
-                class="flex flex-col gap-3"
+                class="flex flex-col gap-3 lg:min-h-0"
                 :class="{ 'hidden lg:flex': selectedThreadId !== null }"
             >
                 <div class="flex items-center gap-2">
@@ -1019,7 +1081,23 @@ watch(
                     </DialogContent>
                 </Dialog>
 
-                <Card class="glass gap-0 overflow-hidden rounded-2xl py-0">
+                <Card
+                    ref="listCard"
+                    class="glass relative gap-0 overflow-hidden rounded-2xl py-0 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain"
+                >
+                    <!-- Changes that came in while the client was scrolled down. -->
+                    <div
+                        v-if="hasNewActivity"
+                        class="sticky top-2 z-10 flex justify-center px-3 pt-2"
+                    >
+                        <Button
+                            size="sm"
+                            class="rounded-full shadow-md"
+                            @click="showNewActivity"
+                        >
+                            New activity · Show
+                        </Button>
+                    </div>
                     <div
                         v-if="threads === undefined"
                         class="flex flex-col gap-2 p-3"
@@ -1034,7 +1112,10 @@ watch(
                     </div>
 
                     <EmptyState
-                        v-else-if="threads.data.length === 0"
+                        v-else-if="
+                            threads.data.length === 0 &&
+                            listedEarlierTexts.length === 0
+                        "
                         class="p-4"
                         :icon="MessageSquare"
                         :title="isFiltered ? 'No matches' : 'No messages yet'"
@@ -1204,12 +1285,113 @@ watch(
                             </li>
                         </template>
                     </InfiniteScroll>
+
+                    <!-- Work order texts from before the hub: closed, read-only. -->
+                    <template v-if="listedEarlierTexts.length > 0">
+                        <p
+                            class="text-muted-foreground border-border/60 bg-muted/30 border-y px-3 py-2 text-xs font-medium"
+                        >
+                            Earlier work order texts
+                        </p>
+                        <ul class="divide-border/60 divide-y">
+                            <li
+                                v-for="thread in listedEarlierTexts"
+                                :key="thread.id"
+                            >
+                                <button
+                                    type="button"
+                                    class="hover:bg-muted/50 focus-visible:ring-ring/60 flex w-full items-start gap-3 px-3 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                                    :class="{
+                                        'bg-primary/5':
+                                            thread.id === selectedThreadId,
+                                    }"
+                                    :aria-current="
+                                        thread.id === selectedThreadId
+                                            ? 'true'
+                                            : undefined
+                                    "
+                                    @click="open(thread.id)"
+                                >
+                                    <span
+                                        class="bg-muted text-muted-foreground mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full"
+                                    >
+                                        <Wrench
+                                            class="size-4"
+                                            aria-hidden="true"
+                                        />
+                                    </span>
+                                    <span
+                                        class="flex min-w-0 flex-1 flex-col gap-0.5"
+                                    >
+                                        <span
+                                            class="flex items-baseline justify-between gap-2"
+                                        >
+                                            <span
+                                                class="truncate text-sm font-medium"
+                                                >{{ thread.subject }}</span
+                                            >
+                                            <span
+                                                class="text-muted-foreground shrink-0 text-xs"
+                                                >{{
+                                                    listTime(thread.updatedAt)
+                                                }}</span
+                                            >
+                                        </span>
+                                        <span
+                                            v-if="thread.lastMessage"
+                                            class="text-muted-foreground line-clamp-1 text-xs"
+                                        >
+                                            <template
+                                                v-if="
+                                                    thread.lastMessage
+                                                        .fromClient
+                                                "
+                                                >You: </template
+                                            >{{
+                                                thread.lastMessage.preview ||
+                                                (thread.lastMessage
+                                                    .hasAttachment
+                                                    ? 'Sent a file'
+                                                    : '')
+                                            }}
+                                        </span>
+                                        <span
+                                            class="flex flex-wrap items-center gap-1.5 pt-0.5"
+                                        >
+                                            <Badge
+                                                variant="secondary"
+                                                class="h-5 border-transparent px-1.5 text-[10px] font-medium"
+                                                :class="
+                                                    categoryTint.maintenance
+                                                "
+                                            >
+                                                {{ categoryLabel.maintenance }}
+                                            </Badge>
+                                            <Badge
+                                                v-if="thread.workOrderNumber"
+                                                variant="outline"
+                                                class="h-5 px-1.5 text-[10px]"
+                                                >WO #{{
+                                                    thread.workOrderNumber
+                                                }}</Badge
+                                            >
+                                            <Badge
+                                                variant="outline"
+                                                class="h-5 px-1.5 text-[10px]"
+                                                >Closed</Badge
+                                            >
+                                        </span>
+                                    </span>
+                                </button>
+                            </li>
+                        </ul>
+                    </template>
                 </Card>
             </div>
 
-            <!-- Selected conversation: fits the screen and stays in view. -->
+            <!-- Selected conversation: fits the screen, beside the list on wide screens. -->
             <Card
-                class="glass flex h-[calc(100dvh-10rem)] min-h-[26rem] min-w-0 flex-col gap-0 overflow-hidden rounded-2xl py-0 lg:sticky lg:top-4"
+                class="glass flex h-[calc(100dvh-10rem)] min-h-[26rem] min-w-0 flex-col gap-0 overflow-hidden rounded-2xl py-0 lg:h-auto lg:min-h-0"
                 :class="{ 'hidden lg:flex': selectedThreadId === null }"
             >
                 <div
@@ -1280,6 +1462,9 @@ watch(
                                             : 'Support'
                                     }}
                                 </template>
+                                <template v-if="conversation.thread.isHistory">
+                                    · Texts from before our new messaging
+                                </template>
                                 <template v-if="conversation.thread.phone">
                                     · Also texted to
                                     {{ conversation.thread.phone }}
@@ -1295,7 +1480,7 @@ watch(
 
                     <ol
                         ref="messageList"
-                        class="bg-muted/20 flex flex-1 flex-col gap-1.5 overflow-y-auto px-4 py-4"
+                        class="bg-muted/20 flex flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain px-4 py-4"
                         aria-live="polite"
                     >
                         <template v-for="row in rows" :key="row.message.id">
@@ -1385,34 +1570,7 @@ watch(
                                                 v-for="url in row.media"
                                                 :key="url"
                                             >
-                                                <a
-                                                    v-if="isImage(url)"
-                                                    :href="url"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    class="block w-56 max-w-full overflow-hidden rounded-xl"
-                                                >
-                                                    <img
-                                                        :src="url"
-                                                        alt="Attached photo"
-                                                        loading="lazy"
-                                                        class="w-full object-cover"
-                                                    />
-                                                </a>
-                                                <a
-                                                    v-else
-                                                    :href="url"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    class="bg-card text-foreground hover:bg-muted/60 flex max-w-64 items-center gap-2 rounded-xl border px-3 py-2 text-sm"
-                                                >
-                                                    <FileText
-                                                        class="text-primary size-4 shrink-0"
-                                                    />
-                                                    <span class="truncate">{{
-                                                        fileName(url)
-                                                    }}</span>
-                                                </a>
+                                                <MessageAttachment :url="url" />
                                             </template>
                                         </BubbleContent>
                                     </Bubble>
@@ -1556,56 +1714,5 @@ watch(
                 </template>
             </Card>
         </div>
-
-        <!--
-          Calls and emails our office logged against the client's record rather
-          than one of their properties; a property's own are on its page.
-        -->
-        <section
-            v-if="available && selectedThreadId === null"
-            class="flex flex-col gap-3"
-        >
-            <h2 class="text-base font-semibold">About your account</h2>
-
-            <LoadingSkeleton
-                v-if="accountConversations === undefined"
-                :rows="2"
-            />
-
-            <ErrorState
-                v-else-if="accountConversations === null"
-                description="We couldn't load calls and emails about your account right now."
-            />
-
-            <p
-                v-else-if="accountConversations.total === 0"
-                class="text-muted-foreground text-sm"
-            >
-                Calls and emails our office logs about your account will appear
-                here.
-            </p>
-
-            <template v-else>
-                <ConversationList
-                    :conversations="accountConversations.conversations"
-                    :work-order-href="routes.workOrder"
-                    :show-property="false"
-                />
-                <Link
-                    v-if="
-                        accountConversations.total >
-                        accountConversations.conversations.length
-                    "
-                    :href="
-                        routes.conversations.url({
-                            query: { property: 'account' },
-                        })
-                    "
-                    class="text-primary self-start text-sm font-medium hover:underline"
-                >
-                    View all {{ accountConversations.total }} conversations
-                </Link>
-            </template>
-        </section>
     </div>
 </template>

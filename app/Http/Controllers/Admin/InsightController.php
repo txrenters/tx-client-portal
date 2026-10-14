@@ -27,6 +27,7 @@ class InsightController extends Controller
             ...$insights->summary(),
             'activityDays' => PortalInsights::ACTIVITY_DAYS,
             'visits' => $insights->visits(),
+            'landing' => $insights->landing(),
             'signIns' => $insights->signIns(),
             'logFilter' => $filter,
             'logEmail' => $email,

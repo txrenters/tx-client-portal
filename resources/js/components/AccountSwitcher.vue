@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3';
-import { Building2, Check, ChevronsUpDown } from '@lucide/vue';
+import { Building2, Check, ChevronsUpDown, ShieldCheck } from '@lucide/vue';
 import { computed } from 'vue';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuLabel,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -14,10 +15,25 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { dashboard as adminDashboard } from '@/routes/admin';
 import { update } from '@/routes/accounts';
 
 const page = usePage();
 const accounts = computed(() => page.props.client?.accounts ?? []);
+
+/** Staff who also hold client accounts switch between the two sides here. */
+const isStaff = computed(() => page.props.auth?.isAdmin === true);
+
+/** Worth showing when there is somewhere else to go. */
+const visible = computed(
+    () =>
+        accounts.value.length > 1 ||
+        (isStaff.value && accounts.value.length > 0),
+);
+
+const goToStaffPortal = (): void => {
+    router.visit(adminDashboard());
+};
 const active = computed(
     () => accounts.value.find((account) => account.active) ?? accounts.value[0],
 );
@@ -28,7 +44,7 @@ const select = (id: number): void => {
 </script>
 
 <template>
-    <SidebarMenu v-if="accounts.length > 1">
+    <SidebarMenu v-if="visible">
         <SidebarMenuItem>
             <DropdownMenu>
                 <DropdownMenuTrigger as-child>
@@ -62,6 +78,17 @@ const select = (id: number): void => {
                     class="max-h-80 w-(--reka-dropdown-menu-trigger-width) min-w-64 overflow-y-auto"
                     align="start"
                 >
+                    <template v-if="isStaff">
+                        <DropdownMenuItem
+                            class="cursor-pointer"
+                            data-test="staff-portal"
+                            @select="goToStaffPortal"
+                        >
+                            <ShieldCheck class="size-4 shrink-0" />
+                            <span class="flex-1">Staff portal</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                    </template>
                     <DropdownMenuLabel class="text-muted-foreground text-xs">
                         Your accounts
                     </DropdownMenuLabel>

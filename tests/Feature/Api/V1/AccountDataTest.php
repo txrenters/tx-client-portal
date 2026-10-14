@@ -176,3 +176,19 @@ test('answers 503 when propertyware is down', function () {
         ->assertServiceUnavailable()
         ->assertJsonPath('message', 'Propertyware data is unavailable right now. Please try again in a moment.');
 });
+
+test('gives the app a work order\'s earlier texts only for the owner\'s own work orders', function () {
+    config(['services.tx_maintenance.url' => 'https://maintenance.test', 'services.tx_maintenance.token' => 'portal-token']);
+    Http::fake(['maintenance.test/*' => Http::response(['data' => [[
+        'work_order' => ['id' => 7, 'propertyware_id' => '1', 'number' => '1001', 'title' => 'Roof repair', 'status' => 'Closed'],
+        'messages' => [['id' => 31, 'from' => 'staff', 'to_you' => true, 'body' => 'Roofer comes Friday.', 'media' => [], 'sent_at' => '2026-03-02T15:00:00+00:00']],
+    ]]])]);
+    $account = apiOwnerAccount();
+
+    $this->getJson(route('api.v1.accounts.maintenance.texts', [$account, '1']))
+        ->assertOk()
+        ->assertJsonPath('data.thread.id', -7)
+        ->assertJsonPath('data.messages.0.body', 'Roofer comes Friday.');
+
+    $this->getJson(route('api.v1.accounts.maintenance.texts', [$account, '2']))->assertNotFound();
+});

@@ -5,6 +5,8 @@
  * service, never from Propertyware.
  */
 
+import type { HelpRequestAttachment } from './portal';
+
 export type AdminStats = {
     users: {
         total: number;
@@ -156,6 +158,7 @@ export type AdminHelpRequest = {
     sentAt: string;
     appVersion: string | null;
     userAgent: string | null;
+    attachments: HelpRequestAttachment[];
     user: { id: number; name: string; email: string };
 };
 

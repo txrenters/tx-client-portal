@@ -11,6 +11,8 @@ import { LifeBuoy, MessageSquare, Send } from '@lucide/vue';
 import { computed, ref, watchEffect } from 'vue';
 import AppCard from '@/components/AppCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import FilePreviewInput from '@/components/FilePreviewInput.vue';
+import HelpAttachments from '@/components/HelpAttachments.vue';
 import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -81,6 +83,16 @@ const messagesRoute = computed(() => {
 const topic = ref('');
 
 const sentFormatter = appDateFormatter({ dateStyle: 'medium' });
+
+/** The first error about the attached files, whichever file it was. */
+function attachmentError(errors: Record<string, string>): string | undefined {
+    return (
+        errors.attachments ??
+        Object.entries(errors).find(([key]) =>
+            key.startsWith('attachments.'),
+        )?.[1]
+    );
+}
 </script>
 
 <template>
@@ -158,6 +170,26 @@ const sentFormatter = appDateFormatter({ dateStyle: 'medium' });
                         <InputError :message="errors.message" />
                     </div>
 
+                    <div class="grid gap-2">
+                        <Label for="help-attachments">
+                            Screenshots or files
+                            <span class="text-muted-foreground font-normal"
+                                >(optional, up to 5)</span
+                            >
+                        </Label>
+                        <FilePreviewInput
+                            id="help-attachments"
+                            name="attachments[]"
+                            multiple
+                            :max="5"
+                            accept=".jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.pdf"
+                        />
+                        <p class="text-muted-foreground text-xs">
+                            A screenshot of what you see helps us fix it faster.
+                        </p>
+                        <InputError :message="attachmentError(errors)" />
+                    </div>
+
                     <div>
                         <Button type="submit" :disabled="processing">
                             <Spinner v-if="processing" />
@@ -217,6 +249,7 @@ const sentFormatter = appDateFormatter({ dateStyle: 'medium' });
                         <p class="text-muted-foreground line-clamp-2 text-sm">
                             {{ request.message }}
                         </p>
+                        <HelpAttachments :attachments="request.attachments" />
                         <p
                             v-if="request.staffNote"
                             class="bg-muted rounded-md p-2 text-sm whitespace-pre-line"

@@ -8,6 +8,7 @@ use App\Http\Controllers\Concerns\ShowsClientDocuments;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Client\CreateWorkOrderRequest;
 use App\Http\Requests\Client\MaintenanceIndexRequest;
+use App\Services\Maintenance\EarlierWorkOrderTexts;
 use App\Services\Propertyware\ConversationLibrary;
 use App\Services\Propertyware\Data\Document;
 use App\Services\Propertyware\DocumentLibrary;
@@ -64,7 +65,7 @@ class MaintenanceController extends Controller
     /**
      * Show one maintenance request, or 404 when it isn't the client's own.
      */
-    public function show(Request $request, string $workOrder, PropertywareDirectory $directory, MaintenanceSummary $maintenance, DocumentLibrary $documents, ConversationLibrary $conversations): Response
+    public function show(Request $request, string $workOrder, PropertywareDirectory $directory, MaintenanceSummary $maintenance, DocumentLibrary $documents, ConversationLibrary $conversations, EarlierWorkOrderTexts $earlierTexts): Response
     {
         $scope = $this->clientScope($request, ClientRole::Resident, $directory);
 
@@ -72,8 +73,12 @@ class MaintenanceController extends Controller
 
         abort_if($record === null, 404);
 
+        $account = $this->activeClientAccount($request, ClientRole::Resident);
+
         return Inertia::render('resident/MaintenanceDetail', [
             'workOrder' => $record,
+            // Texts about this work order from before the messaging hub.
+            'earlierTexts' => Inertia::defer(fn (): ?array => $account === null ? null : $earlierTexts->forWorkOrder($account, $workOrder)),
             'conversations' => Inertia::defer(function () use ($scope, $record, $conversations): ?array {
                 try {
                     return $conversations->forWorkOrder($scope, $record['buildingId'], $record['number']);

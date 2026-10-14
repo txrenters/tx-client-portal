@@ -17,8 +17,8 @@ void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     layout: (name) => {
         switch (true) {
-            // Public pages bring their own marketing header and footer.
-            case ['Welcome', 'Privacy', 'Support'].includes(name):
+            // Public pages and the error page bring their own marketing header and footer.
+            case ['Welcome', 'Privacy', 'Support', 'Error'].includes(name):
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;
