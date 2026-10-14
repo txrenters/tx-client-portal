@@ -596,3 +596,22 @@ export type Promotion = {
     icon?: string;
     link: { type: 'referrals' } | { type: 'url'; url: string };
 };
+
+/** A stored notice, such as a lease reminder. */
+export type Notice = {
+    id: string;
+    type: 'lease_expiring';
+    role: 'owner' | 'resident' | null;
+    title: string;
+    body: string;
+    message: string;
+    building: string | null;
+    unit: string | null;
+    buildingId: number | null;
+    startDate: string | null;
+    endDate: string | null;
+    renewalDeadline: string | null;
+    url: string | null;
+    readAt: string | null;
+    createdAt: string | null;
+};

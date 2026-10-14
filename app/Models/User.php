@@ -207,6 +207,10 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         // A work order is waiting for the owner's approval and cannot go ahead
         // until they decide. Owners only; a tenant is never pushed one.
         'work_order_approvals_push' => true,
+        // A lease is 90 days from ending: the owner decides whether to renew or
+        // relist, the tenant whether to renew. Always kept in the app's list;
+        // this only decides whether the phone is buzzed.
+        'lease_expiry_push' => true,
     ];
 
     /**

@@ -2,6 +2,8 @@
 
 namespace App\Services\Demo;
 
+use App\Enums\ClientRole;
+use App\Models\ClientAccount;
 use App\Models\ConversationRead;
 use App\Models\DemoRecord;
 use App\Models\HelpRequest;
@@ -11,6 +13,11 @@ use App\Models\Referral;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\WorkOrderApproval;
+use App\Notifications\LeaseExpiringNotification;
+use App\Services\Leases\ExpiringLease;
+use App\Services\Leases\LeaseNoticeText;
+use Carbon\CarbonImmutable;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -32,17 +39,54 @@ final class DemoReset
             HelpRequest::query()->whereIn('user_id', $users)->delete();
             Referral::query()->whereIn('user_id', $users)->delete();
             ConversationRead::query()->whereIn('user_id', $users)->delete();
+            DatabaseNotification::query()->where('notifiable_type', (new User)->getMorphClass())->whereIn('notifiable_id', $users)->delete();
             LeaseLedgerEntry::query()->where('lease_id', (string) DemoData::LEASE)->delete();
             LeaseLedgerSync::query()->where('lease_id', (string) DemoData::LEASE)->delete();
         });
 
         $this->restoreLogins();
+        $this->seedNotifications();
 
         Storage::disk('local')->deleteDirectory('demo');
 
         // A new prefix abandons every demo cache key at once, on any driver,
         // without flushing the store real users share; the old keys expire.
         Setting::put(self::CACHE_GENERATION, (string) ((int) Setting::valueOf(self::CACHE_GENERATION, '0') + 1));
+    }
+
+    /**
+     * The bell's starting notices: the lease reminder each demo login would
+     * have received. Database channel only, so nothing is pushed or mailed.
+     */
+    private function seedNotifications(): void
+    {
+        $data = new DemoData;
+        $row = $data->leases()[0];
+        $lease = new ExpiringLease(
+            DemoData::LEASE,
+            DemoData::PORTFOLIO,
+            DemoData::HOME_LEASED,
+            '1234 Demo Meadow Ln',
+            '1234 Demo Meadow Ln',
+            CarbonImmutable::parse($row['startDate']),
+            CarbonImmutable::parse($row['endDate']),
+            [(string) DemoData::TENANT_CONTACT],
+        );
+        $today = CarbonImmutable::today('America/Chicago');
+
+        $accounts = ClientAccount::query()
+            ->whereHas('user', fn ($query) => $query->where('is_demo', true))
+            ->with('user')
+            ->get();
+
+        foreach ($accounts as $account) {
+            $contact = $account->role === ClientRole::Owner ? DemoData::OWNER_CONTACT : DemoData::TENANT_CONTACT;
+            $matches = $account->propertyware_id === (string) $contact;
+
+            if ($matches && $account->user !== null) {
+                $account->user->notifyNow(new LeaseExpiringNotification(LeaseNoticeText::for($lease, $account, $today)), ['database']);
+            }
+        }
     }
 
     /**
