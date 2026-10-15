@@ -434,10 +434,30 @@ class PropertywareDirectory
     {
         $leaseId = $scope->leaseIds[0] ?? null;
 
-        if ($leaseId === null) {
-            return null;
-        }
+        return $leaseId === null ? null : $this->findLease($leaseId);
+    }
 
+    /**
+     * Every lease the tenant is or was on.
+     *
+     * @return array<int, Lease>
+     *
+     * @throws PropertywareException
+     */
+    public function leasesFor(ClientScope $scope): array
+    {
+        return collect($scope->leaseIds)
+            ->map(fn (int $leaseId): ?Lease => $this->findLease($leaseId))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @throws PropertywareException
+     */
+    private function findLease(int $leaseId): ?Lease
+    {
         $lease = Cache::remember(
             "propertyware:lease:{$leaseId}",
             $this->cacheSeconds,

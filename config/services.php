@@ -97,6 +97,9 @@ return [
         // do change: work orders and documents.
         'directory_cache_seconds' => (int) env('PROPERTYWARE_DIRECTORY_CACHE_SECONDS', 1800),
         'discover_accounts' => env('PROPERTYWARE_DISCOVER_ACCOUNTS', true),
+        // Residents whose every lease is terminated are signed out and kept
+        // out; see App\Services\Propertyware\TerminatedLeaseGate.
+        'block_terminated_leases' => env('PROPERTYWARE_BLOCK_TERMINATED_LEASES', true),
         // Only emails on a Propertyware contact may sign up on their own;
         // see App\Rules\RegisteredClientEmail.
         'require_client_email' => env('PROPERTYWARE_REQUIRE_CLIENT_EMAIL', true),

@@ -53,6 +53,14 @@ class Lease
     }
 
     /**
+     * Whether Propertyware has closed the lease out; the tenancy is over.
+     */
+    public function isTerminated(): bool
+    {
+        return strcasecmp((string) $this->status, 'Terminated') === 0;
+    }
+
+    /**
      * Whether the lease is running out: it ends, or they move out, within 60 days.
      */
     public function endsSoon(): bool

@@ -10,6 +10,7 @@ use App\Http\Requests\Api\V1\ResetPasswordRequest;
 use App\Http\Resources\V1\UserResource;
 use App\Models\User;
 use App\Services\Admin\SignInLog;
+use App\Services\Propertyware\TerminatedLeaseGate;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,7 +41,7 @@ class AuthController extends Controller
      *
      * @throws ValidationException
      */
-    public function login(LoginRequest $request, TwoFactorAuthenticationProvider $twoFactor, SignInLog $log): JsonResponse
+    public function login(LoginRequest $request, TwoFactorAuthenticationProvider $twoFactor, SignInLog $log, TerminatedLeaseGate $leases): JsonResponse
     {
         $email = $request->validated('email');
         $user = User::where('email', $email)->first();
@@ -55,6 +56,12 @@ class AuthController extends Controller
             $log->record($request, 'blocked', $user, $email, 'app', 'password');
 
             throw ValidationException::withMessages(['email' => __('This account has been suspended. Contact TexasRenters.com for help.')]);
+        }
+
+        if ($leases->shutsOut($user)) {
+            $log->record($request, 'blocked', $user, $email, 'app', 'password');
+
+            throw ValidationException::withMessages(['email' => __(TerminatedLeaseGate::MESSAGE)]);
         }
 
         if ($user->hasEnabledTwoFactorAuthentication()) {

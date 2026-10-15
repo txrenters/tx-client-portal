@@ -20,6 +20,7 @@
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="PROPERTYWARE_DISCOVER_ACCOUNTS" value="false"/>
+        <env name="PROPERTYWARE_BLOCK_TERMINATED_LEASES" value="false"/>
         <!-- Fake credentials: the client refuses to run without them, and every
              test fakes Propertyware's HTTP. Set here so the suite never picks up
              a developer's real keys from .env, and runs the same in CI. -->

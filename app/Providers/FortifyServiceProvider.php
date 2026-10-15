@@ -6,6 +6,7 @@ use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Models\User;
 use App\Services\Admin\SignInLog;
+use App\Services\Propertyware\TerminatedLeaseGate;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -17,6 +18,8 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use Laravel\Passkeys\Contracts\PasskeyUser;
+use Laravel\Passkeys\Passkeys;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -46,8 +49,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
 
-        // Fortify's own check, plus turning away a login staff have suspended
-        // before a session is ever started for it.
+        // Fortify's own check, plus turning away a login staff have suspended,
+        // or a resident whose lease has ended, before a session is ever started for it.
         Fortify::authenticateUsing(function (Request $request): ?User {
             $user = User::query()->where(Fortify::username(), $request->input(Fortify::username()))->first();
 
@@ -63,7 +66,26 @@ class FortifyServiceProvider extends ServiceProvider
                 ]);
             }
 
+            if (app(TerminatedLeaseGate::class)->shutsOut($user)) {
+                app(SignInLog::class)->record($request, 'blocked', $user, null, 'web', 'password');
+
+                throw ValidationException::withMessages([
+                    Fortify::username() => __(TerminatedLeaseGate::MESSAGE),
+                ]);
+            }
+
             return $user;
+        });
+
+        // Passkey sign-ins on the web and in the apps both ask this before logging in.
+        Passkeys::authorizeLoginUsing(function (Request $request, PasskeyUser $user): bool {
+            if ($user instanceof User && app(TerminatedLeaseGate::class)->shutsOut($user)) {
+                app(SignInLog::class)->record($request, 'blocked', $user, null, $request->is('api/*') ? 'app' : 'web', 'passkey');
+
+                throw ValidationException::withMessages(['credential' => __(TerminatedLeaseGate::MESSAGE)]);
+            }
+
+            return true;
         });
     }
 
