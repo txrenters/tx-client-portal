@@ -33,7 +33,7 @@ final class DemoChatHub
             $request->method() === 'POST' && $segments[0] === 'threads' && ($segments[2] ?? null) === 'messages' => $this->post($id, $this->fields($request)),
             $segments[0] === 'contacts' && count($segments) === 2 => Http::response(['data' => [
                 'contact_id' => $segments[1],
-                'sms_replies' => (bool) ($this->fields($request)['sms_replies'] ?? false),
+                'sms_replies' => (bool) ($this->fields($request)['sms_replies'] ?? true),
             ]]),
             default => Http::response(['message' => 'Not found.'], 404),
         };

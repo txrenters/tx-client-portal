@@ -176,7 +176,7 @@ class ClientConversations
         }
 
         return [
-            'enabled' => (bool) ($contact['sms_replies'] ?? false),
+            'enabled' => (bool) ($contact['sms_replies'] ?? true),
             'phone' => $this->presentPhone($contact['phone'] ?? null),
         ];
     }

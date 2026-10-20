@@ -90,15 +90,13 @@ function saveSms(): void {
             class="flex items-start justify-between gap-4 rounded-xl border p-4"
         >
             <div class="space-y-1">
-                <Label for="message-replies-sms">Text me about replies</Label>
+                <Label for="message-replies-sms">Text me replies</Label>
                 <p class="text-muted-foreground text-sm">
                     <template v-if="sms === undefined">
                         Checking where we can text you…
                     </template>
                     <template v-else-if="sms.phone">
-                        We'll text {{ sms.phone }} to say a reply is waiting;
-                        the message itself stays here. Reply STOP to any text to
-                        stop them.
+                        We'll also text our replies to {{ sms.phone }}.
                     </template>
                     <template v-else>
                         We don't have a mobile number for you yet, so we can
