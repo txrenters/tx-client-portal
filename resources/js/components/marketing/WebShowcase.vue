@@ -36,7 +36,7 @@ const tours: Record<Audience, Feature[]> = {
         },
         {
             screen: '03-work-orders',
-            title: 'Follow it to finished',
+            title: 'Track to Completion',
             description:
                 'Every work order and where it stands, from open to completed.',
         },
