@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\DemoMode;
+use App\Http\Middleware\EnsureClientWebIsNotPaused;
 use App\Http\Middleware\EnsureLeaseIsNotTerminated;
 use App\Http\Middleware\EnsureUserIsNotSuspended;
 use App\Http\Middleware\ForceJsonResponse;
@@ -48,6 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             EnsureUserIsNotSuspended::class,
             EnsureLeaseIsNotTerminated::class,
+            EnsureClientWebIsNotPaused::class,
             TrackLastSeen::class,
             // Before anything reads Propertyware for the page: an App Review login sees made-up records.
             DemoMode::class,

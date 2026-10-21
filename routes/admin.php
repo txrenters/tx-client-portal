@@ -90,6 +90,8 @@ Route::middleware(['auth', 'verified', LogDeniedAdminAccess::class, 'can:admin',
     Route::get('security', [SecurityController::class, 'index'])->name('security');
     Route::post('security/blocks', [SecurityController::class, 'store'])->middleware('throttle:30,1')->name('security.blocks.store');
     Route::delete('security/blocks/{block}', [SecurityController::class, 'destroy'])->name('security.blocks.destroy');
+    Route::post('security/client-web-pause', [SecurityController::class, 'pauseClientWeb'])->middleware('throttle:20,1')->name('security.client-web.pause');
+    Route::delete('security/client-web-pause', [SecurityController::class, 'resumeClientWeb'])->middleware('throttle:20,1')->name('security.client-web.resume');
 
     Route::get('integrations', [IntegrationController::class, 'index'])->name('integrations.index');
     Route::post('integrations/refresh', [IntegrationController::class, 'refresh'])

@@ -7,6 +7,7 @@ use App\Actions\Fortify\ResetUserPassword;
 use App\Models\User;
 use App\Services\Admin\SignInLog;
 use App\Services\Propertyware\TerminatedLeaseGate;
+use App\Services\Security\ClientWebPause;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -50,7 +51,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::createUsersUsing(CreateNewUser::class);
 
         // Fortify's own check, plus turning away a login staff have suspended,
-        // or a resident whose lease has ended, before a session is ever started for it.
+        // a resident whose lease has ended, or any client while staff have the
+        // website paused, before a session is ever started for it.
         Fortify::authenticateUsing(function (Request $request): ?User {
             $user = User::query()->where(Fortify::username(), $request->input(Fortify::username()))->first();
 
@@ -74,6 +76,14 @@ class FortifyServiceProvider extends ServiceProvider
                 ]);
             }
 
+            if (app(ClientWebPause::class)->shutsOut($user)) {
+                app(SignInLog::class)->record($request, 'blocked', $user, null, 'web', 'password');
+
+                throw ValidationException::withMessages([
+                    Fortify::username() => __(ClientWebPause::MESSAGE),
+                ]);
+            }
+
             return $user;
         });
 
@@ -83,6 +93,13 @@ class FortifyServiceProvider extends ServiceProvider
                 app(SignInLog::class)->record($request, 'blocked', $user, null, $request->is('api/*') ? 'app' : 'web', 'passkey');
 
                 throw ValidationException::withMessages(['credential' => __(TerminatedLeaseGate::MESSAGE)]);
+            }
+
+            // The pause is the website's only; a passkey sign-in in the apps carries on.
+            if ($user instanceof User && ! $request->is('api/*') && app(ClientWebPause::class)->shutsOut($user)) {
+                app(SignInLog::class)->record($request, 'blocked', $user, null, 'web', 'passkey');
+
+                throw ValidationException::withMessages(['credential' => __(ClientWebPause::MESSAGE)]);
             }
 
             return true;

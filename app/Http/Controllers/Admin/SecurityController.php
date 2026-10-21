@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BlockedIp;
 use App\Models\SecurityEvent;
 use App\Services\Admin\AdminAudit;
+use App\Services\Security\ClientWebPause;
 use App\Services\Security\IpGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,7 +34,7 @@ class SecurityController extends Controller
         'auto_blocked' => 'Blocked automatically',
     ];
 
-    public function __construct(private IpGuard $guard, private AdminAudit $audit) {}
+    public function __construct(private IpGuard $guard, private AdminAudit $audit, private ClientWebPause $pause) {}
 
     public function index(Request $request): Response
     {
@@ -49,6 +50,7 @@ class SecurityController extends Controller
             'type' => $validated['type'] ?? null,
             'ip' => $validated['ip'] ?? null,
             'yourIp' => $request->ip(),
+            'clientWebPaused' => $this->pause->isPaused(),
             'eventTypes' => self::EVENT_TYPES,
             'thresholds' => [
                 'stuffingFailures' => IpGuard::STUFFING_FAILURES,
@@ -126,6 +128,30 @@ class SecurityController extends Controller
 
         $this->audit->record($request->user(), 'ip_unblocked', "Unblocked {$block->ip_address}");
         $this->toast("{$block->ip_address} is no longer blocked.");
+
+        return back();
+    }
+
+    /**
+     * Keep every client off the website, signing out the ones on it now.
+     * Staff and the apps carry on as normal.
+     */
+    public function pauseClientWeb(Request $request): RedirectResponse
+    {
+        $this->pause->pause();
+
+        $this->audit->record($request->user(), 'client_web_paused', 'Paused client sign-in to the website');
+        $this->toast('Client sign-in to the website is paused.');
+
+        return back();
+    }
+
+    public function resumeClientWeb(Request $request): RedirectResponse
+    {
+        $this->pause->resume();
+
+        $this->audit->record($request->user(), 'client_web_resumed', 'Resumed client sign-in to the website');
+        $this->toast('Clients can sign in to the website again.');
 
         return back();
     }

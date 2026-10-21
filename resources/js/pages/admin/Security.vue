@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { Ban, ShieldAlert, ShieldCheck, ShieldX, Unlock } from '@lucide/vue';
+import {
+    Ban,
+    CirclePause,
+    CirclePlay,
+    ShieldAlert,
+    ShieldCheck,
+    ShieldX,
+    Unlock,
+} from '@lucide/vue';
 import { ref, watch } from 'vue';
 import AppCard from '@/components/AppCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
@@ -40,6 +48,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { appDateFormatter } from '@/lib/timezone';
 import { dashboard as adminHome, security } from '@/routes/admin';
 import { destroy, store } from '@/routes/admin/security/blocks';
+import {
+    pause as pauseClientWeb,
+    resume as resumeClientWeb,
+} from '@/routes/admin/security/client-web';
 import { show as showUser } from '@/routes/admin/users';
 import type {
     AdminBlockedIp,
@@ -63,6 +75,7 @@ const props = defineProps<{
     type: string | null;
     ip: string | null;
     yourIp: string | null;
+    clientWebPaused: boolean;
     eventTypes: Record<string, string>;
     thresholds: {
         stuffingFailures: number;
@@ -182,6 +195,46 @@ const activeBlocks = props.blocks.filter((item) => item.active).length;
                 </Button>
             </template>
         </PageHeader>
+
+        <AppCard
+            title="Client sign-in on the website"
+            :description="
+                clientWebPaused
+                    ? 'Paused. Residents and owners cannot sign in to the website, and anyone who was signed in has been signed out. Staff and the apps are not affected.'
+                    : 'Open. Pausing signs every resident and owner out of the website and keeps them out until you resume. Staff and the apps are not affected.'
+            "
+        >
+            <div class="flex flex-wrap items-center gap-3">
+                <Badge :variant="clientWebPaused ? 'destructive' : 'secondary'">
+                    {{ clientWebPaused ? 'Paused' : 'Open' }}
+                </Badge>
+                <ConfirmAction
+                    v-if="clientWebPaused"
+                    title="Let clients back in?"
+                    description="Residents and owners will be able to sign in to the website again."
+                    confirm-label="Resume sign-in"
+                    :action="resumeClientWeb()"
+                >
+                    <Button size="sm" variant="outline">
+                        <CirclePlay class="size-4" />
+                        Resume sign-in
+                    </Button>
+                </ConfirmAction>
+                <ConfirmAction
+                    v-else
+                    title="Pause client sign-in?"
+                    description="Every resident and owner is signed out of the website and cannot sign in until you resume. Staff and the apps keep working."
+                    confirm-label="Pause sign-in"
+                    :action="pauseClientWeb()"
+                    destructive
+                >
+                    <Button size="sm" variant="destructive">
+                        <CirclePause class="size-4" />
+                        Pause sign-in
+                    </Button>
+                </ConfirmAction>
+            </div>
+        </AppCard>
 
         <Tabs v-model="tab" class="gap-6">
             <TabsList>
