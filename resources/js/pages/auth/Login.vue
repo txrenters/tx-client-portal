@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import BetaNotice from '@/components/BetaNotice.vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import TextLink from '@/components/TextLink.vue';
@@ -25,11 +26,14 @@ defineProps<{
     status?: string;
     canResetPassword: boolean;
     canRegister: boolean;
+    accessPaused?: boolean;
 }>();
 </script>
 
 <template>
     <Head title="Log in" />
+
+    <BetaNotice v-if="accessPaused" />
 
     <div
         v-if="status"

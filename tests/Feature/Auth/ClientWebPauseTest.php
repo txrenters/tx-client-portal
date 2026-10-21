@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Passkeys\Passkeys;
 
-const WEB_PAUSED = 'Client sign-in to the website is paused for now. Please try again later.';
+const WEB_PAUSED = "We're still in beta, so sign-in isn't open yet. Please check back soon.";
 
 beforeEach(function () {
     config(['services.admin_emails' => ['staff@texasrenters.com'], 'services.propertyware.discover_accounts' => false]);
@@ -41,6 +41,15 @@ test('a client cannot pause sign-in', function () {
     $this->actingAs($this->client)->post(route('admin.security.client-web.pause'))->assertForbidden();
 
     expect(app(ClientWebPause::class)->isPaused())->toBeFalse();
+});
+
+test('the sign-in and sign-up pages show the beta notice only while paused', function () {
+    $this->get(route('login'))->assertInertia(fn (AssertableInertia $page) => $page->where('accessPaused', false));
+
+    app(ClientWebPause::class)->pause();
+
+    $this->get(route('login'))->assertInertia(fn (AssertableInertia $page) => $page->where('accessPaused', true));
+    $this->get(route('register'))->assertInertia(fn (AssertableInertia $page) => $page->where('accessPaused', true));
 });
 
 test('a client cannot sign in to the website while it is paused', function () {
@@ -79,7 +88,7 @@ test('nobody can sign up on the website while it is paused', function () {
         'email' => 'dana@example.com',
         'password' => 'A-long-passphrase-9',
         'password_confirmation' => 'A-long-passphrase-9',
-    ])->assertSessionHasErrors(['email' => 'Sign-up on the website is paused for now. Please try again later.']);
+    ])->assertSessionHasErrors(['email' => "We're still in beta, so sign-up isn't open yet. Please check back soon."]);
 
     $this->assertGuest();
     expect(User::query()->where('email', 'dana@example.com')->exists())->toBeFalse();

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import BetaNotice from '@/components/BetaNotice.vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import TextLink from '@/components/TextLink.vue';
@@ -22,11 +23,14 @@ defineOptions({
 
 defineProps<{
     passwordRules?: string;
+    accessPaused?: boolean;
 }>();
 </script>
 
 <template>
     <Head title="Sign up" />
+
+    <BetaNotice v-if="accessPaused" />
 
     <Form
         v-bind="store.form()"

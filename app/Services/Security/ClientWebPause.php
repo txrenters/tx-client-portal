@@ -16,9 +16,9 @@ class ClientWebPause
     /** The Setting key the pause is kept under. */
     public const SETTING = 'client_web_paused';
 
-    public const MESSAGE = 'Client sign-in to the website is paused for now. Please try again later.';
+    public const MESSAGE = "We're still in beta, so sign-in isn't open yet. Please check back soon.";
 
-    public const SIGN_UP_MESSAGE = 'Sign-up on the website is paused for now. Please try again later.';
+    public const SIGN_UP_MESSAGE = "We're still in beta, so sign-up isn't open yet. Please check back soon.";
 
     public function isPaused(): bool
     {
