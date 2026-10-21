@@ -3,7 +3,6 @@
 namespace App\Services\Propertyware;
 
 use App\Enums\ClientRole;
-use App\Enums\WorkOrderStatus;
 use App\Services\Propertyware\Data\ClientScope;
 use App\Services\Propertyware\Data\Document;
 use App\Services\Propertyware\Data\Property;
@@ -37,15 +36,16 @@ class DocumentLibrary
     ) {}
 
     /**
-     * How many recent work orders' attachments the client-wide list includes.
-     * Older attachments stay on each work order's own page.
+     * How many of the client's newest work orders the upload picker offers.
      */
     public const RECENT_WORK_ORDER_LIMIT = 300;
 
     /**
      * Get every document the client may see: files on their properties, units,
-     * leases, portfolios (owners) and their own contact record, plus the
-     * attachments on their recent work orders.
+     * leases, portfolios (owners) and their own contact record.
+     *
+     * A work order's files (mostly photos) are not documents; they show only
+     * on that work order's own page.
      *
      * The list is kept for a day and refreshed in the background once it is
      * older than the cache window, so pages stay fast for large accounts.
@@ -67,10 +67,22 @@ class DocumentLibrary
                 $this->importInBackground($scope);
             }
 
-            return $this->visible($cached['records'] ?? [], $scope);
+            return $this->withoutWorkOrderFiles($this->visible($cached['records'] ?? [], $scope));
         }
 
-        return $this->visible($this->import($scope), $scope);
+        return $this->withoutWorkOrderFiles($this->visible($this->import($scope), $scope));
+    }
+
+    /**
+     * Drop work order files from a client-wide list. Lists kept from before
+     * they left the Documents page still hold some for up to a day.
+     *
+     * @param  Collection<int, Document>  $documents
+     * @return Collection<int, Document>
+     */
+    private function withoutWorkOrderFiles(Collection $documents): Collection
+    {
+        return $documents->reject(fn (Document $document): bool => $document->workOrderId() !== null)->values();
     }
 
     /**
@@ -149,33 +161,11 @@ class DocumentLibrary
                 : $scope->leaseIds,
             'PORTFOLIO' => $scope->role === ClientRole::Owner ? $scope->portfolioIds : [],
             'CONTACT' => ctype_digit($scope->contactId) ? [(int) $scope->contactId] : [],
-            'WORK_ORDER' => $this->recentWorkOrderIds($scope),
         ]);
 
         Cache::put($this->cacheKey($scope), ['fetchedAt' => now()->timestamp, 'records' => $records], now()->addDay());
 
         return $records;
-    }
-
-    /**
-     * Get the work orders whose attachments belong in the client-wide list:
-     * open or scheduled ones, and any updated in the last year, newest first.
-     *
-     * @return array<int, int>
-     *
-     * @throws PropertywareException
-     */
-    private function recentWorkOrderIds(ClientScope $scope): array
-    {
-        $cutoff = now()->subYear();
-
-        return $this->maintenance->forClient($scope)
-            ->filter(fn (WorkOrder $workOrder): bool => in_array($workOrder->status, [WorkOrderStatus::Open, WorkOrderStatus::Scheduled], true)
-                || ($workOrder->updatedAt !== null && $workOrder->updatedAt->greaterThan($cutoff)))
-            ->take(self::RECENT_WORK_ORDER_LIMIT)
-            ->map(fn (WorkOrder $workOrder): int => (int) $workOrder->id)
-            ->values()
-            ->all();
     }
 
     private function cacheKey(ClientScope $scope): string
@@ -463,8 +453,8 @@ class DocumentLibrary
      *
      * The full list stays in the cache; only the requested page leaves the server.
      *
-     * @param  array{search?: ?string, category?: ?string, type?: ?string, from?: ?string, to?: ?string, property?: int|string|null, work_order?: ?string}  $filters
-     * @return array{total: int, categories: array<int, string>, typeCounts: array<string, int>, properties: array<int, array{id: int, name: string}>, workOrders: array<int, array{id: string, number: ?string, category: ?string, title: string}>, results: array<string, mixed>}
+     * @param  array{search?: ?string, category?: ?string, kind?: ?string, type?: ?string, from?: ?string, to?: ?string, property?: int|string|null, work_order?: ?string}  $filters
+     * @return array{total: int, categories: array<int, string>, kindCounts: array<string, int>, typeCounts: array<string, int>, properties: array<int, array{id: int, name: string}>, workOrders: array<int, array{id: string, number: ?string, category: ?string, title: string}>, results: array<string, mixed>}
      *
      * @throws PropertywareException
      */
@@ -500,6 +490,9 @@ class DocumentLibrary
         return [
             'total' => $all->count(),
             'categories' => $all->map(fn (Document $document): string => $document->category())->unique()->sort()->values()->all(),
+            'kindCounts' => collect(array_keys(Document::KINDS))
+                ->mapWithKeys(fn (string $kind): array => [$kind => $all->filter(fn (Document $document): bool => $document->kind() === $kind)->count()])
+                ->all(),
             'typeCounts' => collect(['images', 'pdf', 'other'])
                 ->mapWithKeys(fn (string $type): array => [$type => $all->filter(fn (Document $document): bool => $document->typeGroup() === $type)->count()])
                 ->all(),
@@ -531,7 +524,7 @@ class DocumentLibrary
      * files and those on its units, its current lease and its work orders.
      *
      * @param  Collection<int, Document>  $documents
-     * @param  array{search?: ?string, category?: ?string, type?: ?string, from?: ?string, to?: ?string, property?: int|string|null, work_order?: ?string}  $filters
+     * @param  array{search?: ?string, category?: ?string, kind?: ?string, type?: ?string, from?: ?string, to?: ?string, property?: int|string|null, work_order?: ?string}  $filters
      * @param  Collection<string, WorkOrder>|null  $workOrders  The client's work orders keyed by id, to match their attachments.
      * @param  array{units?: array<int, int>, leases?: array<int, int>}  $locations  Property ids by unit and current lease.
      * @return Collection<int, Document>
@@ -550,6 +543,7 @@ class DocumentLibrary
 
         return $documents
             ->filter(fn (Document $document): bool => blank($filters['category'] ?? null) || $document->category() === $filters['category'])
+            ->filter(fn (Document $document): bool => blank($filters['kind'] ?? null) || $document->kind() === $filters['kind'])
             ->filter(fn (Document $document): bool => blank($filters['type'] ?? null) || $document->typeGroup() === $filters['type'])
             ->filter(fn (Document $document): bool => $property === null || $this->buildingFor($document, $workOrders, $locations) === $property)
             ->filter(fn (Document $document): bool => $workOrder === null || $document->workOrderId() === $workOrder)

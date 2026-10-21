@@ -106,9 +106,18 @@ export type ApprovalSummary = {
     items: WorkOrder[];
 };
 
+/** What a document is, read from its name: the Documents page's buttons. */
+export type DocumentKind =
+    | 'leases'
+    | 'statements'
+    | 'tax'
+    | 'invoices'
+    | 'other';
+
 export type DocumentFilterValues = {
     search: string | null;
     category: string | null;
+    kind: DocumentKind | null;
     type: 'images' | 'pdf' | 'other' | null;
     from: string | null;
     to: string | null;
@@ -149,6 +158,7 @@ export type DocumentsPage = {
     status: 'ready';
     total: number;
     categories: string[];
+    kindCounts: Record<DocumentKind, number>;
     typeCounts: Record<'images' | 'pdf' | 'other', number>;
     properties: { id: number; name: string }[];
     workOrders: {
