@@ -78,6 +78,7 @@ final class DemoPropertyware
             $path === 'buildings' => $this->where($data->buildings(), 'portfolioID', $query['portfolioID'] ?? null),
             $segments[0] === 'buildings' && count($segments) === 2 => $this->byId($data->buildings(), $id),
             $path === 'units' => [],
+            $path === 'leases/payments' => $this->tenantPayments($query),
             $path === 'leases/adjustments' => $this->where($data->leaseAdjustments(), 'leaseID', $query['leaseID'] ?? null),
             $path === 'leases' => $this->leases($query),
             $segments[0] === 'leases' && count($segments) === 2 => $this->byId($data->leases(), $id),
@@ -126,6 +127,19 @@ final class DemoPropertyware
             $this->where($this->data->leases(), 'buildingID', $query['buildingID'] ?? null),
             fn (array $lease): bool => (! isset($query['endDateStart']) || $lease['endDate'] >= $query['endDateStart'])
                 && (! isset($query['endDateEnd']) || $lease['endDate'] <= $query['endDateEnd']),
+        ));
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $query
+     * @return array<int, array<string, mixed>>
+     */
+    private function tenantPayments(array $query): array
+    {
+        // Every made-up payment has already reached the bank.
+        return array_values(array_map(
+            fn (array $transaction): array => ['id' => $transaction['id'], 'portfolioID' => DemoData::PORTFOLIO, 'depositDate' => $transaction['txDate']],
+            array_filter($this->generalLedger($query), fn (array $transaction): bool => $transaction['transactionType'] === 'Tenant Payment'),
         ));
     }
 

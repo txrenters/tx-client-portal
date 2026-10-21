@@ -470,6 +470,9 @@ export type OwnerLedgerEntry = {
     details: string | null;
     amount: number;
     balance: number;
+    /** On a tenant payment: whether it has reached the bank. Null on any other line. */
+    settled?: boolean | null;
+    settledOn?: string | null;
 };
 
 export type OwnerLedgerData = {

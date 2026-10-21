@@ -48,6 +48,7 @@ beforeEach(function () {
             apiTransaction(2, '2026-09-08', 'Bill Payment', [apiEntry(30, debit: 270.00), apiEntry(50, credit: 270.00)]),
             apiTransaction(3, '2026-09-10', 'Bill Payment', [apiEntry(20, debit: 475.00), apiEntry(50, credit: 475.00)]),
         ]),
+        '*/leases/payments*' => Http::response([['id' => 1, 'depositDate' => '2026-09-09']]),
         '*/portfolios/*' => Http::response(['id' => 2, 'createdDateTime' => '2026-08-01T00:00:00Z', 'targetOperatingReserve' => 300.0]),
     ]);
 

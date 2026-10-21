@@ -5,6 +5,7 @@ import DashboardMetrics from '@/components/DashboardMetrics.vue';
 import type { Metric } from '@/components/DashboardMetrics.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFormattedDate } from '@/composables/useFormattedDate';
@@ -35,6 +36,15 @@ function line(entry: OwnerLedgerEntry): string {
     ]
         .filter((part): part is string => Boolean(part))
         .join(' · ');
+}
+
+/** Whether a tenant's payment has reached the bank; null on other lines. */
+function settlementLabel(entry: OwnerLedgerEntry): string | null {
+    if (entry.settled == null) {
+        return null;
+    }
+
+    return entry.settled ? 'Settled' : 'Pending';
 }
 
 /** The dates on screen, named under every figure they belong to. */
@@ -102,6 +112,7 @@ function csv(): void {
             'Details',
             'Amount',
             'Balance',
+            'Status',
         ],
         ...props.ledger.entries.map((entry) => [
             entry.date,
@@ -111,6 +122,7 @@ function csv(): void {
             entry.details ?? '',
             entry.amount.toFixed(2),
             entry.balance.toFixed(2),
+            settlementLabel(entry) ?? '',
         ]),
     ];
 
@@ -176,8 +188,23 @@ function csv(): void {
                     class="flex items-start gap-4 px-4 py-3"
                 >
                     <div class="min-w-0 flex-1">
-                        <p class="truncate text-sm font-medium">
-                            {{ entry.description }}
+                        <p class="flex items-center gap-2 text-sm font-medium">
+                            <span class="truncate">{{
+                                entry.description
+                            }}</span>
+                            <Badge
+                                v-if="entry.settled != null"
+                                :variant="
+                                    entry.settled ? 'secondary' : 'outline'
+                                "
+                                class="shrink-0"
+                                :title="
+                                    entry.settledOn
+                                        ? `Deposited ${formatDate(entry.settledOn)}`
+                                        : 'Not deposited yet, and can still be returned'
+                                "
+                                >{{ settlementLabel(entry) }}</Badge
+                            >
                         </p>
                         <p
                             class="text-muted-foreground mt-0.5 truncate text-xs"
