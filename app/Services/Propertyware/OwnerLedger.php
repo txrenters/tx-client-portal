@@ -81,11 +81,13 @@ class OwnerLedger
      * @param  array<int, int>  $buildingIds  Only these properties; all of them when empty.
      * @param  array<int, string>  $locations  Building id to the address an owner would recognise.
      * @return array{
-     *     income: float, expense: float, managementFee: float,
+     *     income: float, expense: float, managementFee: float, draws: float,
      *     openingBalance: float, endingBalance: float, net: float,
      *     fromInception: bool, portfolioMinimum: float,
      *     incomeAccounts: array<int, array{name: string, amount: float}>,
      *     expenseAccounts: array<int, array{name: string, amount: float}>,
+     *     incomeByAccount: array<int, array{name: string, amount: float}>,
+     *     expenseByAccount: array<int, array{name: string, amount: float}>,
      *     entries: array<int, array<string, mixed>>, from: string, to: string
 
      * }
@@ -120,6 +122,7 @@ class OwnerLedger
 
         $income = 0.0;
         $expense = 0.0;
+        $draws = 0.0;
         $entries = [];
         $byAccount = ['income' => [], 'expense' => []];
         $managementFee = $this->managementFee($transactions, $portfolioId, $accounts);
@@ -138,6 +141,7 @@ class OwnerLedger
 
             $income += $entry['income'];
             $expense += $entry['expense'];
+            $draws += $entry['draw'];
             $entries[] = $entry;
         }
 
@@ -150,13 +154,14 @@ class OwnerLedger
         foreach ($entries as $index => $entry) {
             $balance = round($balance + $entry['amount'], 2);
             $entries[$index]['balance'] = $balance;
-            unset($entries[$index]['income'], $entries[$index]['expense'], $entries[$index]['managementFee']);
+            unset($entries[$index]['income'], $entries[$index]['expense'], $entries[$index]['draw'], $entries[$index]['managementFee']);
         }
 
         return [
             'income' => round($income, 2),
             'expense' => round($expense, 2),
             'managementFee' => round($managementFee, 2),
+            'draws' => round($draws, 2),
             'openingBalance' => round($opening, 2),
             'endingBalance' => round($balance, 2),
             'net' => round($balance - $opening, 2),
@@ -164,6 +169,8 @@ class OwnerLedger
             'entries' => array_reverse($entries),
             'incomeAccounts' => $this->topAccounts($byAccount['income']),
             'expenseAccounts' => $this->topAccounts($byAccount['expense']),
+            'incomeByAccount' => $this->everyAccount($byAccount['income']),
+            'expenseByAccount' => $this->everyAccount($byAccount['expense']),
             'portfolioMinimum' => $this->portfolioMinimum($portfolioId),
             'from' => $from,
             'to' => $to,
@@ -330,6 +337,7 @@ class OwnerLedger
             'balance' => 0.0,
             'income' => $income,
             'expense' => $expense,
+            'draw' => $draw,
             'managementFee' => $managementFee,
         ];
     }
@@ -498,6 +506,24 @@ class OwnerLedger
                 $byAccount['expense'][$name] = round(($byAccount['expense'][$name] ?? 0) + $debit - $credit, 2);
             }
         }
+    }
+
+    /**
+     * Every account that moved, largest first, for a statement that has to add up.
+     *
+     * @param  array<string, float>  $totals
+     * @return array<int, array{name: string, amount: float}>
+     */
+    private function everyAccount(array $totals): array
+    {
+        $totals = array_filter($totals, fn (float $amount): bool => $amount !== 0.0);
+        arsort($totals);
+
+        return array_map(
+            fn (string $name, float $amount): array => ['name' => $name, 'amount' => $amount],
+            array_keys($totals),
+            array_values($totals),
+        );
     }
 
     /**

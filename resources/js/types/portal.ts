@@ -475,6 +475,26 @@ export type OwnerLedgerEntry = {
     settledOn?: string | null;
 };
 
+/** An owner's statement for one portfolio and one finished month. */
+export type OwnerStatement = {
+    portfolio: { id: number; name: string } | null;
+    month: string;
+    label: string;
+    from: string;
+    to: string;
+    openingBalance: number;
+    income: number;
+    expense: number;
+    managementFee: number;
+    draws: number;
+    endingBalance: number;
+    fromInception: boolean;
+    incomeAccounts: { name: string; amount: number }[];
+    expenseAccounts: { name: string; amount: number }[];
+    /** Oldest first, each with the balance it left behind. */
+    entries: OwnerLedgerEntry[];
+};
+
 export type OwnerLedgerData = {
     income: number;
     expense: number;

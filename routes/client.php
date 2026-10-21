@@ -15,6 +15,7 @@ use App\Http\Controllers\Owner\MessageController as OwnerMessageController;
 use App\Http\Controllers\Owner\PortfolioController as OwnerPortfolioController;
 use App\Http\Controllers\Owner\PropertyController as OwnerPropertyController;
 use App\Http\Controllers\Owner\ReferralController as OwnerReferralController;
+use App\Http\Controllers\Owner\StatementController as OwnerStatementController;
 use App\Http\Controllers\Resident\ConversationController as ResidentConversationController;
 use App\Http\Controllers\Resident\DashboardController as ResidentDashboardController;
 use App\Http\Controllers\Resident\DocumentController as ResidentDocumentController;
@@ -95,7 +96,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('referrals', [OwnerReferralController::class, 'index'])->name('referrals.index');
         Route::post('referrals', [OwnerReferralController::class, 'store'])->middleware('throttle:10,1')->name('referrals.store');
         Route::get('financials', OwnerFinancialController::class)->name('financials');
-        Route::inertia('statements', 'client/ComingSoon', ['title' => 'Statements'])->name('statements');
+        Route::get('statements', OwnerStatementController::class)->name('statements');
         Route::get('documents', [OwnerDocumentController::class, 'index'])->name('documents');
         Route::post('documents', [OwnerDocumentController::class, 'store'])
             ->middleware('throttle:10,1')

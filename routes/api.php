@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OwnerLedgerController;
+use App\Http\Controllers\Api\V1\OwnerStatementController;
 use App\Http\Controllers\Api\V1\PasskeyController;
 use App\Http\Controllers\Api\V1\PasswordController;
 use App\Http\Controllers\Api\V1\PaymentController;
@@ -111,6 +112,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('payments', PaymentController::class)->name('payments');
             Route::get('financials', FinancialController::class)->name('financials');
             Route::get('ledger', OwnerLedgerController::class)->name('ledger');
+            Route::get('statement', OwnerStatementController::class)->name('statement');
             Route::get('properties', [PropertyController::class, 'index'])->name('properties.index');
             Route::get('properties/{property}', [PropertyController::class, 'show'])->whereNumber('property')->name('properties.show');
             Route::get('meetings', [MeetingController::class, 'index'])->name('meetings.index');
