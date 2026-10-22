@@ -23,7 +23,7 @@ class PropertywarePing extends Command
             return self::FAILURE;
         }
 
-        $resource = $this->argument('resource');
+        $resource = $this->input()->string('resource')->toString();
 
         try {
             $records = $propertyware->list($resource, limit: 1);

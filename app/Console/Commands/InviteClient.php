@@ -38,12 +38,13 @@ class InviteClient extends Command
             return self::FAILURE;
         }
 
-        $role = ClientRole::from($this->argument('role'));
-        $email = $this->argument('email');
+        $role = ClientRole::from($this->input()->string('role')->toString());
+        $email = $this->input()->string('email')->toString();
+        $propertywareId = $this->input()->string('propertyware_id')->toString();
 
         $isLinkedToAnotherClient = ClientAccount::query()
             ->where('role', $role)
-            ->where('propertyware_id', $this->argument('propertyware_id'))
+            ->where('propertyware_id', $propertywareId)
             ->exists();
 
         if ($isLinkedToAnotherClient) {
@@ -54,7 +55,7 @@ class InviteClient extends Command
 
         $user = User::where('email', $email)->first();
 
-        if ($user?->clientAccountsFor($role)->contains('propertyware_id', $this->argument('propertyware_id'))) {
+        if ($user?->clientAccountsFor($role)->contains('propertyware_id', $propertywareId)) {
             $this->components->error("{$email} is already linked to that Propertyware record.");
 
             return self::FAILURE;
@@ -64,7 +65,7 @@ class InviteClient extends Command
             return self::FAILURE;
         }
 
-        $inviteClient->handle($email, $this->argument('name'), $role, $this->argument('propertyware_id'));
+        $inviteClient->handle($email, $this->input()->string('name')->toString(), $role, $propertywareId);
 
         $this->components->info("Invitation sent to {$email}.");
 
@@ -76,7 +77,7 @@ class InviteClient extends Command
      */
     private function verifyContact(PropertywareDirectory $directory, ClientRole $role): bool
     {
-        $contactId = $this->argument('propertyware_id');
+        $contactId = $this->input()->string('propertyware_id')->toString();
 
         try {
             $contact = $directory->findContact($contactId);

@@ -352,8 +352,10 @@ class Financials
      */
     private function chosenPortfolios(ClientScope $scope, array $filters): array
     {
+        $single = $filters['portfolio'] ?? null;
+
         $asked = collect($filters['portfolios'] ?? [])
-            ->when(filled($filters['portfolio'] ?? null), fn ($all) => $all->push($filters['portfolio']))
+            ->when(filled($single), fn ($all) => $all->push($single))
             ->map(fn (mixed $id): int => (int) $id)
             ->filter(fn (int $id): bool => in_array($id, $scope->portfolioIds, true))
             ->unique()
