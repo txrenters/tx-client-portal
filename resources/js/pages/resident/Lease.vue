@@ -564,43 +564,42 @@ const term = computed(() => [
                                             >{{ entry.detail }}</span
                                         >
                                         <span
-                                            v-if="entry.settled != null"
-                                            class="text-xs"
-                                            :class="
-                                                entry.settled
-                                                    ? 'text-success'
-                                                    : 'text-muted-foreground'
-                                            "
+                                            class="text-muted-foreground text-xs"
                                         >
                                             {{
-                                                entry.settledOn
-                                                    ? `Deposited ${formatDate(entry.settledOn)}`
-                                                    : 'On its way to the bank'
+                                                entry.kind === 'payment'
+                                                    ? `Paid ${formatDate(entry.date)}`
+                                                    : formatDate(entry.date)
                                             }}
+                                            <template
+                                                v-if="entry.settled != null"
+                                            >
+                                                ·
+                                                <span
+                                                    :class="{
+                                                        'text-success':
+                                                            entry.settled,
+                                                    }"
+                                                    >{{
+                                                        entry.settledOn
+                                                            ? `In the bank ${formatDate(entry.settledOn)}`
+                                                            : 'On its way to the bank'
+                                                    }}</span
+                                                >
+                                            </template>
                                         </span>
                                     </span>
 
                                     <span
-                                        class="flex shrink-0 flex-col items-end gap-0.5"
+                                        class="shrink-0 text-sm font-semibold tabular-nums"
+                                        :class="
+                                            entry.kind === 'payment'
+                                                ? 'text-success'
+                                                : 'text-foreground'
+                                        "
                                     >
-                                        <span
-                                            class="text-sm font-semibold tabular-nums"
-                                            :class="
-                                                entry.kind === 'payment'
-                                                    ? 'text-success'
-                                                    : 'text-foreground'
-                                            "
-                                        >
-                                            {{
-                                                entry.kind === 'payment'
-                                                    ? '−'
-                                                    : '+'
-                                            }}{{ money.format(entry.amount) }}
-                                        </span>
-                                        <span
-                                            class="text-muted-foreground text-xs"
-                                            >{{ formatDate(entry.date) }}</span
-                                        >
+                                        {{ entry.kind === 'payment' ? '−' : '+'
+                                        }}{{ money.format(entry.amount) }}
                                     </span>
                                 </li>
                             </ul>
