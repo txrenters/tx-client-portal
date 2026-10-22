@@ -9,6 +9,7 @@ use App\Http\Controllers\Owner\ConversationController as OwnerConversationContro
 use App\Http\Controllers\Owner\DashboardController as OwnerDashboardController;
 use App\Http\Controllers\Owner\DocumentController as OwnerDocumentController;
 use App\Http\Controllers\Owner\FinancialController as OwnerFinancialController;
+use App\Http\Controllers\Owner\IncomeStatementController as OwnerIncomeStatementController;
 use App\Http\Controllers\Owner\MaintenanceController as OwnerMaintenanceController;
 use App\Http\Controllers\Owner\MeetingController as OwnerMeetingController;
 use App\Http\Controllers\Owner\MessageController as OwnerMessageController;
@@ -97,6 +98,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('referrals', [OwnerReferralController::class, 'store'])->middleware('throttle:10,1')->name('referrals.store');
         Route::get('financials', OwnerFinancialController::class)->name('financials');
         Route::get('statements', OwnerStatementController::class)->name('statements');
+        Route::get('statements/income-statement.pdf', OwnerIncomeStatementController::class)->middleware('throttle:10,1')->name('statements.income-pdf');
         Route::get('documents', [OwnerDocumentController::class, 'index'])->name('documents');
         Route::post('documents', [OwnerDocumentController::class, 'store'])
             ->middleware('throttle:10,1')

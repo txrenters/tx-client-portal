@@ -640,16 +640,8 @@ class OwnerLedger
         $from = $month->startOfMonth();
         $to = $month->endOfMonth()->gt($until) ? $until : $month->endOfMonth();
 
-        $startOfThisMonth = CarbonImmutable::now()->startOfMonth();
-        $closed = $to->lt($startOfThisMonth);
-        $recent = $to->gte($startOfThisMonth->subMonths(self::RECENT_MONTHS));
-
         $key = "propertyware:owner-ledger:v2:{$portfolioId}:{$from->toDateString()}:{$to->toDateString()}";
-        $ttl = match (true) {
-            ! $closed => now()->addMinutes(self::OPEN_MONTH_MINUTES),
-            $recent => now()->addDays(self::RECENT_MONTH_DAYS),
-            default => now()->addDays(self::SETTLED_MONTH_DAYS),
-        };
+        $ttl = $this->monthTtl($to);
 
         if (! Cache::has($key)) {
             $missing++;
@@ -696,6 +688,104 @@ class OwnerLedger
         });
 
         return $totals;
+    }
+
+    /**
+     * Every income and expense account the portfolio touched in each month of
+     * a year, as Propertyware's Published Income Statement reads it: our own
+     * pass-through fees included (they usually net to nothing), months after
+     * this one left empty. An account that moved and came back to nothing
+     * still appears, as it does there.
+     *
+     * @return array{
+     *     months: array<string, array<int, float>>,
+     *     accounts: array<int, array{name: string, type: string, number: string, parent: string, passThrough: bool}>
+     * }
+     *
+     * @throws PropertywareException
+     */
+    public function accountsByMonth(ClientScope $scope, int $portfolioId, int $year): array
+    {
+        if (! in_array($portfolioId, $scope->portfolioIds, strict: true)) {
+            throw new PropertywareException('That portfolio does not belong to this client.');
+        }
+
+        $accounts = $this->accounts();
+        $now = CarbonImmutable::now();
+        $months = [];
+
+        for ($number = 1; $number <= 12; $number++) {
+            $month = CarbonImmutable::create($year, $number, 1);
+            $months[$month->format('Y-m')] = $month->gt($now)
+                ? []
+                : $this->monthAccounts($portfolioId, $month, $accounts);
+        }
+
+        $touched = array_unique(array_merge(...array_map(array_keys(...), array_values($months))));
+
+        return [
+            'months' => $months,
+            'accounts' => array_intersect_key($accounts, array_flip($touched)),
+        ];
+    }
+
+    /**
+     * One month's movement on each income and expense account, cached like
+     * the month totals: income as credits less debits, expense the other way.
+     *
+     * @param  array<int, array{name: string, type: string, number: string, parent: string, passThrough: bool}>  $accounts
+     * @return array<int, float>
+     *
+     * @throws PropertywareException
+     */
+    private function monthAccounts(int $portfolioId, CarbonImmutable $month, array $accounts): array
+    {
+        $from = $month->startOfMonth();
+        $to = $month->endOfMonth()->gt(CarbonImmutable::now()) ? CarbonImmutable::now()->startOfDay() : $month->endOfMonth();
+
+        return Cache::remember(
+            "propertyware:owner-ledger:accounts:v1:{$portfolioId}:{$from->toDateString()}:{$to->toDateString()}",
+            $this->monthTtl($to),
+            function () use ($portfolioId, $from, $to, $accounts): array {
+                $totals = [];
+
+                foreach ($this->transactions($portfolioId, $from->toDateString(), $to->toDateString()) as $transaction) {
+                    foreach ($transaction['glentries'] ?? [] as $entry) {
+                        if ((int) ($entry['portfolioID'] ?? 0) !== $portfolioId) {
+                            continue;
+                        }
+
+                        $id = (int) ($entry['glaccountID'] ?? 0);
+                        $type = (string) ($accounts[$id]['type'] ?? '');
+                        $credit = (float) ($entry['credit'] ?? 0);
+                        $debit = (float) ($entry['debit'] ?? 0);
+
+                        if ($type === 'Income') {
+                            $totals[$id] = round(($totals[$id] ?? 0) + $credit - $debit, 2);
+                        } elseif (str_contains($type, 'Expense')) {
+                            $totals[$id] = round(($totals[$id] ?? 0) + $debit - $credit, 2);
+                        }
+                    }
+                }
+
+                return $totals;
+            },
+        );
+    }
+
+    /**
+     * How long a month read ending on this day is kept: briefly while it is
+     * open, a week while recent, months once settled.
+     */
+    private function monthTtl(CarbonImmutable $to): \DateTimeInterface
+    {
+        $startOfThisMonth = CarbonImmutable::now()->startOfMonth();
+
+        return match (true) {
+            ! $to->lt($startOfThisMonth) => now()->addMinutes(self::OPEN_MONTH_MINUTES),
+            $to->gte($startOfThisMonth->subMonths(self::RECENT_MONTHS)) => now()->addDays(self::RECENT_MONTH_DAYS),
+            default => now()->addDays(self::SETTLED_MONTH_DAYS),
+        };
     }
 
     /**
@@ -786,19 +876,31 @@ class OwnerLedger
     }
 
     /**
+     * The chart of accounts, for a report that names accounts which did not move.
+     *
+     * @return array<int, array{name: string, type: string, number: string, parent: string, passThrough: bool}>
+     */
+    public function chartOfAccounts(): array
+    {
+        return $this->accounts();
+    }
+
+    /**
      * Propertyware's chart of accounts, keyed by id, marking our own pass-through fees.
      *
-     * @return array<int, array{name: string, type: string, passThrough: bool}>
+     * @return array<int, array{name: string, type: string, number: string, parent: string, passThrough: bool}>
      */
     private function accounts(): array
     {
-        return Cache::remember('propertyware:gl-accounts:owner-ledger', now()->addDay(), function (): array {
+        return Cache::remember('propertyware:gl-accounts:owner-ledger:v2', now()->addDay(), function (): array {
             try {
                 return collect($this->propertyware->listAll('accounting/glaccounts', [], 2000))
                     ->filter(fn (array $account): bool => filled($account['id'] ?? null))
                     ->mapWithKeys(fn (array $account): array => [(int) $account['id'] => [
                         'name' => trim((string) ($account['name'] ?? '')),
                         'type' => (string) ($account['accountType'] ?? ''),
+                        'number' => trim((string) ($account['accountNumber'] ?? '')),
+                        'parent' => trim((string) ($account['parentRef'] ?? '')),
                         'passThrough' => trim((string) ($account['parentRef'] ?? '')) === self::PASS_THROUGH_PARENT
                             || trim((string) ($account['name'] ?? '')) === self::PASS_THROUGH_PARENT,
                     ]])

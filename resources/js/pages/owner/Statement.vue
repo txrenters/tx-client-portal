@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { FileText } from '@lucide/vue';
+import { Download, FileText } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import AppCard from '@/components/AppCard.vue';
+import { Button } from '@/components/ui/button';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -71,6 +72,20 @@ const year = computed({
         month.value = (same ?? inYear[0]).value;
     },
 });
+/**
+ * The year's income statement as a PDF, for the portfolio on screen. Made
+ * when it is asked for and never kept: the owner's download is the copy.
+ */
+const pdfHref = computed(() => {
+    const query = new URLSearchParams({ year: year.value });
+
+    if (portfolio.value !== '') {
+        query.set('portfolio', portfolio.value);
+    }
+
+    return `${statements().url}/income-statement.pdf?${query}`;
+});
+
 const monthsInYear = computed(() =>
     props.months.filter((item) => item.value.startsWith(year.value)),
 );
@@ -163,6 +178,12 @@ watch(
                     >
                 </SelectContent>
             </Select>
+            <Button as-child variant="outline" class="sm:ml-auto">
+                <a :href="pdfHref" download>
+                    <Download class="size-4" aria-hidden="true" />
+                    Download {{ year }} income statement (PDF)
+                </a>
+            </Button>
         </div>
 
         <div v-if="statement === undefined" class="flex flex-col gap-4">
