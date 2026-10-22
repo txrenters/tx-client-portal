@@ -63,8 +63,11 @@ class IncomeStatement
      */
     public function range(): array
     {
+        $months = $this->statements->months();
+        $oldest = $months === [] ? CarbonImmutable::now(config('app.display_timezone'))->format('Y') : substr($months[array_key_last($months)]['value'], 0, 4);
+
         return [
-            'earliest' => min($this->years()).'-01',
+            'earliest' => $oldest.'-01',
             'latest' => CarbonImmutable::now(config('app.display_timezone'))->format('Y-m'),
         ];
     }
