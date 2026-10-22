@@ -113,6 +113,29 @@ test('an owner draw reduces the balance without counting as an expense', functio
         ->and($ledger['net'])->toBe(2285.78);
 });
 
+test('says what each line was by where its money went, not by its name', function () {
+    fakeLedger([
+        transaction(1, '2026-09-01', 'Tenant Payment', [glEntry(7, 10, credit: 1400.00)]),
+        transaction(2, '2026-09-08', 'Bill Payment', [glEntry(7, 20, debit: 475.00)]),
+        // Propertyware files these two under one type; the accounts tell them apart.
+        transaction(3, '2026-09-15', 'Tenant Refund/Owner Draw', [glEntry(7, 40, debit: 500.00)]),
+        transaction(4, '2026-09-16', 'Tenant Refund/Owner Draw', [glEntry(7, 10, debit: 100.00)]),
+        transaction(5, '2026-09-20', 'Credit Memo', [glEntry(7, 20, credit: 50.00)]),
+        transaction(6, '2026-09-22', 'Journal Entry', [glEntry(7, 40, credit: 1000.00)]),
+    ]);
+
+    $entries = collect(app(OwnerLedger::class)->forPortfolio($this->scope, 7, '2026-09-01', '2026-09-30')['entries']);
+
+    expect($entries->pluck('kind', 'id')->sortKeys()->all())->toBe([
+        1 => 'income',
+        2 => 'expense',
+        3 => 'draw',
+        4 => 'refund',
+        5 => 'credit',
+        6 => 'contribution',
+    ]);
+});
+
 test('refuses a portfolio the client does not own', function () {
     fakeLedger([]);
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import OwnerEntryBadge from '@/components/OwnerEntryBadge.vue';
+import { ownerAmountClass } from '@/lib/ownerLedger';
 import { Head, router } from '@inertiajs/vue3';
 import { Download, FileText } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
@@ -17,7 +19,6 @@ import { Label } from '@/components/ui/label';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import PageHeader from '@/components/PageHeader.vue';
-import { Badge } from '@/components/ui/badge';
 import {
     Select,
     SelectContent,
@@ -451,19 +452,7 @@ watch(
                                     <span class="font-medium">{{
                                         entry.description
                                     }}</span>
-                                    <Badge
-                                        v-if="entry.settled != null"
-                                        :variant="
-                                            entry.settled
-                                                ? 'secondary'
-                                                : 'outline'
-                                        "
-                                        >{{
-                                            entry.settled
-                                                ? 'Settled'
-                                                : 'Pending'
-                                        }}</Badge
-                                    >
+                                    <OwnerEntryBadge :entry="entry" />
                                 </div>
                                 <p
                                     v-if="entry.details"
@@ -478,9 +467,7 @@ watch(
                             >
                             <TableCell
                                 class="text-right tabular-nums"
-                                :class="
-                                    entry.amount < 0 ? 'text-destructive' : ''
-                                "
+                                :class="ownerAmountClass(entry)"
                                 >{{ money.format(entry.amount) }}</TableCell
                             >
                             <TableCell

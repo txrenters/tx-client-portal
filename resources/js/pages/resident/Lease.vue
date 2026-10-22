@@ -530,7 +530,7 @@ const term = computed(() => [
                                         class="flex size-9 shrink-0 items-center justify-center rounded-full"
                                         :class="
                                             entry.kind === 'payment'
-                                                ? 'bg-success/10 text-success'
+                                                ? 'bg-primary/10 text-primary'
                                                 : 'bg-muted text-muted-foreground'
                                         "
                                     >
@@ -585,7 +585,7 @@ const term = computed(() => [
                                                 ·
                                                 <span
                                                     :class="{
-                                                        'text-success':
+                                                        'text-primary':
                                                             entry.settled,
                                                     }"
                                                     >{{
@@ -602,7 +602,7 @@ const term = computed(() => [
                                         class="shrink-0 text-sm font-semibold tabular-nums"
                                         :class="
                                             entry.kind === 'payment'
-                                                ? 'text-success'
+                                                ? 'text-primary'
                                                 : 'text-foreground'
                                         "
                                     >
@@ -613,7 +613,7 @@ const term = computed(() => [
                             </ul>
 
                             <p class="text-muted-foreground mt-4 text-xs">
-                                <span class="text-success font-medium">−</span>
+                                <span class="text-primary font-medium">−</span>
                                 payments come off your balance;
                                 <span class="text-foreground font-medium"
                                     >+</span
@@ -621,7 +621,7 @@ const term = computed(() => [
                                 charges add to it. A payment is
                                 <span class="font-medium">Pending</span> while
                                 it is on its way to the bank and
-                                <span class="text-success font-medium"
+                                <span class="text-primary font-medium"
                                     >Settled</span
                                 >
                                 once it has been deposited. Payments are made in

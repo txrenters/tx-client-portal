@@ -273,7 +273,7 @@ function refreshDashboard(): void {
                             class="flex size-8 shrink-0 items-center justify-center rounded-full"
                             :class="
                                 entry.kind === 'payment'
-                                    ? 'bg-success/10 text-success'
+                                    ? 'bg-primary/10 text-primary'
                                     : 'bg-muted text-muted-foreground'
                             "
                         >
@@ -310,7 +310,7 @@ function refreshDashboard(): void {
                             class="shrink-0 text-sm font-medium tabular-nums"
                             :class="
                                 entry.kind === 'payment'
-                                    ? 'text-success'
+                                    ? 'text-primary'
                                     : entry.kind === 'charge'
                                       ? 'text-foreground'
                                       : 'text-muted-foreground'
