@@ -70,18 +70,6 @@ test('dashboard once props are scoped to the selected account', function (string
     ['resident', 'property'],
 ]);
 
-test('the owner home page always carries the referral reward', function () {
-    $user = User::factory()->create();
-    ClientAccount::factory()->for($user)->create(['role' => 'owner']);
-    Http::fake();
-
-    $this->actingAs($user)->get(route('owner.dashboard'))
-        ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('owner/Dashboard')
-            ->where('referralReward', ReferralProgram::DEFAULT_REWARD));
-});
-
 test('every owner page carries the referral card, and resident pages do not', function () {
     Http::fake();
     $owner = User::factory()->create();

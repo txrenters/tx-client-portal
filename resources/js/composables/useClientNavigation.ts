@@ -7,7 +7,6 @@ import {
     CircleQuestionMark,
     FileSpreadsheet,
     FileText,
-    Gift,
     Home,
     LayoutGrid,
     MessageSquare,
@@ -31,7 +30,6 @@ import { index as ownerMaintenance } from '@/routes/owner/maintenance';
 import { index as ownerMeetings } from '@/routes/owner/meetings';
 import { index as ownerMessages } from '@/routes/owner/messages';
 import { index as ownerProperties } from '@/routes/owner/properties';
-import { index as ownerReferrals } from '@/routes/owner/referrals';
 import { edit as editProfile } from '@/routes/profile';
 import {
     dashboard as residentDashboard,
@@ -40,7 +38,6 @@ import {
 } from '@/routes/resident';
 import { index as residentMaintenance } from '@/routes/resident/maintenance';
 import { index as residentMessages } from '@/routes/resident/messages';
-import { index as residentReferrals } from '@/routes/resident/referrals';
 import type { ClientRole, NavGroup, NavItem } from '@/types';
 
 export type UseClientNavigationReturn = {
@@ -121,26 +118,6 @@ const ownerNavGroups = (): NavGroup[] => [
 ];
 
 /**
- * Referrals are a one-off rather than daily work, so they sit with the other
- * extras at the foot of the sidebar instead of in the main menu.
- */
-const referralNavItems = (role: ClientRole | null): NavItem[] => {
-    if (role === 'owner') {
-        return [
-            { title: 'Refer a friend', href: ownerReferrals(), icon: Gift },
-        ];
-    }
-
-    if (role === 'resident') {
-        return [
-            { title: 'Refer a friend', href: residentReferrals(), icon: Gift },
-        ];
-    }
-
-    return [];
-};
-
-/**
  * Navigation for the portal the client is currently using.
  */
 export function useClientNavigation(): UseClientNavigationReturn {
@@ -156,7 +133,6 @@ export function useClientNavigation(): UseClientNavigationReturn {
     });
 
     const secondaryNavItems = computed<NavItem[]>(() => [
-        ...referralNavItems(activeRole.value),
         // Staff only; the server decides, and every admin route checks again.
         // Staff with client accounts of their own switch with the account switcher instead.
         ...(page.props.auth?.isAdmin &&
