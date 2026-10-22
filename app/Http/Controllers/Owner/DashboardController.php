@@ -15,6 +15,7 @@ use App\Services\Propertyware\OwnerLedger;
 use App\Services\Propertyware\PropertywareDirectory;
 use App\Services\Propertyware\PropertywareException;
 use App\Services\Propertyware\WorkOrderApprovals;
+use App\Services\Referrals\ReferralProgram;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -27,13 +28,15 @@ class DashboardController extends Controller
     /**
      * Show the owner's portfolio home page.
      */
-    public function __invoke(Request $request, PropertywareDirectory $directory, MaintenanceSummary $maintenance, WorkOrderApprovals $approvals, DocumentLibrary $documents, ClientConversations $conversations, Financials $financials, OwnerLedger $ledger): Response
+    public function __invoke(Request $request, PropertywareDirectory $directory, MaintenanceSummary $maintenance, WorkOrderApprovals $approvals, DocumentLibrary $documents, ClientConversations $conversations, Financials $financials, OwnerLedger $ledger, ReferralProgram $program): Response
     {
         $account = $this->activeClientAccount($request, ClientRole::Owner);
         abort_if($account === null, 403);
         $onceKey = 'owner-dashboard-'.$account->id;
 
         return Inertia::render('owner/Dashboard', [
+            // The referral banner, always shown: owners cannot hide it.
+            'referralReward' => $program->reward(),
             // The figures Propertyware's own owner dashboard opens with: what
             // the portfolio carried in, earned, spent, and has left.
             'ledger' => Inertia::defer(function () use ($request, $directory, $financials, $ledger): ?array {
