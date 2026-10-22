@@ -130,3 +130,45 @@ test('answers 404 for a portfolio the owner does not hold, or a resident', funct
     $this->get(route('api.v1.accounts.income-statement.pdf', [$this->account, 'portfolio' => 99]))->assertNotFound();
     $this->getJson(route('api.v1.accounts.income-statement', $resident))->assertNotFound();
 });
+
+test('runs across two years, up to twelve months', function () {
+    Sanctum::actingAs($this->user);
+
+    $response = $this->getJson(route('api.v1.accounts.income-statement', [$this->account, 'from' => '2025-11', 'to' => '2026-10']))->assertOk();
+
+    expect($response->json('data.months'))->toHaveCount(12)
+        ->and($response->json('data.months.0'))->toBe(['value' => '2025-11', 'label' => 'NOV 25'])
+        ->and($response->json('data.months.11'))->toBe(['value' => '2026-10', 'label' => 'OCT 26'])
+        ->and($response->json('data.label'))->toBe('Nov 2025 – Oct 2026')
+        ->and($response->json('data.from'))->toBe('2025-11-01')
+        ->and($response->json('data.to'))->toBe('2026-10-31')
+        ->and($response->json('data.totalIncome'))->toEqual(15174.19)
+        ->and($response->json('meta.range'))->toBe(['earliest' => '2021-01', 'latest' => '2026-10', 'maxMonths' => 12]);
+
+    $this->get(route('api.v1.accounts.income-statement.pdf', [$this->account, 'from' => '2025-11', 'to' => '2026-10']))
+        ->assertOk()
+        ->assertHeader('Content-Disposition', 'attachment; filename="Income Statement Nov 2025 to Oct 2026 - Pesek,Douglas.pdf"');
+});
+
+test('a shorter run covers only its own months', function () {
+    Sanctum::actingAs($this->user);
+
+    $response = $this->getJson(route('api.v1.accounts.income-statement', [$this->account, 'from' => '2026-08', 'to' => '2026-09']))->assertOk();
+
+    expect($response->json('data.months'))->toHaveCount(2)
+        ->and($response->json('data.label'))->toBe('Aug 2026 – Sep 2026')
+        ->and($response->json('data.totalIncome'))->toEqual(6774.19)
+        ->and($response->json('data.totalExpense'))->toEqual(178);
+});
+
+test('refuses more than twelve months, months out of order, or months not on offer', function (array $query, string $field) {
+    Sanctum::actingAs($this->user);
+
+    $this->getJson(route('api.v1.accounts.income-statement', [$this->account, ...$query]))->assertUnprocessable()->assertJsonValidationErrors($field);
+    $this->getJson(route('api.v1.accounts.income-statement.pdf', [$this->account, ...$query]))->assertUnprocessable()->assertJsonValidationErrors($field);
+})->with([
+    'thirteen months' => [['from' => '2025-10', 'to' => '2026-10'], 'to'],
+    'out of order' => [['from' => '2026-05', 'to' => '2026-02'], 'to'],
+    'too long ago' => [['from' => '2020-12', 'to' => '2021-03'], 'from'],
+    'not yet' => [['from' => '2026-10', 'to' => '2026-11'], 'from'],
+]);

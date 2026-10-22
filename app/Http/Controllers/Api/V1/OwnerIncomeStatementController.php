@@ -25,12 +25,14 @@ class OwnerIncomeStatementController extends Controller
      */
     public function show(Request $request, ClientAccount $account, PropertywareDirectory $directory, IncomeStatement $statements, OwnerStatement $monthly): JsonResponse
     {
-        [$scope, $portfolioId, $year] = $this->resolve($request, $account, $directory, $statements);
+        [$scope, $portfolioId, $from, $to] = $this->resolve($request, $account, $directory, $statements);
 
         return response()->json([
-            'data' => $statements->for($scope, $portfolioId, $year),
+            'data' => $statements->for($scope, $portfolioId, $from, $to),
             'meta' => [
                 'years' => $statements->years(),
+                // The months a PDF can be made between, up to MAX_MONTHS at a time.
+                'range' => [...$statements->range(), 'maxMonths' => IncomeStatement::MAX_MONTHS],
                 'portfolios' => $monthly->portfolios($scope),
             ],
         ]);
@@ -43,13 +45,13 @@ class OwnerIncomeStatementController extends Controller
      */
     public function pdf(Request $request, ClientAccount $account, PropertywareDirectory $directory, IncomeStatement $statements): Response
     {
-        [$scope, $portfolioId, $year] = $this->resolve($request, $account, $directory, $statements);
+        [$scope, $portfolioId, $from, $to] = $this->resolve($request, $account, $directory, $statements);
 
-        return $statements->download($statements->for($scope, $portfolioId, $year));
+        return $statements->download($statements->for($scope, $portfolioId, $from, $to));
     }
 
     /**
-     * @return array{0: ClientScope, 1: int, 2: int}
+     * @return array{0: ClientScope, 1: int, 2: string, 3: string}
      *
      * @throws PropertywareException
      */
@@ -60,13 +62,16 @@ class OwnerIncomeStatementController extends Controller
         $validated = $request->validate([
             'portfolio' => ['nullable', 'integer'],
             'year' => ['nullable', 'integer'],
+            'from' => ['nullable', 'date_format:Y-m'],
+            'to' => ['nullable', 'date_format:Y-m'],
         ]);
+        $period = $statements->period($validated);
 
         $scope = $directory->scopeFor($account);
         $portfolioId = (int) ($validated['portfolio'] ?? $scope->portfolioIds[0] ?? 0);
 
         abort_if($portfolioId === 0 || ! in_array($portfolioId, $scope->portfolioIds, strict: true), 404);
 
-        return [$scope, $portfolioId, $statements->yearOrDefault(isset($validated['year']) ? (int) $validated['year'] : null)];
+        return [$scope, $portfolioId, ...$period];
     }
 }
