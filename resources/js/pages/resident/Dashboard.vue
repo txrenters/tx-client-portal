@@ -15,6 +15,7 @@ import {
     ScrollText,
     Wrench,
 } from '@lucide/vue';
+import ChargeBadge from '@/components/ChargeBadge.vue';
 import PaymentStatusBadge from '@/components/PaymentStatusBadge.vue';
 import DashboardHeader from '@/components/DashboardHeader.vue';
 import EmptyState from '@/components/EmptyState.vue';
@@ -296,6 +297,9 @@ function refreshDashboard(): void {
                                 <PaymentStatusBadge
                                     v-if="entry.settled != null"
                                     :settled="entry.settled"
+                                />
+                                <ChargeBadge
+                                    v-else-if="entry.kind === 'charge'"
                                 />
                             </span>
                             <span class="text-muted-foreground text-xs">{{

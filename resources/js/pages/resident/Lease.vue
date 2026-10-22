@@ -15,6 +15,7 @@ import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import ChargeBadge from '@/components/ChargeBadge.vue';
 import PaymentStatusBadge from '@/components/PaymentStatusBadge.vue';
 import ResultsPagination from '@/components/ResultsPagination.vue';
 import { Badge } from '@/components/ui/badge';
@@ -557,6 +558,11 @@ const term = computed(() => [
                                                 v-if="entry.settled != null"
                                                 :settled="entry.settled"
                                             />
+                                            <ChargeBadge
+                                                v-else-if="
+                                                    entry.kind === 'charge'
+                                                "
+                                            />
                                         </span>
                                         <span
                                             v-if="entry.detail"
@@ -569,7 +575,9 @@ const term = computed(() => [
                                             {{
                                                 entry.kind === 'payment'
                                                     ? `Paid ${formatDate(entry.date)}`
-                                                    : formatDate(entry.date)
+                                                    : entry.kind === 'charge'
+                                                      ? `Billed ${formatDate(entry.date)}`
+                                                      : formatDate(entry.date)
                                             }}
                                             <template
                                                 v-if="entry.settled != null"
