@@ -22,8 +22,8 @@ class DemoAccounts extends Command
     public function handle(DemoReset $reset): int
     {
         $passwords = [
-            'owner' => $this->option('owner-password') ?: password('Password for the demo owner'),
-            'tenant' => $this->option('tenant-password') ?: password('Password for the demo tenant'),
+            'owner' => $this->input()->string('owner-password')->toString() ?: password('Password for the demo owner'),
+            'tenant' => $this->input()->string('tenant-password')->toString() ?: password('Password for the demo tenant'),
         ];
 
         foreach ($passwords as $key => $plain) {

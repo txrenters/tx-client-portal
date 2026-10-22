@@ -52,7 +52,7 @@ test('an expired block lets the address back in', function () {
     $this->withServerVariables(['REMOTE_ADDR' => ATTACKER])->get(route('login'))->assertOk();
 });
 
-test('credential stuffing from one address blocks it for a day and emails the admins', function () {
+test('credential stuffing from one address blocks it for a day and emails IT', function () {
     $emails = collect(range(1, IpGuard::STUFFING_FAILURES))->map(fn (int $n): string => 'person'.($n % IpGuard::STUFFING_EMAILS).'@example.com')->all();
 
     failSignInsFrom(ATTACKER, $emails);
@@ -62,7 +62,7 @@ test('credential stuffing from one address blocks it for a day and emails the ad
         ->ip_address->toBe(ATTACKER)
         ->source->toBe('automatic')
         ->and($block->expires_at->between(now()->addHours(23), now()->addHours(25)))->toBeTrue();
-    Notification::assertSentOnDemand(SecurityAlertNotification::class, fn ($notification, $channels, $notifiable) => $notifiable->routes['mail'] === ['staff@texasrenters.com']);
+    Notification::assertSentOnDemand(SecurityAlertNotification::class, fn ($notification, $channels, $notifiable) => $notifiable->routes['mail'] === 'it@texasrenters.com');
 
     $this->withServerVariables(['REMOTE_ADDR' => ATTACKER])->get(route('login'))->assertForbidden();
 });

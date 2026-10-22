@@ -299,19 +299,14 @@ class IpGuard
     }
 
     /**
-     * Email the owners and admins.
+     * Email IT, and nobody else.
      */
     private function alert(string $subject, string $message): void
     {
-        $emails = collect(config()->array('services.admin_emails'))
-            ->merge(User::query()->where('staff_role', 'admin')->whereNull('suspended_at')->pluck('email'))
-            ->map(fn (string $email): string => mb_strtolower($email))
-            ->unique()
-            ->values()
-            ->all();
+        $email = config()->string('services.security_alert_email');
 
-        if ($emails !== []) {
-            Notification::route('mail', $emails)->notify(new SecurityAlertNotification($subject, $message));
+        if ($email !== '') {
+            Notification::route('mail', $email)->notify(new SecurityAlertNotification($subject, $message));
         }
     }
 }

@@ -22,7 +22,7 @@ class FindClientContacts extends Command
      */
     public function handle(PropertywareClient $propertyware): int
     {
-        $email = $this->argument('email');
+        $email = $this->input()->string('email')->toString();
 
         try {
             $records = $propertyware->list('contacts', ['email' => $email], limit: PropertywareClient::MAX_LIMIT);

@@ -11,7 +11,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1: dependencies and frontend assets.
 # ---------------------------------------------------------------------------
-FROM php:8.5-cli-bookworm AS build
+FROM php:8.5.12-cli-bookworm AS build
 
 ENV COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_NO_INTERACTION=1
@@ -59,7 +59,7 @@ RUN npm run build && rm -rf node_modules
 # Stage 2: PHP-FPM runtime. Shared by app, queue, scheduler, reverb and
 # migrate -- they differ only in the command they run.
 # ---------------------------------------------------------------------------
-FROM php:8.5-fpm-alpine AS app
+FROM php:8.5.12-fpm-alpine AS app
 
 # fcgi provides cgi-fcgi, which the health check uses to reach FPM directly.
 # soap backs PropertywareSoap; gd/exif back intervention/image; pcntl lets

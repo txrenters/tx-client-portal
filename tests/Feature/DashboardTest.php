@@ -3,7 +3,9 @@
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\ClientAccount;
 use App\Models\User;
+use App\Services\Referrals\ReferralProgram;
 use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia;
 
 test('guests are redirected to the login page', function () {
     $response = $this->get(route('dashboard'));
@@ -67,3 +69,15 @@ test('dashboard once props are scoped to the selected account', function (string
     ['owner', 'portfolio'],
     ['resident', 'property'],
 ]);
+
+test('the owner home page always carries the referral reward', function () {
+    $user = User::factory()->create();
+    ClientAccount::factory()->for($user)->create(['role' => 'owner']);
+    Http::fake();
+
+    $this->actingAs($user)->get(route('owner.dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('owner/Dashboard')
+            ->where('referralReward', ReferralProgram::DEFAULT_REWARD));
+});
