@@ -585,7 +585,7 @@ const term = computed(() => [
                                                 ·
                                                 <span
                                                     :class="{
-                                                        'text-primary':
+                                                        'text-success':
                                                             entry.settled,
                                                     }"
                                                     >{{
@@ -620,7 +620,7 @@ const term = computed(() => [
                                 it. A payment is
                                 <span class="font-medium">Pending</span> while
                                 it is on its way to the bank and
-                                <span class="text-primary font-medium"
+                                <span class="text-success font-medium"
                                     >Settled</span
                                 >
                                 once it has been deposited. Payments are made in
