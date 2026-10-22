@@ -692,9 +692,9 @@ class OwnerLedger
 
     /**
      * Every income and expense account the portfolio touched in each month
-     * from one month to another, as Propertyware's Published Income Statement reads it: our own
-     * pass-through fees included (they usually net to nothing), months after
-     * this one left empty. An account that moved and came back to nothing
+     * from one month to another, as Propertyware's Published Income Statement
+     * reads it, except our own Management Income accounts: owners are never
+     * shown what TexasRenters.com earns. Months after this one are left empty. An account that moved and came back to nothing
      * still appears, as it does there.
      *
      * @return array{
@@ -743,7 +743,7 @@ class OwnerLedger
         $to = $month->endOfMonth()->gt(CarbonImmutable::now()) ? CarbonImmutable::now()->startOfDay() : $month->endOfMonth();
 
         return Cache::remember(
-            "propertyware:owner-ledger:accounts:v1:{$portfolioId}:{$from->toDateString()}:{$to->toDateString()}",
+            "propertyware:owner-ledger:accounts:v2:{$portfolioId}:{$from->toDateString()}:{$to->toDateString()}",
             $this->monthTtl($to),
             function () use ($portfolioId, $from, $to, $accounts): array {
                 $totals = [];
@@ -756,6 +756,11 @@ class OwnerLedger
 
                         $id = (int) ($entry['glaccountID'] ?? 0);
                         $type = (string) ($accounts[$id]['type'] ?? '');
+
+                        // Our own income is never shown to an owner.
+                        if ($accounts[$id]['passThrough'] ?? false) {
+                            continue;
+                        }
                         $credit = (float) ($entry['credit'] ?? 0);
                         $debit = (float) ($entry['debit'] ?? 0);
 
@@ -891,7 +896,7 @@ class OwnerLedger
      */
     private function accounts(): array
     {
-        return Cache::remember('propertyware:gl-accounts:owner-ledger:v2', now()->addDay(), function (): array {
+        return Cache::remember('propertyware:gl-accounts:owner-ledger:v3', now()->addDay(), function (): array {
             try {
                 return collect($this->propertyware->listAll('accounting/glaccounts', [], 2000))
                     ->filter(fn (array $account): bool => filled($account['id'] ?? null))
@@ -900,8 +905,10 @@ class OwnerLedger
                         'type' => (string) ($account['accountType'] ?? ''),
                         'number' => trim((string) ($account['accountNumber'] ?? '')),
                         'parent' => trim((string) ($account['parentRef'] ?? '')),
+                        // Under Management Income, or named for it at the top level
+                        // as 4025 Management Income Admin Charge is.
                         'passThrough' => trim((string) ($account['parentRef'] ?? '')) === self::PASS_THROUGH_PARENT
-                            || trim((string) ($account['name'] ?? '')) === self::PASS_THROUGH_PARENT,
+                            || str_starts_with(trim((string) ($account['name'] ?? '')), self::PASS_THROUGH_PARENT),
                     ]])
                     ->all();
             } catch (PropertywareException) {
