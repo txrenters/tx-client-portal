@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, InfiniteScroll } from '@inertiajs/vue3';
+import { onMounted, ref } from 'vue';
 import { Gift, UserPlus } from '@lucide/vue';
 import AppCard from '@/components/AppCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
@@ -7,6 +8,13 @@ import InputError from '@/components/InputError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,6 +68,17 @@ const store = props.portal === 'owner' ? ownerStore : residentStore;
 
 const sentFormatter = appDateFormatter({ dateStyle: 'medium' });
 
+/**
+ * The referral form opens over the page. The sidebar's Refer an owner button
+ * lands here with ?refer=1, which opens it straight away.
+ */
+const referOpen = ref(false);
+
+onMounted(() => {
+    referOpen.value =
+        new URLSearchParams(window.location.search).get('refer') === '1';
+});
+
 /** Signed is the good news; not a fit is quiet rather than alarming. */
 function statusVariant(
     status: Referral['status'],
@@ -79,7 +98,14 @@ function statusVariant(
         <PageHeader
             title="Refer a friend"
             description="Know a property owner who needs a property manager? Tell us who they are and we'll take it from there."
-        />
+        >
+            <template #actions>
+                <Button @click="referOpen = true">
+                    <UserPlus class="size-4" aria-hidden="true" />
+                    Refer an owner
+                </Button>
+            </template>
+        </PageHeader>
 
         <!-- The same blue gradient as the dashboard header. -->
         <Alert
@@ -99,14 +125,19 @@ function statusVariant(
             </AlertDescription>
         </Alert>
 
-        <div class="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <AppCard
-                title="Property owner"
-                description="Their details, so our team can reach out. We'll mention you referred them."
-            >
+        <Dialog v-model:open="referOpen">
+            <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+                <DialogHeader>
+                    <DialogTitle>Refer a property owner</DialogTitle>
+                    <DialogDescription>
+                        Their details, so our team can reach out. We'll mention
+                        you referred them.
+                    </DialogDescription>
+                </DialogHeader>
                 <Form
                     :action="store()"
                     reset-on-success
+                    @success="referOpen = false"
                     :options="{
                         preserveScroll: true,
                         only: ['referrals'],
@@ -204,65 +235,68 @@ function statusVariant(
                         </Button>
                     </div>
                 </Form>
-            </AppCard>
+            </DialogContent>
+        </Dialog>
 
-            <AppCard
-                title="Your referrals"
-                description="Where our team is with each owner you've sent."
+        <AppCard
+            title="Your referrals"
+            description="Where our team is with each owner you've sent."
+        >
+            <div
+                v-if="referrals === undefined"
+                class="flex flex-col gap-2"
+                role="status"
+                aria-label="Loading referrals"
             >
-                <div
-                    v-if="referrals === undefined"
-                    class="flex flex-col gap-2"
-                    role="status"
-                    aria-label="Loading referrals"
-                >
-                    <Skeleton
-                        v-for="item in 3"
-                        :key="item"
-                        class="h-14 w-full rounded-xl"
-                    />
-                </div>
-
-                <EmptyState
-                    v-else-if="referrals.data.length === 0"
-                    :icon="UserPlus"
-                    title="No referrals yet"
-                    description="Owners you refer will show up here."
+                <Skeleton
+                    v-for="item in 3"
+                    :key="item"
+                    class="h-14 w-full rounded-xl"
                 />
+            </div>
 
-                <InfiniteScroll
-                    v-else
-                    data="referrals"
-                    as="ul"
-                    class="divide-border/60 divide-y"
+            <EmptyState
+                v-else-if="referrals.data.length === 0"
+                :icon="UserPlus"
+                title="No referrals yet"
+                description="Owners you refer will show up here."
+            >
+                <Button variant="outline" @click="referOpen = true">
+                    <UserPlus class="size-4" aria-hidden="true" />
+                    Refer an owner
+                </Button>
+            </EmptyState>
+
+            <InfiniteScroll
+                v-else
+                data="referrals"
+                as="ul"
+                class="divide-border/60 divide-y"
+            >
+                <li
+                    v-for="referral in referrals.data"
+                    :key="referral.id"
+                    class="flex items-start justify-between gap-3 py-3"
                 >
-                    <li
-                        v-for="referral in referrals.data"
-                        :key="referral.id"
-                        class="flex items-start justify-between gap-3 py-3"
-                    >
-                        <div class="min-w-0">
-                            <p class="truncate font-medium">
-                                {{ referral.name }}
-                            </p>
-                            <p class="text-muted-foreground truncate text-sm">
-                                {{ referral.propertyAddress }}
-                            </p>
-                            <p class="text-muted-foreground text-xs">
-                                Sent
-                                {{
-                                    sentFormatter.format(
-                                        new Date(referral.sentAt),
-                                    )
-                                }}
-                            </p>
-                        </div>
-                        <Badge :variant="statusVariant(referral.status)">{{
-                            referral.statusLabel
-                        }}</Badge>
-                    </li>
-                </InfiniteScroll>
-            </AppCard>
-        </div>
+                    <div class="min-w-0">
+                        <p class="truncate font-medium">
+                            {{ referral.name }}
+                        </p>
+                        <p class="text-muted-foreground truncate text-sm">
+                            {{ referral.propertyAddress }}
+                        </p>
+                        <p class="text-muted-foreground text-xs">
+                            Sent
+                            {{
+                                sentFormatter.format(new Date(referral.sentAt))
+                            }}
+                        </p>
+                    </div>
+                    <Badge :variant="statusVariant(referral.status)">{{
+                        referral.statusLabel
+                    }}</Badge>
+                </li>
+            </InfiniteScroll>
+        </AppCard>
     </div>
 </template>

@@ -81,3 +81,16 @@ test('the owner home page always carries the referral reward', function () {
             ->component('owner/Dashboard')
             ->where('referralReward', ReferralProgram::DEFAULT_REWARD));
 });
+
+test('every owner page carries the referral card, and resident pages do not', function () {
+    Http::fake();
+    $owner = User::factory()->create();
+    ClientAccount::factory()->for($owner)->create(['role' => 'owner']);
+    $resident = User::factory()->resident()->create();
+
+    $this->actingAs($owner)->get(route('owner.documents'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('client.referralReward', ReferralProgram::DEFAULT_REWARD));
+
+    $this->actingAs($resident)->get(route('resident.dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('client.referralReward', null));
+});
