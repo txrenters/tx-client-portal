@@ -14,7 +14,11 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { useDocumentFilters } from '@/composables/useDocumentFilters';
-import type { DocumentFilterValues, DocumentsPage } from '@/types';
+import type {
+    DocumentFilterValues,
+    DocumentKind,
+    DocumentsPage,
+} from '@/types';
 
 const props = defineProps<{
     page: DocumentsPage;
@@ -32,15 +36,28 @@ const props = defineProps<{
  */
 const hasSeveralProperties = computed(() => props.page.properties.length > 1);
 
+/** The buttons along the top: what each document is, read from its name. */
+const kinds: { value: DocumentKind | 'all'; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'leases', label: 'Leases' },
+    { value: 'statements', label: 'Statements' },
+    { value: 'tax', label: 'Tax documents' },
+    { value: 'invoices', label: 'Invoices' },
+    { value: 'other', label: 'Other' },
+];
+
+function countFor(value: DocumentKind | 'all'): number {
+    return value === 'all' ? props.page.total : props.page.kindCounts[value];
+}
+
 const {
     search,
     category,
-    fileType,
+    kind,
     dateRange,
     dateFrom,
     dateTo,
     property,
-    workOrder,
     isLoading,
     isFiltered,
     clearFilters,
@@ -50,6 +67,31 @@ const {
 
 <template>
     <div class="flex flex-col gap-4">
+        <div
+            class="flex flex-wrap gap-2"
+            role="group"
+            aria-label="Filter by kind of document"
+        >
+            <Button
+                v-for="item in kinds"
+                :key="item.value"
+                size="sm"
+                :variant="kind === item.value ? 'default' : 'outline'"
+                :aria-pressed="kind === item.value"
+                @click="kind = item.value"
+            >
+                {{ item.label }}
+                <span
+                    class="text-xs tabular-nums"
+                    :class="
+                        kind === item.value
+                            ? 'opacity-80'
+                            : 'text-muted-foreground'
+                    "
+                    >{{ countFor(item.value) }}</span
+                >
+            </Button>
+        </div>
         <div
             class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
         >
@@ -62,7 +104,7 @@ const {
                     v-model="search"
                     type="search"
                     class="pl-9"
-                    placeholder="Search documents or WO #"
+                    placeholder="Search documents"
                     aria-label="Search documents"
                 />
             </div>
@@ -79,25 +121,6 @@ const {
                         :key="item"
                         :value="item"
                         >{{ item }}</SelectItem
-                    >
-                </SelectContent>
-            </Select>
-            <Select v-model="fileType">
-                <SelectTrigger
-                    class="w-full sm:w-40"
-                    aria-label="Filter by file type"
-                    ><SelectValue placeholder="All file types"
-                /></SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">All file types</SelectItem>
-                    <SelectItem value="images"
-                        >Images ({{ page.typeCounts.images }})</SelectItem
-                    >
-                    <SelectItem value="pdf"
-                        >PDFs ({{ page.typeCounts.pdf }})</SelectItem
-                    >
-                    <SelectItem value="other"
-                        >Other files ({{ page.typeCounts.other }})</SelectItem
                     >
                 </SelectContent>
             </Select>
@@ -149,25 +172,6 @@ const {
                         :key="item.id"
                         :value="String(item.id)"
                         >{{ item.name }}</SelectItem
-                    >
-                </SelectContent>
-            </Select>
-            <Select v-if="page.workOrders.length > 0" v-model="workOrder">
-                <SelectTrigger
-                    class="w-full sm:w-56"
-                    aria-label="Filter by work order"
-                    ><SelectValue placeholder="All work orders"
-                /></SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">All work orders</SelectItem>
-                    <SelectItem
-                        v-for="item in page.workOrders"
-                        :key="item.id"
-                        :value="item.id"
-                        >WO #{{ item.number ?? item.id
-                        }}<template v-if="item.category">
-                            · {{ item.category }}</template
-                        ></SelectItem
                     >
                 </SelectContent>
             </Select>

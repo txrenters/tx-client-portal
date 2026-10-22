@@ -8,12 +8,11 @@ import type { DocumentFilterValues } from '@/types';
 export type UseDocumentFiltersReturn = {
     search: Ref<string>;
     category: Ref<string>;
-    fileType: Ref<string>;
+    kind: Ref<string>;
     dateRange: Ref<string>;
     dateFrom: Ref<string>;
     dateTo: Ref<string>;
     property: Ref<string>;
-    workOrder: Ref<string>;
     isLoading: Ref<boolean>;
     isFiltered: Readonly<Ref<boolean>>;
     clearFilters: () => void;
@@ -31,14 +30,13 @@ export function useDocumentFilters(
 ): UseDocumentFiltersReturn {
     const search = ref(initial.search ?? '');
     const category = ref(initial.category ?? 'all');
-    const fileType = ref<string>(initial.type ?? 'all');
+    const kind = ref<string>(initial.kind ?? 'all');
     const dateRange = ref<string>(initial.range ?? 'all');
     const dateFrom = ref(
         initial.range === 'custom' ? (initial.from ?? '') : '',
     );
     const dateTo = ref(initial.range === 'custom' ? (initial.to ?? '') : '');
     const property = ref(initial.property ? String(initial.property) : 'all');
-    const workOrder = ref(initial.work_order ?? 'all');
     const isLoading = ref(false);
 
     function visit(page: number): void {
@@ -53,13 +51,11 @@ export function useDocumentFilters(
             {
                 search: search.value.trim() || undefined,
                 category: category.value === 'all' ? undefined : category.value,
-                type: fileType.value === 'all' ? undefined : fileType.value,
+                kind: kind.value === 'all' ? undefined : kind.value,
                 range: dateRange.value === 'all' ? undefined : dateRange.value,
                 from: dates.from,
                 to: dates.to,
                 property: property.value === 'all' ? undefined : property.value,
-                work_order:
-                    workOrder.value === 'all' ? undefined : workOrder.value,
                 page: page > 1 ? page : undefined,
             },
             {
@@ -73,40 +69,36 @@ export function useDocumentFilters(
         );
     }
 
-    watch(
-        [category, fileType, dateRange, dateFrom, dateTo, property, workOrder],
-        () => visit(1),
+    watch([category, kind, dateRange, dateFrom, dateTo, property], () =>
+        visit(1),
     );
     watchDebounced(search, () => visit(1), { debounce: 300 });
 
     return {
         search,
         category,
-        fileType,
+        kind,
         dateRange,
         dateFrom,
         dateTo,
         property,
-        workOrder,
         isLoading,
         isFiltered: computed(
             () =>
                 search.value.trim() !== '' ||
                 category.value !== 'all' ||
-                fileType.value !== 'all' ||
+                kind.value !== 'all' ||
                 dateRange.value !== 'all' ||
-                property.value !== 'all' ||
-                workOrder.value !== 'all',
+                property.value !== 'all',
         ),
         clearFilters(): void {
             search.value = '';
             category.value = 'all';
-            fileType.value = 'all';
+            kind.value = 'all';
             dateRange.value = 'all';
             dateFrom.value = '';
             dateTo.value = '';
             property.value = 'all';
-            workOrder.value = 'all';
         },
         goToPage: (page: number) => visit(page),
     };

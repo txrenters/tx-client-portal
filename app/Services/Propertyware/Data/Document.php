@@ -31,6 +31,30 @@ class Document
         'image/x-png' => 'image/png',
     ];
 
+    /**
+     * The kinds clients filter their documents by, with their labels.
+     * Propertyware keeps no document type, so the kind is read from the
+     * file's name and description; anything unmatched is "other".
+     */
+    public const KINDS = [
+        'leases' => 'Leases',
+        'statements' => 'Statements',
+        'tax' => 'Tax documents',
+        'invoices' => 'Invoices',
+        'other' => 'Other',
+    ];
+
+    /**
+     * The words that mark each kind, checked in this order so an owner's
+     * 1099 is a tax document even when its name mentions their statement.
+     */
+    private const KIND_PATTERNS = [
+        'tax' => '/\b1099|\bw-?9\b|\btax(es)?\b/i',
+        'statements' => '/statement|\bgl ?report|\bp ?& ?l\b|profit (and|&) loss/i',
+        'invoices' => '/invoice|receipt|\bbill(ing)?\b|estimate|\bquote\b/i',
+        'leases' => '/lease|renewal|addendum/i',
+    ];
+
     public function __construct(
         public readonly string $id,
         public readonly string $fileName,
@@ -120,6 +144,23 @@ class Document
     }
 
     /**
+     * Get the kind of document this is, from its name and description: one of KINDS.
+     */
+    public function kind(): string
+    {
+        // Underscores join words in many file names, and \b does not split on them.
+        $text = str_replace('_', ' ', $this->fileName.' '.$this->description);
+
+        foreach (self::KIND_PATTERNS as $kind => $pattern) {
+            if (preg_match($pattern, $text) === 1) {
+                return $kind;
+            }
+        }
+
+        return 'other';
+    }
+
+    /**
      * Get the client-facing label for what this file belongs to.
      */
     public function category(): string
@@ -146,6 +187,7 @@ class Document
             'fileType' => $this->fileType,
             'description' => $this->description,
             'category' => $this->category(),
+            'kind' => $this->kind(),
             'workOrderId' => $this->workOrderId(),
             'viewable' => $this->isViewable(),
             'createdAt' => $this->createdAt?->toIso8601String(),

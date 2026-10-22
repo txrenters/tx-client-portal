@@ -100,10 +100,10 @@ test('leads the dashboard with the newest documents and merges them into recent 
 
     $feeds = partialGet(route('owner.dashboard'), 'owner/Dashboard', 'documents', 'activity', 'messages')->assertOk();
 
-    // Newest first: the lease addendum, then the statement, then the invoice.
+    // Newest first; the work order's invoice shows only on the work order.
     expect($feeds->json('props.documents.status'))->toBe('ready')
         ->and(collect($feeds->json('props.documents.items'))->pluck('fileName')->all())
-        ->toBe(['Lease addendum.pdf', 'Statement.pdf', 'Invoice.pdf'])
+        ->toBe(['Lease addendum.pdf', 'Statement.pdf'])
         // The hub is not configured in tests, so there are no messages to merge.
         ->and($feeds->json('props.messages'))->toBe([]);
 
@@ -202,13 +202,13 @@ test('returns 404 for an attachment on a work order the owner cannot open', func
         ->assertNotFound();
 });
 
-test('shows every file related to the property on the property page', function () {
+test('shows the property\'s documents on the property page, but not its work orders\' files', function () {
     $this->actingAs(linkedOwner());
 
     $response = partialGet(route('owner.properties.show', 7), 'owner/PropertyDetail', 'documents')->assertOk();
 
     expect(collect($response->json('props.documents.results.data'))->pluck('fileName')->sort()->values()->all())
-        ->toBe(['Invoice.pdf', 'Lease addendum.pdf', 'Statement.pdf']);
+        ->toBe(['Lease addendum.pdf', 'Statement.pdf']);
     $response->assertDontSee('OtherProperty.pdf')->assertDontSee('Tenant only.pdf');
 });
 
@@ -222,7 +222,6 @@ test('gives the app the property\'s history, newest first', function () {
     expect(collect($response->json('data.history'))->map(fn (array $event): string => $event['type'].':'.($event['detail'] ?? ''))->all())->toBe([
         'document_added:Lease addendum.pdf',
         'document_added:Statement.pdf',
-        'document_added:Invoice.pdf',
         'work_order_completed:Roof repair',
     ]);
     $response->assertDontSee('Hidden from owners');

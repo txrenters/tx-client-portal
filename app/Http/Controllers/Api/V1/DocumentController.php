@@ -45,6 +45,7 @@ class DocumentController extends Controller
                 'total' => $page['total'],
                 'unfilteredTotal' => $result['total'],
                 'categories' => $result['categories'],
+                'kindCounts' => $result['kindCounts'],
                 'typeCounts' => $result['typeCounts'],
                 'properties' => $result['properties'],
                 'workOrders' => $result['workOrders'],

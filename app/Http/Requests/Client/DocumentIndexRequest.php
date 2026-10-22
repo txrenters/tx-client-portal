@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Client;
 
+use App\Services\Propertyware\Data\Document;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class DocumentIndexRequest extends FormRequest
 {
@@ -17,6 +19,7 @@ class DocumentIndexRequest extends FormRequest
         return [
             'search' => ['nullable', 'string', 'max:100'],
             'category' => ['nullable', 'string', 'max:50'],
+            'kind' => ['nullable', Rule::in(array_keys(Document::KINDS))],
             'type' => ['nullable', 'in:images,pdf,other'],
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
@@ -31,13 +34,14 @@ class DocumentIndexRequest extends FormRequest
     /**
      * Get the document filters the client asked for.
      *
-     * @return array{search: ?string, category: ?string, type: ?string, from: ?string, to: ?string, range: ?string, property: ?int, work_order: ?string}
+     * @return array{search: ?string, category: ?string, kind: ?string, type: ?string, from: ?string, to: ?string, range: ?string, property: ?int, work_order: ?string}
      */
     public function filters(): array
     {
         return [
             'search' => $this->validated('search'),
             'category' => $this->validated('category'),
+            'kind' => $this->validated('kind'),
             'type' => $this->validated('type'),
             'from' => $this->validated('from'),
             'to' => $this->validated('to'),

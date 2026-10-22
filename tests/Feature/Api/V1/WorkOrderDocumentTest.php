@@ -33,46 +33,52 @@ beforeEach(function () {
     $this->account = ClientAccount::factory()->owner()->for($user)->create(['propertyware_id' => '500']);
 });
 
-test('labels work order attachments with their work order number', function () {
-    $response = $this->getJson(route('api.v1.accounts.documents.index', $this->account))->assertOk();
+test('leaves work order files off the documents list', function (array $query) {
+    $this->getJson(route('api.v1.accounts.documents.index', [$this->account, ...$query]))
+        ->assertOk()
+        ->assertJsonMissing(['fileName' => 'Roof invoice.pdf'])
+        ->assertJsonPath('meta.unfilteredTotal', 1);
+})->with([
+    'unfiltered' => [[]],
+    'searching its number' => [['search' => '1043']],
+    'filtering by it' => [['work_order' => '70']],
+]);
 
-    $invoice = collect($response->json('data'))->firstWhere('fileName', 'Roof invoice.pdf');
-    expect($invoice)->toMatchArray(['category' => 'Maintenance', 'workOrderId' => '70', 'workOrderNumber' => '1043'])
-        ->and(collect($response->json('data'))->firstWhere('fileName', 'Statement.pdf')['workOrderNumber'])->toBeNull();
+test('drops work order files from a documents list kept from before they left it', function () {
+    $this->getJson(route('api.v1.accounts.documents.index', $this->account))->assertOk();
+
+    cache()->put(
+        'propertyware:documents:v2:owner:500',
+        ['fetchedAt' => now()->timestamp, 'records' => [
+            ['id' => 80, 'fileName' => 'Roof invoice.pdf', 'fileType' => 'application/pdf', 'entityType' => 'WORK_ORDER', 'entityId' => 70, 'publishToOwnerPortal' => true],
+            ['id' => 81, 'fileName' => 'Statement.pdf', 'fileType' => 'application/pdf', 'entityType' => 'BUILDING', 'entityId' => 7, 'publishToOwnerPortal' => true],
+        ]],
+        now()->addDay(),
+    );
+
+    $this->getJson(route('api.v1.accounts.documents.index', $this->account))
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.fileName', 'Statement.pdf');
 });
 
 test('names the property a document belongs to', function () {
     $response = $this->getJson(route('api.v1.accounts.documents.index', $this->account))->assertOk();
 
     expect(collect($response->json('data'))->pluck('propertyName', 'fileName')->all())->toEqual([
-        'Roof invoice.pdf' => '12 Elm St',
         'Statement.pdf' => '12 Elm St',
     ]);
 });
 
-test('finds a work order\'s attachments by searching its number', function () {
-    $this->getJson(route('api.v1.accounts.documents.index', [$this->account, 'search' => '1043']))
-        ->assertOk()
-        ->assertJsonCount(1, 'data')
-        ->assertJsonPath('data.0.fileName', 'Roof invoice.pdf');
-});
-
-test('filters documents by work order', function () {
-    $this->getJson(route('api.v1.accounts.documents.index', [$this->account, 'work_order' => '70']))
-        ->assertOk()
-        ->assertJsonCount(1, 'data')
-        ->assertJsonPath('data.0.fileName', 'Roof invoice.pdf');
-});
-
-test('filters documents by property, including its work order attachments', function (int $property, int $expectedCount) {
+test('filters documents by property', function (int $property, int $expectedCount) {
     $this->getJson(route('api.v1.accounts.documents.index', [$this->account, 'property' => $property]))
         ->assertOk()
         ->assertJsonCount($expectedCount, 'data');
-})->with(['the property' => [7, 2], 'another property' => [8, 0]]);
+})->with(['the property' => [7, 1], 'another property' => [8, 0]]);
 
-test('lists the properties and work orders that have documents, for the filters', function () {
+test('lists the properties that have documents, for the filters', function () {
     $this->getJson(route('api.v1.accounts.documents.index', $this->account))
         ->assertOk()
         ->assertJsonPath('meta.properties', [['id' => 7, 'name' => '12 Elm St']])
-        ->assertJsonPath('meta.workOrders', [['id' => '70', 'number' => '1043', 'category' => 'Roofing', 'title' => 'Leaking roof']]);
+        ->assertJsonPath('meta.workOrders', []);
 });
