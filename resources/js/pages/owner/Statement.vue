@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { FileText } from '@lucide/vue';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import AppCard from '@/components/AppCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
@@ -52,6 +52,28 @@ const money = new Intl.NumberFormat('en-US', {
 });
 
 const month = ref(props.filters.month);
+
+/** The years on offer, newest first, so an owner can go back a year at a time. */
+const years = computed(() => [
+    ...new Set(props.months.map((item) => item.value.slice(0, 4))),
+]);
+const year = computed({
+    get: () => month.value.slice(0, 4),
+    // The same month in the year picked, or that year's latest on offer.
+    set: (picked: string) => {
+        const inYear = props.months.filter((item) =>
+            item.value.startsWith(picked),
+        );
+        const same = inYear.find(
+            (item) => item.value.slice(5) === month.value.slice(5),
+        );
+
+        month.value = (same ?? inYear[0]).value;
+    },
+});
+const monthsInYear = computed(() =>
+    props.months.filter((item) => item.value.startsWith(year.value)),
+);
 const portfolio = ref(
     props.filters.portfolio === null ? '' : String(props.filters.portfolio),
 );
@@ -99,13 +121,26 @@ watch(
         />
 
         <div class="flex flex-col gap-2 sm:flex-row">
+            <Select v-model="year">
+                <SelectTrigger class="w-full sm:w-28" aria-label="Year">
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem
+                        v-for="item in years"
+                        :key="item"
+                        :value="item"
+                        >{{ item }}</SelectItem
+                    >
+                </SelectContent>
+            </Select>
             <Select v-model="month">
                 <SelectTrigger class="w-full sm:w-48" aria-label="Month">
                     <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem
-                        v-for="item in months"
+                        v-for="item in monthsInYear"
                         :key="item.value"
                         :value="item.value"
                         >{{ item.label }}</SelectItem

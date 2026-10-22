@@ -64,7 +64,9 @@ test('gives the app last month\'s statement, account by account', function () {
         ->and(collect($response->json('data.entries'))->pluck('balance')->all())->toBe([1550, 1350, 350])
         ->and($response->json('data.entries.0.settled'))->toBeTrue()
         ->and($response->json('meta.months.0'))->toBe(['value' => '2026-09', 'label' => 'September 2026'])
-        ->and($response->json('meta.months'))->toHaveCount(24);
+        // September 2026 back to January 2021: this year and the five before it.
+        ->and($response->json('meta.months'))->toHaveCount(69)
+        ->and($response->json('meta.months.68'))->toBe(['value' => '2021-01', 'label' => 'January 2021']);
 });
 
 test('falls back to last month for a month that is not offered', function (string $month) {
@@ -73,7 +75,7 @@ test('falls back to last month for a month that is not offered', function (strin
     $this->getJson(route('api.v1.accounts.statement', [$this->account, 'month' => $month]))
         ->assertOk()
         ->assertJsonPath('data.month', '2026-09');
-})->with(['the month in progress' => '2026-10', 'too long ago' => '2020-01']);
+})->with(['the month in progress' => '2026-10', 'too long ago' => '2020-12']);
 
 test('answers 404 for a portfolio the owner does not hold', function () {
     Sanctum::actingAs($this->user);

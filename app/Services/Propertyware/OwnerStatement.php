@@ -15,8 +15,11 @@ use Carbon\CarbonImmutable;
  */
 class OwnerStatement
 {
-    /** How many finished months an owner can pick from. */
-    public const MONTHS_OFFERED = 24;
+    /**
+     * How many years of statements an owner can pick from: the year of the
+     * last finished month and the ones before it, each from January.
+     */
+    public const YEARS_OFFERED = 6;
 
     public function __construct(private OwnerLedger $ledger, private PropertywareDirectory $directory) {}
 
@@ -29,8 +32,9 @@ class OwnerStatement
     public function months(): array
     {
         $lastMonth = CarbonImmutable::now(config('app.display_timezone'))->startOfMonth()->subMonth();
+        $firstMonth = $lastMonth->subYears(self::YEARS_OFFERED - 1)->startOfYear();
 
-        return collect(range(0, self::MONTHS_OFFERED - 1))
+        return collect(range(0, (int) $firstMonth->diffInMonths($lastMonth)))
             ->map(fn (int $back): CarbonImmutable => $lastMonth->subMonths($back))
             ->map(fn (CarbonImmutable $month): array => ['value' => $month->format('Y-m'), 'label' => $month->format('F Y')])
             ->all();
