@@ -130,7 +130,7 @@ class LeaseLedgerStore
         LeaseLedgerEntry::query()->upsert(
             $batch,
             ['lease_id', 'external_id'],
-            ['occurred_on', 'kind', 'direction', 'amount', 'description', 'detail', 'reference', 'updated_at'],
+            ['occurred_on', 'kind', 'direction', 'amount', 'description', 'detail', 'reference', 'deposit_checked', 'deposited_on', 'updated_at'],
         );
     }
 

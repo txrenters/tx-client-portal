@@ -546,9 +546,31 @@ const term = computed(() => [
 
                                     <span class="flex min-w-0 flex-1 flex-col">
                                         <span
-                                            class="truncate text-sm font-medium"
-                                            >{{ entry.description }}</span
+                                            class="flex items-center gap-2 text-sm font-medium"
                                         >
+                                            <span class="truncate">{{
+                                                entry.description
+                                            }}</span>
+                                            <Badge
+                                                v-if="entry.settled != null"
+                                                :variant="
+                                                    entry.settled
+                                                        ? 'secondary'
+                                                        : 'outline'
+                                                "
+                                                class="shrink-0"
+                                                :title="
+                                                    entry.settledOn
+                                                        ? `Deposited ${formatDate(entry.settledOn)}`
+                                                        : 'Not deposited yet, and can still be returned'
+                                                "
+                                                >{{
+                                                    entry.settled
+                                                        ? 'Settled'
+                                                        : 'Pending'
+                                                }}</Badge
+                                            >
+                                        </span>
                                         <span
                                             v-if="entry.detail"
                                             class="text-muted-foreground truncate text-xs"

@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Cache;
  * which is the same set of lines the old SOAP call returned. The narrower
  * /leases/charges and /leases/payments endpoints hold the same money again,
  * broken down, so reading those as well would count every line twice.
+ * /leases/payments is read for one thing only: the day each payment was
+ * deposited, matched to its ledger line by id, which the two share.
  *
  * A charge's own balance lives on /leases/charges as `amountDue`, and the sum
  * of those equals the lease's `leaseBalance` exactly — so the balance is taken
@@ -26,6 +28,9 @@ class LeaseLedgerSource
 {
     /** Propertyware's consolidated ledger for a lease. */
     private const LEDGER = 'leases/adjustments';
+
+    /** A lease's payments, read only for when each was deposited. */
+    private const PAYMENTS = 'leases/payments';
 
     public function __construct(private PropertywareClient $propertyware) {}
 
@@ -48,14 +53,55 @@ class LeaseLedgerSource
     public function entries(int $leaseId): iterable
     {
         $accounts = $this->accounts();
+        $deposits = $this->depositDates($leaseId);
 
         foreach ($this->propertyware->listAll(self::LEDGER, ['leaseID' => $leaseId]) as $row) {
             $entry = $this->present($row, $accounts);
 
             if ($entry !== null) {
-                yield $entry;
+                yield [...$entry, ...$this->deposit($entry, $deposits)];
             }
         }
+    }
+
+    /**
+     * When a payment reached the bank. Only a payment carries one, and only
+     * when its record was read: any other line, or a payment whose record is
+     * missing, is left unchecked so it shows no status rather than a wrong one.
+     *
+     * @param  array<string, mixed>  $entry
+     * @param  array<string, string|null>|null  $deposits
+     * @return array{deposit_checked: bool, deposited_on: string|null}
+     */
+    private function deposit(array $entry, ?array $deposits): array
+    {
+        if ($entry['kind'] !== 'payment' || $deposits === null || ! array_key_exists($entry['external_id'], $deposits)) {
+            return ['deposit_checked' => false, 'deposited_on' => null];
+        }
+
+        return ['deposit_checked' => true, 'deposited_on' => $deposits[$entry['external_id']]];
+    }
+
+    /**
+     * When each of a lease's payments was deposited, by its id; null for one
+     * not deposited yet. Null altogether when Propertyware would not say.
+     *
+     * @return array<string, string|null>|null
+     */
+    private function depositDates(int $leaseId): ?array
+    {
+        try {
+            $payments = $this->propertyware->listAll(self::PAYMENTS, ['leaseID' => $leaseId]);
+        } catch (PropertywareException) {
+            return null;
+        }
+
+        return collect($payments)
+            ->filter(fn (array $payment): bool => filled($payment['id'] ?? null))
+            ->mapWithKeys(fn (array $payment): array => [(string) $payment['id'] => filled($payment['depositDate'] ?? null)
+                ? substr((string) $payment['depositDate'], 0, 10)
+                : null])
+            ->all();
     }
 
     /**

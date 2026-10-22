@@ -31,7 +31,10 @@ beforeEach(function () {
             ['id' => 8, 'leaseID' => 55, 'date' => '2026-09-01', 'amount' => 0.0, 'glAccountID' => 10],
             ['id' => 9, 'leaseID' => 55, 'date' => '', 'amount' => 100.0, 'glAccountID' => 10],
         ]),
+        // Read only for when each payment was deposited.
+        '*/leases/payments*' => fn () => $this->payments,
     ]);
+    $this->payments = Http::response([]);
 });
 
 function ledgerSource(): LeaseLedgerSource
@@ -52,13 +55,39 @@ test('reads the consolidated ledger and names each line', function () {
         ]);
 });
 
-test('reads only the consolidated ledger, never the endpoints that repeat it', function () {
-    ledgerSource()->entries(55);
+test('takes its lines from the consolidated ledger only, never the endpoints that repeat it', function () {
+    $this->payments = Http::response([['id' => 99, 'leaseID' => 55, 'date' => '2026-09-20', 'amount' => -500.0, 'depositDate' => '2026-09-22']]);
+
+    $ids = collect(ledgerSource()->entries(55))->pluck('external_id');
 
     // /leases/charges and /leases/payments hold the same money broken down, so
-    // reading them as well would count every line twice.
-    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/leases/charges')
-        || str_contains($request->url(), '/leases/payments'));
+    // taking lines from them as well would count every line twice.
+    expect($ids)->not->toContain('99');
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/leases/charges'));
+});
+
+test('marks when each payment was deposited, matched to its ledger line by id', function () {
+    $this->payments = Http::response([
+        ['id' => 2, 'leaseID' => 55, 'depositDate' => '2026-09-05T00:00:00'],
+    ]);
+
+    $entries = collect(ledgerSource()->entries(55))->keyBy('external_id');
+
+    expect($entries['2'])->toMatchArray(['deposit_checked' => true, 'deposited_on' => '2026-09-05'])
+        // Only payments carry a deposit.
+        ->and($entries['1'])->toMatchArray(['deposit_checked' => false, 'deposited_on' => null])
+        ->and($entries['3'])->toMatchArray(['deposit_checked' => false, 'deposited_on' => null])
+        ->and($entries['5'])->toMatchArray(['deposit_checked' => false, 'deposited_on' => null]);
+    Http::assertSent(fn ($request): bool => str_contains($request->url(), '/leases/payments') && $request['leaseID'] == 55);
+});
+
+test('leaves payments unchecked when their records cannot be read', function () {
+    $this->payments = Http::response([], 500);
+
+    $entries = collect(ledgerSource()->entries(55))->keyBy('external_id');
+
+    expect($entries)->toHaveCount(5)
+        ->and($entries['2'])->toMatchArray(['deposit_checked' => false, 'deposited_on' => null]);
 });
 
 test('names a line from the chart of accounts', function () {

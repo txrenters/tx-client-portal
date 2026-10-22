@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     ArrowDownLeft,
@@ -286,9 +287,23 @@ function refreshDashboard(): void {
                             />
                         </span>
                         <span class="flex min-w-0 flex-1 flex-col">
-                            <span class="truncate text-sm font-medium">{{
-                                entry.description
-                            }}</span>
+                            <span
+                                class="flex items-center gap-2 text-sm font-medium"
+                            >
+                                <span class="truncate">{{
+                                    entry.description
+                                }}</span>
+                                <Badge
+                                    v-if="entry.settled != null"
+                                    :variant="
+                                        entry.settled ? 'secondary' : 'outline'
+                                    "
+                                    class="shrink-0"
+                                    >{{
+                                        entry.settled ? 'Settled' : 'Pending'
+                                    }}</Badge
+                                >
+                            </span>
                             <span class="text-muted-foreground text-xs">{{
                                 formatDate(entry.date)
                             }}</span>
