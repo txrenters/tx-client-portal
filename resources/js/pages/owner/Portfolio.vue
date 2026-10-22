@@ -145,7 +145,8 @@ const metrics = computed<Metric[]>(() => [
                     :key="item.id"
                     class="min-w-0"
                 >
-                    <Collapsible class="group/portfolio">
+                    <!-- Open from the start; the chevron still folds it away. -->
+                    <Collapsible class="group/portfolio" default-open>
                         <CollapsibleTrigger as-child>
                             <Button
                                 variant="ghost"
