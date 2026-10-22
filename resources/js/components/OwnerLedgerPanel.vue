@@ -37,7 +37,7 @@ function line(entry: OwnerLedgerEntry): string {
         entry.settled == null
             ? null
             : entry.settledOn
-              ? `In the bank ${formatDate(entry.settledOn)}`
+              ? `Settled ${formatDate(entry.settledOn)}`
               : 'On its way to the bank',
         entry.details,
         entry.location,

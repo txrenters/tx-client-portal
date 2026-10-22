@@ -590,7 +590,7 @@ const term = computed(() => [
                                                     }"
                                                     >{{
                                                         entry.settledOn
-                                                            ? `In the bank ${formatDate(entry.settledOn)}`
+                                                            ? `Settled ${formatDate(entry.settledOn)}`
                                                             : 'On its way to the bank'
                                                     }}</span
                                                 >
