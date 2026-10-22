@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     ArrowDownLeft,
@@ -16,6 +15,7 @@ import {
     ScrollText,
     Wrench,
 } from '@lucide/vue';
+import PaymentStatusBadge from '@/components/PaymentStatusBadge.vue';
 import DashboardHeader from '@/components/DashboardHeader.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import WorkOrderLoadStatus from '@/components/WorkOrderLoadStatus.vue';
@@ -269,10 +269,10 @@ function refreshDashboard(): void {
                         class="border-border/60 flex items-center gap-3 border-b py-2.5 last:border-0"
                     >
                         <span
-                            class="flex size-8 shrink-0 items-center justify-center rounded-lg"
+                            class="flex size-8 shrink-0 items-center justify-center rounded-full"
                             :class="
                                 entry.kind === 'payment'
-                                    ? 'bg-destructive/10 text-destructive'
+                                    ? 'bg-success/10 text-success'
                                     : 'bg-muted text-muted-foreground'
                             "
                         >
@@ -293,16 +293,10 @@ function refreshDashboard(): void {
                                 <span class="truncate">{{
                                     entry.description
                                 }}</span>
-                                <Badge
+                                <PaymentStatusBadge
                                     v-if="entry.settled != null"
-                                    :variant="
-                                        entry.settled ? 'secondary' : 'outline'
-                                    "
-                                    class="shrink-0"
-                                    >{{
-                                        entry.settled ? 'Settled' : 'Pending'
-                                    }}</Badge
-                                >
+                                    :settled="entry.settled"
+                                />
                             </span>
                             <span class="text-muted-foreground text-xs">{{
                                 formatDate(entry.date)
@@ -312,7 +306,7 @@ function refreshDashboard(): void {
                             class="shrink-0 text-sm font-medium tabular-nums"
                             :class="
                                 entry.kind === 'payment'
-                                    ? 'text-destructive'
+                                    ? 'text-success'
                                     : entry.kind === 'charge'
                                       ? 'text-foreground'
                                       : 'text-muted-foreground'

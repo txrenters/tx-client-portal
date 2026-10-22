@@ -15,6 +15,7 @@ import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import PaymentStatusBadge from '@/components/PaymentStatusBadge.vue';
 import ResultsPagination from '@/components/ResultsPagination.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -526,10 +527,10 @@ const term = computed(() => [
                                     class="border-border/60 flex items-center gap-3 border-b py-3 last:border-0"
                                 >
                                     <span
-                                        class="flex size-8 shrink-0 items-center justify-center rounded-lg"
+                                        class="flex size-9 shrink-0 items-center justify-center rounded-full"
                                         :class="
                                             entry.kind === 'payment'
-                                                ? 'bg-destructive/10 text-destructive'
+                                                ? 'bg-success/10 text-success'
                                                 : 'bg-muted text-muted-foreground'
                                         "
                                     >
@@ -544,48 +545,50 @@ const term = computed(() => [
                                         />
                                     </span>
 
-                                    <span class="flex min-w-0 flex-1 flex-col">
+                                    <span
+                                        class="flex min-w-0 flex-1 flex-col gap-0.5"
+                                    >
                                         <span
                                             class="flex items-center gap-2 text-sm font-medium"
                                         >
                                             <span class="truncate">{{
                                                 entry.description
                                             }}</span>
-                                            <Badge
+                                            <PaymentStatusBadge
                                                 v-if="entry.settled != null"
-                                                :variant="
-                                                    entry.settled
-                                                        ? 'secondary'
-                                                        : 'outline'
-                                                "
-                                                class="shrink-0"
-                                                :title="
-                                                    entry.settledOn
-                                                        ? `Deposited ${formatDate(entry.settledOn)}`
-                                                        : 'Not deposited yet, and can still be returned'
-                                                "
-                                                >{{
-                                                    entry.settled
-                                                        ? 'Settled'
-                                                        : 'Pending'
-                                                }}</Badge
-                                            >
+                                                :settled="entry.settled"
+                                            />
                                         </span>
                                         <span
                                             v-if="entry.detail"
                                             class="text-muted-foreground truncate text-xs"
                                             >{{ entry.detail }}</span
                                         >
+                                        <span
+                                            v-if="entry.settled != null"
+                                            class="text-xs"
+                                            :class="
+                                                entry.settled
+                                                    ? 'text-success'
+                                                    : 'text-muted-foreground'
+                                            "
+                                        >
+                                            {{
+                                                entry.settledOn
+                                                    ? `Deposited ${formatDate(entry.settledOn)}`
+                                                    : 'On its way to the bank'
+                                            }}
+                                        </span>
                                     </span>
 
                                     <span
-                                        class="flex shrink-0 flex-col items-end"
+                                        class="flex shrink-0 flex-col items-end gap-0.5"
                                     >
                                         <span
-                                            class="text-sm font-medium tabular-nums"
+                                            class="text-sm font-semibold tabular-nums"
                                             :class="
                                                 entry.kind === 'payment'
-                                                    ? 'text-destructive'
+                                                    ? 'text-success'
                                                     : 'text-foreground'
                                             "
                                         >
@@ -604,16 +607,20 @@ const term = computed(() => [
                             </ul>
 
                             <p class="text-muted-foreground mt-4 text-xs">
-                                <span class="text-destructive font-medium"
-                                    >−</span
-                                >
+                                <span class="text-success font-medium">−</span>
                                 payments come off your balance;
                                 <span class="text-foreground font-medium"
                                     >+</span
                                 >
-                                charges add to it. Payments are made in your
-                                Propertyware tenant portal; this page shows what
-                                has landed on your lease.
+                                charges add to it. A payment is
+                                <span class="font-medium">Pending</span> while
+                                it is on its way to the bank and
+                                <span class="text-success font-medium"
+                                    >Settled</span
+                                >
+                                once it has been deposited. Payments are made in
+                                your Propertyware tenant portal; this page shows
+                                what has landed on your lease.
                             </p>
                         </template>
                     </AppCard>
