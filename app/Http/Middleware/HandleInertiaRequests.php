@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\DashboardController;
 use App\Models\ClientAccount;
 use App\Services\Announcements\AnnouncementBoard;
+use App\Services\Referrals\ReferralProgram;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Middleware;
@@ -99,6 +100,8 @@ class HandleInertiaRequests extends Middleware
             'activeRole' => $activeRole?->value,
             // Propertyware's own portal for the role in view: owner or tenant.
             'propertywarePortalUrl' => $activeRole === null ? null : config("services.propertyware.portal_urls.{$activeRole->value}"),
+            // The referral card always at the foot of an owner's sidebar.
+            'referralReward' => $activeRole === ClientRole::Owner ? app(ReferralProgram::class)->reward() : null,
             'accounts' => $accounts->map(fn (ClientAccount $account): array => [
                 'id' => $account->id,
                 'label' => $account->label ?? 'Account '.$account->id,

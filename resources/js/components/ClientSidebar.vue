@@ -2,6 +2,7 @@
 import AccountSwitcher from '@/components/AccountSwitcher.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
+import ReferralSidebarCard from '@/components/ReferralSidebarCard.vue';
 import SidebarBrand from '@/components/SidebarBrand.vue';
 import {
     Sidebar,
@@ -37,6 +38,7 @@ const { mainNavGroups, secondaryNavItems } = useClientNavigation();
         </SidebarContent>
 
         <SidebarFooter>
+            <ReferralSidebarCard />
             <NavUser />
         </SidebarFooter>
     </Sidebar>

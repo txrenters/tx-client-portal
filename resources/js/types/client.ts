@@ -13,5 +13,7 @@ export type ClientPortal = {
     activeRole: ClientRole | null;
     /** Propertyware's own owner or tenant portal for the role in view. */
     propertywarePortalUrl: string | null;
+    /** The referral reward, for an owner's sidebar card; null for residents. */
+    referralReward: string | null;
     accounts: ClientAccountOption[];
 };
