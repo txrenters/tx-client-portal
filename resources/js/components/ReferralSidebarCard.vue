@@ -33,7 +33,10 @@ const reward = computed(() => page.props.client?.referralReward ?? null);
             {{ GIFT_CARD_NOTICE }}
         </p>
         <Button as-child variant="secondary" size="sm" class="w-full">
-            <Link :href="ownerReferrals()">Refer an owner</Link>
+            <!-- Opens the form straight away. -->
+            <Link :href="ownerReferrals({ query: { refer: 1 } })"
+                >Refer an owner</Link
+            >
         </Button>
     </div>
 </template>
