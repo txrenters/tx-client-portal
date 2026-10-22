@@ -5,6 +5,7 @@ import {
     Building2,
     Building,
     CircleQuestionMark,
+    FileSpreadsheet,
     FileText,
     Gift,
     Home,
@@ -24,6 +25,7 @@ import {
     documents as ownerDocuments,
     financials,
     portfolio,
+    statements,
 } from '@/routes/owner';
 import { index as ownerMaintenance } from '@/routes/owner/maintenance';
 import { index as ownerMeetings } from '@/routes/owner/meetings';
@@ -101,6 +103,7 @@ const ownerNavGroups = (): NavGroup[] => [
         label: 'Finances',
         items: [
             { title: 'My Ledger', href: financials(), icon: Banknote },
+            { title: 'Statements', href: statements(), icon: FileSpreadsheet },
             { title: 'Documents', href: ownerDocuments(), icon: FileText },
         ],
     },
