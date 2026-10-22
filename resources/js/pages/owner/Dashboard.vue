@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
     Banknote,
     Building2,
     CheckCircle2,
-    Gift,
     Clock,
     Percent,
     Receipt,
@@ -36,9 +34,7 @@ import {
 import { download, preview } from '@/routes/owner/documents';
 import { index as messages } from '@/routes/owner/messages';
 import { index as properties } from '@/routes/owner/properties';
-import { index as referrals } from '@/routes/owner/referrals';
 
-import { GIFT_CARD_NOTICE } from '@/lib/referrals';
 import OwnerLedgerSummary from '@/components/OwnerLedgerSummary.vue';
 import RecentActivityCard from '@/components/RecentActivityCard.vue';
 import type {
@@ -58,8 +54,6 @@ defineOptions({
 });
 
 const props = defineProps<{
-    /** What staff offer for a referral; always shown, owners cannot hide it. */
-    referralReward: string;
     portfolio?: {
         portfolioCount: number;
         propertyCount: number;
@@ -222,31 +216,6 @@ function refreshDashboard(): void {
                 </Button>
             </template>
         </DashboardHeader>
-
-        <!-- The same blue gradient as the Refer a friend page's reward. -->
-        <Alert
-            class="from-primary to-ring text-primary-foreground border-0 bg-gradient-to-br p-5 shadow-sm"
-        >
-            <Gift class="text-primary-foreground" />
-            <AlertTitle class="text-base font-semibold"
-                >Refer a friend</AlertTitle
-            >
-            <AlertDescription
-                class="text-primary-foreground/90 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between"
-            >
-                <div class="flex flex-col gap-1">
-                    <span class="whitespace-pre-line">{{
-                        referralReward
-                    }}</span>
-                    <span class="text-primary-foreground/75 text-xs">{{
-                        GIFT_CARD_NOTICE
-                    }}</span>
-                </div>
-                <Button as-child variant="secondary" size="sm" class="shrink-0">
-                    <Link :href="referrals()">Refer an owner</Link>
-                </Button>
-            </AlertDescription>
-        </Alert>
 
         <DashboardMetrics :metrics="metrics" />
 
