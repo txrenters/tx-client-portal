@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import OwnerEntryBadge from '@/components/OwnerEntryBadge.vue';
+import { OWNER_ENTRY_KINDS, ownerAmountClass } from '@/lib/ownerLedger';
 import { Banknote, Download, Percent, Receipt, Wallet } from '@lucide/vue';
 import { computed } from 'vue';
 import DashboardMetrics from '@/components/DashboardMetrics.vue';
 import type { Metric } from '@/components/DashboardMetrics.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFormattedDate } from '@/composables/useFormattedDate';
@@ -24,12 +25,20 @@ const money = new Intl.NumberFormat('en-US', {
 });
 
 /**
- * One quiet line under each transaction: when it happened, what it touched,
+ * One quiet line under each transaction: when it happened and which way the
+ * money went, whether a tenant's payment is in the bank yet, what it touched,
  * and where — the parts that are actually filled in, joined.
  */
 function line(entry: OwnerLedgerEntry): string {
+    const verb = OWNER_ENTRY_KINDS[entry.kind]?.verb;
+
     return [
-        formatDate(entry.date),
+        verb ? `${verb} ${formatDate(entry.date)}` : formatDate(entry.date),
+        entry.settled == null
+            ? null
+            : entry.settledOn
+              ? `In the bank ${formatDate(entry.settledOn)}`
+              : 'On its way to the bank',
         entry.details,
         entry.location,
         entry.reference,
@@ -38,13 +47,13 @@ function line(entry: OwnerLedgerEntry): string {
         .join(' · ');
 }
 
-/** Whether a tenant's payment has reached the bank; null on other lines. */
-function settlementLabel(entry: OwnerLedgerEntry): string | null {
-    if (entry.settled == null) {
-        return null;
+/** A line's status as its badge reads, for the download. */
+function statusLabel(entry: OwnerLedgerEntry): string {
+    if (entry.settled != null) {
+        return entry.settled ? 'Settled' : 'Pending';
     }
 
-    return entry.settled ? 'Settled' : 'Pending';
+    return OWNER_ENTRY_KINDS[entry.kind]?.label ?? '';
 }
 
 /** The dates on screen, named under every figure they belong to. */
@@ -122,7 +131,7 @@ function csv(): void {
             entry.details ?? '',
             entry.amount.toFixed(2),
             entry.balance.toFixed(2),
-            settlementLabel(entry) ?? '',
+            statusLabel(entry),
         ]),
     ];
 
@@ -192,19 +201,7 @@ function csv(): void {
                             <span class="truncate">{{
                                 entry.description
                             }}</span>
-                            <Badge
-                                v-if="entry.settled != null"
-                                :variant="
-                                    entry.settled ? 'secondary' : 'outline'
-                                "
-                                class="shrink-0"
-                                :title="
-                                    entry.settledOn
-                                        ? `Deposited ${formatDate(entry.settledOn)}`
-                                        : 'Not deposited yet, and can still be returned'
-                                "
-                                >{{ settlementLabel(entry) }}</Badge
-                            >
+                            <OwnerEntryBadge :entry="entry" class="shrink-0" />
                         </p>
                         <p
                             class="text-muted-foreground mt-0.5 truncate text-xs"
@@ -215,7 +212,7 @@ function csv(): void {
                     <div class="shrink-0 text-right">
                         <p
                             class="text-sm font-medium tabular-nums"
-                            :class="entry.amount < 0 ? 'text-destructive' : ''"
+                            :class="ownerAmountClass(entry)"
                         >
                             {{ money.format(entry.amount) }}
                         </p>

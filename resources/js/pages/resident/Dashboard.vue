@@ -15,6 +15,7 @@ import {
     ScrollText,
     Wrench,
 } from '@lucide/vue';
+import ChargeBadge from '@/components/ChargeBadge.vue';
 import PaymentStatusBadge from '@/components/PaymentStatusBadge.vue';
 import DashboardHeader from '@/components/DashboardHeader.vue';
 import EmptyState from '@/components/EmptyState.vue';
@@ -272,7 +273,7 @@ function refreshDashboard(): void {
                             class="flex size-8 shrink-0 items-center justify-center rounded-full"
                             :class="
                                 entry.kind === 'payment'
-                                    ? 'bg-success/10 text-success'
+                                    ? 'bg-primary/10 text-primary'
                                     : 'bg-muted text-muted-foreground'
                             "
                         >
@@ -297,6 +298,9 @@ function refreshDashboard(): void {
                                     v-if="entry.settled != null"
                                     :settled="entry.settled"
                                 />
+                                <ChargeBadge
+                                    v-else-if="entry.kind === 'charge'"
+                                />
                             </span>
                             <span class="text-muted-foreground text-xs">{{
                                 formatDate(entry.date)
@@ -306,7 +310,7 @@ function refreshDashboard(): void {
                             class="shrink-0 text-sm font-medium tabular-nums"
                             :class="
                                 entry.kind === 'payment'
-                                    ? 'text-success'
+                                    ? 'text-primary'
                                     : entry.kind === 'charge'
                                       ? 'text-foreground'
                                       : 'text-muted-foreground'

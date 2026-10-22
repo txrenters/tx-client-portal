@@ -478,12 +478,25 @@ export type OwnerRevenue = {
 };
 
 /** One line of the owner's ledger, as Propertyware's owner portal shows it. */
+/**
+ * What a line was to the owner: rent or other income in (or refunded back
+ * out), a bill paid (or credited back), money sent to them or put in by them.
+ */
+export type OwnerLedgerEntryKind =
+    | 'income'
+    | 'refund'
+    | 'expense'
+    | 'credit'
+    | 'draw'
+    | 'contribution';
+
 export type OwnerLedgerEntry = {
     id: number;
     date: string;
     reference: string | null;
     location: string | null;
     description: string;
+    kind: OwnerLedgerEntryKind;
     details: string | null;
     amount: number;
     balance: number;

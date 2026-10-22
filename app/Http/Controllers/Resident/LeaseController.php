@@ -9,6 +9,7 @@ use App\Http\Requests\Client\LeaseLedgerRequest;
 use App\Services\Propertyware\LeaseLedger;
 use App\Services\Propertyware\PropertywareDirectory;
 use App\Services\Propertyware\PropertywareException;
+use Carbon\CarbonImmutable;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -25,7 +26,7 @@ class LeaseController extends Controller
         $account = $this->activeClientAccount($request, ClientRole::Resident);
         abort_if($account === null, 403);
 
-        $filters = $request->filters();
+        $filters = $this->periodOrThisMonth($request->filters());
         $page = $request->page();
 
         return Inertia::render('resident/Lease', [
@@ -59,5 +60,28 @@ class LeaseController extends Controller
                 }
             }, 'ledger'),
         ]);
+    }
+
+    /**
+     * The page opens on the month the tenant is in, like the owner's
+     * financials; "All time" is asked for by name. The app's endpoint keeps
+     * its own default of the whole tenancy.
+     *
+     * @param  array{range: ?string, from: ?string, to: ?string}  $filters
+     * @return array{range: ?string, from: ?string, to: ?string}
+     */
+    private function periodOrThisMonth(array $filters): array
+    {
+        if ($filters['range'] !== null || $filters['from'] !== null || $filters['to'] !== null) {
+            return $filters;
+        }
+
+        $now = CarbonImmutable::now(config('app.display_timezone'));
+
+        return [
+            'range' => 'this-month',
+            'from' => $now->startOfMonth()->toDateString(),
+            'to' => $now->endOfMonth()->toDateString(),
+        ];
     }
 }

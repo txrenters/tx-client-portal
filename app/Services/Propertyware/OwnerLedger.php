@@ -332,6 +332,7 @@ class OwnerLedger
             'reference' => filled($transaction['comment'] ?? null) ? (string) $transaction['comment'] : null,
             'location' => $location,
             'description' => (string) ($transaction['transactionType'] ?? ''),
+            'kind' => $this->kind($income, $expense, $draw),
             'details' => $this->summarise($details),
             'amount' => round($income - $expense - $draw, 2),
             'balance' => 0.0,
@@ -340,6 +341,26 @@ class OwnerLedger
             'draw' => $draw,
             'managementFee' => $managementFee,
         ];
+    }
+
+    /**
+     * What a line was to the owner, from where most of its money went rather
+     * than its name: Propertyware files a tenant refund and an owner draw
+     * under the same type, and a credit memo can be either side.
+     *
+     * income and refund are rent and other income in or back out, expense
+     * and credit a bill paid or credited back, draw and contribution money
+     * sent to the owner or put in by them.
+     */
+    private function kind(float $income, float $expense, float $draw): string
+    {
+        $largest = max(abs($income), abs($expense), abs($draw));
+
+        return match (true) {
+            abs($draw) === $largest => $draw > 0 ? 'draw' : 'contribution',
+            abs($expense) === $largest => $expense > 0 ? 'expense' : 'credit',
+            default => $income > 0 ? 'income' : 'refund',
+        };
     }
 
     /**

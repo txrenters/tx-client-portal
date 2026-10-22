@@ -15,6 +15,7 @@ import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import ChargeBadge from '@/components/ChargeBadge.vue';
 import PaymentStatusBadge from '@/components/PaymentStatusBadge.vue';
 import ResultsPagination from '@/components/ResultsPagination.vue';
 import { Badge } from '@/components/ui/badge';
@@ -114,15 +115,12 @@ const periodGroups = [
 ];
 
 /**
- * Which preset the period control shows. Dates carried on their own — a link
+ * Which preset the period control shows. The server opens the page on this
+ * month and names every preset, so dates carried on their own — a link
  * someone kept, or a range picked by hand — are a custom period.
  */
 function appliedRange(applied: Filters): string {
-    if (applied.range !== null) {
-        return applied.range;
-    }
-
-    return applied.from === null && applied.to === null ? 'all' : 'custom';
+    return applied.range ?? 'custom';
 }
 
 const range = ref(appliedRange(props.filters));
@@ -136,10 +134,7 @@ function picked(): Filters {
     const dates = presetDates(range.value, from.value, to.value);
 
     return {
-        range:
-            range.value === 'custom' || range.value === 'all'
-                ? null
-                : range.value,
+        range: range.value === 'custom' ? null : range.value,
         from: dates.from ?? null,
         to: dates.to ?? null,
     };
@@ -173,10 +168,15 @@ function goToPage(page: number): void {
     visit(props.filters, page);
 }
 
+/** Whether the list covers less than the whole tenancy. */
 const isFiltered = computed(() => range.value !== 'all');
 
+/** Whether the period differs from the month the page opens on. */
+const isChanged = computed(() => range.value !== 'this-month');
+
+/** Clearing goes back to the month the page opens on. */
 function clear(): void {
-    range.value = 'all';
+    range.value = 'this-month';
     from.value = '';
     to.value = '';
 }
@@ -422,7 +422,7 @@ const term = computed(() => [
                         </div>
 
                         <Button
-                            v-if="isFiltered"
+                            v-if="isChanged"
                             variant="ghost"
                             :disabled="isLoading"
                             @click="clear"
@@ -530,7 +530,7 @@ const term = computed(() => [
                                         class="flex size-9 shrink-0 items-center justify-center rounded-full"
                                         :class="
                                             entry.kind === 'payment'
-                                                ? 'bg-success/10 text-success'
+                                                ? 'bg-primary/10 text-primary'
                                                 : 'bg-muted text-muted-foreground'
                                         "
                                     >
@@ -558,6 +558,11 @@ const term = computed(() => [
                                                 v-if="entry.settled != null"
                                                 :settled="entry.settled"
                                             />
+                                            <ChargeBadge
+                                                v-else-if="
+                                                    entry.kind === 'charge'
+                                                "
+                                            />
                                         </span>
                                         <span
                                             v-if="entry.detail"
@@ -565,49 +570,50 @@ const term = computed(() => [
                                             >{{ entry.detail }}</span
                                         >
                                         <span
-                                            v-if="entry.settled != null"
-                                            class="text-xs"
-                                            :class="
-                                                entry.settled
-                                                    ? 'text-success'
-                                                    : 'text-muted-foreground'
-                                            "
+                                            class="text-muted-foreground text-xs"
                                         >
                                             {{
-                                                entry.settledOn
-                                                    ? `Deposited ${formatDate(entry.settledOn)}`
-                                                    : 'On its way to the bank'
+                                                entry.kind === 'payment'
+                                                    ? `Paid ${formatDate(entry.date)}`
+                                                    : entry.kind === 'charge'
+                                                      ? `Billed ${formatDate(entry.date)}`
+                                                      : formatDate(entry.date)
                                             }}
+                                            <template
+                                                v-if="entry.settled != null"
+                                            >
+                                                ·
+                                                <span
+                                                    :class="{
+                                                        'text-primary':
+                                                            entry.settled,
+                                                    }"
+                                                    >{{
+                                                        entry.settledOn
+                                                            ? `In the bank ${formatDate(entry.settledOn)}`
+                                                            : 'On its way to the bank'
+                                                    }}</span
+                                                >
+                                            </template>
                                         </span>
                                     </span>
 
                                     <span
-                                        class="flex shrink-0 flex-col items-end gap-0.5"
+                                        class="shrink-0 text-sm font-semibold tabular-nums"
+                                        :class="
+                                            entry.kind === 'payment'
+                                                ? 'text-primary'
+                                                : 'text-foreground'
+                                        "
                                     >
-                                        <span
-                                            class="text-sm font-semibold tabular-nums"
-                                            :class="
-                                                entry.kind === 'payment'
-                                                    ? 'text-success'
-                                                    : 'text-foreground'
-                                            "
-                                        >
-                                            {{
-                                                entry.kind === 'payment'
-                                                    ? '−'
-                                                    : '+'
-                                            }}{{ money.format(entry.amount) }}
-                                        </span>
-                                        <span
-                                            class="text-muted-foreground text-xs"
-                                            >{{ formatDate(entry.date) }}</span
-                                        >
+                                        {{ entry.kind === 'payment' ? '−' : '+'
+                                        }}{{ money.format(entry.amount) }}
                                     </span>
                                 </li>
                             </ul>
 
                             <p class="text-muted-foreground mt-4 text-xs">
-                                <span class="text-success font-medium">−</span>
+                                <span class="text-primary font-medium">−</span>
                                 payments come off your balance;
                                 <span class="text-foreground font-medium"
                                     >+</span
@@ -615,7 +621,7 @@ const term = computed(() => [
                                 charges add to it. A payment is
                                 <span class="font-medium">Pending</span> while
                                 it is on its way to the bank and
-                                <span class="text-success font-medium"
+                                <span class="text-primary font-medium"
                                     >Settled</span
                                 >
                                 once it has been deposited. Payments are made in

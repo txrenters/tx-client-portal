@@ -16,7 +16,7 @@ const props = defineProps<{
         variant="outline"
         :class="
             props.settled
-                ? 'bg-success/10 text-success border-success/20'
+                ? 'bg-primary/10 text-primary border-primary/20'
                 : 'bg-muted text-muted-foreground border-border'
         "
     >
