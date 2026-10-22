@@ -16,8 +16,8 @@ class IncomeStatementController extends Controller
     use ResolvesClientScope;
 
     /**
-     * Download the owner's income statement for one portfolio and one year as
-     * a PDF, made for this request and never kept.
+     * Download the owner's income statement for one portfolio and up to
+     * twelve months as a PDF, made for this request and never kept.
      *
      * @throws PropertywareException
      */
@@ -26,7 +26,10 @@ class IncomeStatementController extends Controller
         $validated = $request->validate([
             'portfolio' => ['nullable', 'integer'],
             'year' => ['nullable', 'integer'],
+            'from' => ['nullable', 'date_format:Y-m'],
+            'to' => ['nullable', 'date_format:Y-m'],
         ]);
+        [$from, $to] = $statements->period($validated);
 
         $scope = $this->clientScope($request, ClientRole::Owner, $directory);
         $portfolio = isset($validated['portfolio']) ? (int) $validated['portfolio'] : null;
@@ -35,10 +38,6 @@ class IncomeStatementController extends Controller
 
         abort_if($portfolioId === null, 404);
 
-        return $statements->download($statements->for(
-            $scope,
-            $portfolioId,
-            $statements->yearOrDefault(isset($validated['year']) ? (int) $validated['year'] : null),
-        ));
+        return $statements->download($statements->for($scope, $portfolioId, $from, $to));
     }
 }

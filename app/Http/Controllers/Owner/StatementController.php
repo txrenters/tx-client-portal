@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Owner;
 use App\Enums\ClientRole;
 use App\Http\Controllers\Concerns\ResolvesClientScope;
 use App\Http\Controllers\Controller;
+use App\Services\Propertyware\IncomeStatement;
 use App\Services\Propertyware\OwnerStatement;
 use App\Services\Propertyware\PropertywareDirectory;
 use App\Services\Propertyware\PropertywareException;
@@ -19,7 +20,7 @@ class StatementController extends Controller
     /**
      * Show the owner's statement for one portfolio and one finished month.
      */
-    public function __invoke(Request $request, PropertywareDirectory $directory, OwnerStatement $statements): Response
+    public function __invoke(Request $request, PropertywareDirectory $directory, OwnerStatement $statements, IncomeStatement $incomeStatements): Response
     {
         $account = $this->activeClientAccount($request, ClientRole::Owner);
         abort_if($account === null, 403);
@@ -34,6 +35,8 @@ class StatementController extends Controller
         return Inertia::render('owner/Statement', [
             'filters' => ['portfolio' => $portfolio, 'month' => $month],
             'months' => $statements->months(),
+            // The months an income statement PDF can be made between, up to twelve at a time.
+            'pdfRange' => [...$incomeStatements->range(), 'maxMonths' => IncomeStatement::MAX_MONTHS],
             'portfolios' => Inertia::defer(function () use ($request, $directory, $statements): array {
                 try {
                     return $statements->portfolios($this->clientScope($request, ClientRole::Owner, $directory));

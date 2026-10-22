@@ -6,12 +6,15 @@ use App\Services\Propertyware\Data\ClientScope;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * An owner's income statement for one portfolio and one year, month by
- * month: Propertyware's Published Income Statement Standard By Month, cash
- * basis, read from the same books as the rest of the portal.
+ * An owner's income statement for one portfolio over up to twelve months,
+ * month by month: Propertyware's Published Income Statement Standard By
+ * Month, cash basis, read from the same books as the rest of the portal. A
+ * year on screen is January to December; a PDF can run across two years,
+ * such as July to June.
  *
  * Accounts are listed by name, each with its number, and an account's
  * sub-accounts sit under it with a subtotal, as Propertyware lays them out.
@@ -20,6 +23,9 @@ use Symfony\Component\HttpFoundation\Response;
 class IncomeStatement
 {
     public const BASIS = 'cash';
+
+    /** The most months one statement covers, as Propertyware's report does. */
+    public const MAX_MONTHS = 12;
 
     public function __construct(private OwnerLedger $ledger, private OwnerStatement $statements) {}
 
@@ -49,13 +55,74 @@ class IncomeStatement
     }
 
     /**
+     * The months a statement can run between, oldest and newest: from January
+     * of the earliest year on offer to the month in progress, which
+     * Propertyware's report includes too.
+     *
+     * @return array{earliest: string, latest: string}
+     */
+    public function range(): array
+    {
+        return [
+            'earliest' => min($this->years()).'-01',
+            'latest' => CarbonImmutable::now(config('app.display_timezone'))->format('Y-m'),
+        ];
+    }
+
+    /**
+     * The first and last month asked for: a from and to month (YYYY-MM), or
+     * a whole year, or this year when neither is given.
+     *
+     * @param  array{from?: ?string, to?: ?string, year?: int|string|null}  $input
+     * @return array{0: string, 1: string}
+     *
+     * @throws ValidationException when the months are out of order, off the range or more than a year apart.
+     */
+    public function period(array $input): array
+    {
+        $from = $input['from'] ?? null;
+        $to = $input['to'] ?? null;
+
+        if (blank($from) && blank($to)) {
+            $year = $this->yearOrDefault(filled($input['year'] ?? null) ? (int) $input['year'] : null);
+
+            return ["{$year}-01", "{$year}-12"];
+        }
+
+        $range = $this->range();
+        $from = (string) ($from ?: $to);
+        $to = (string) ($to ?: $from);
+
+        if ($from > $to) {
+            throw ValidationException::withMessages(['to' => __('The end month must be on or after the start month.')]);
+        }
+
+        if ($from < $range['earliest'] || $to > $range['latest']) {
+            throw ValidationException::withMessages(['from' => __('Pick months between :earliest and :latest.', [
+                'earliest' => CarbonImmutable::createFromFormat('!Y-m', $range['earliest'])->format('F Y'),
+                'latest' => CarbonImmutable::createFromFormat('!Y-m', $range['latest'])->format('F Y'),
+            ])]);
+        }
+
+        $months = (int) CarbonImmutable::createFromFormat('!Y-m', $from)->diffInMonths(CarbonImmutable::createFromFormat('!Y-m', $to)) + 1;
+
+        if ($months > self::MAX_MONTHS) {
+            throw ValidationException::withMessages(['to' => __('A statement covers up to :max months.', ['max' => self::MAX_MONTHS])]);
+        }
+
+        return [$from, $to];
+    }
+
+    /**
      * @return array<string, mixed>
      *
      * @throws PropertywareException
      */
-    public function for(ClientScope $scope, int $portfolioId, int $year): array
+    public function for(ClientScope $scope, int $portfolioId, string $fromMonth, string $toMonth): array
     {
-        $book = $this->ledger->accountsByMonth($scope, $portfolioId, $year);
+        $first = CarbonImmutable::createFromFormat('!Y-m', $fromMonth, config('app.display_timezone'));
+        $last = CarbonImmutable::createFromFormat('!Y-m', $toMonth, config('app.display_timezone'));
+        $book = $this->ledger->accountsByMonth($scope, $portfolioId, $first, $last);
         $monthKeys = array_keys($book['months']);
 
         $income = $this->section($book, 'Income');
@@ -64,10 +131,14 @@ class IncomeStatement
 
         return [
             'portfolio' => collect($this->statements->portfolios($scope))->firstWhere('id', $portfolioId),
-            'year' => $year,
+            'year' => (int) $first->format('Y'),
+            // "2026" for a calendar year, "Jul 2025 – Jun 2026" for any other run.
+            'label' => $first->format('m') === '01' && $last->format('m') === '12' && $first->year === $last->year
+                ? $first->format('Y')
+                : ($fromMonth === $toMonth ? $first->format('M Y') : $first->format('M Y').' – '.$last->format('M Y')),
             'basis' => self::BASIS,
-            'from' => "{$year}-01-01",
-            'to' => "{$year}-12-31",
+            'from' => $first->startOfMonth()->toDateString(),
+            'to' => $last->endOfMonth()->toDateString(),
             'months' => array_map(fn (string $month): array => [
                 'value' => $month,
                 'label' => strtoupper(CarbonImmutable::createFromFormat('!Y-m', $month)->format('M y')),
@@ -100,7 +171,7 @@ class IncomeStatement
             ->setPaper('letter', 'landscape')
             // Only the letters used, not the whole font: a tenth of the size.
             ->setOption('isFontSubsettingEnabled', true)
-            ->download("Income Statement {$report['year']} - {$name}.pdf")
+            ->download('Income Statement '.str_replace(' – ', ' to ', $report['label'])." - {$name}.pdf")
             ->withHeaders(['Cache-Control' => 'no-store, private']);
     }
 

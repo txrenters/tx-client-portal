@@ -4,6 +4,16 @@ import { Download, FileText } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import AppCard from '@/components/AppCard.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -40,6 +50,8 @@ defineOptions({
 const props = defineProps<{
     filters: { portfolio: number | null; month: string };
     months: { value: string; label: string }[];
+    /** The months an income statement PDF can be made between. */
+    pdfRange: { earliest: string; latest: string; maxMonths: number };
     portfolios?: { id: number; name: string }[];
     /** Undefined while loading, null when it couldn't be read. */
     statement?: OwnerStatement | null;
@@ -72,12 +84,71 @@ const year = computed({
         month.value = (same ?? inYear[0]).value;
     },
 });
+/** Months as YYYY-MM, moved by a number of months. */
+function shiftMonth(month: string, by: number): string {
+    const [y, m] = month.split('-').map(Number);
+    const moved = new Date(Date.UTC(y, m - 1 + by, 1));
+
+    return `${moved.getUTCFullYear()}-${String(moved.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthLabel(month: string): string {
+    const [y, m] = month.split('-').map(Number);
+
+    return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-US', {
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'UTC',
+    });
+}
+
 /**
- * The year's income statement as a PDF, for the portfolio on screen. Made
- * when it is asked for and never kept: the owner's download is the copy.
+ * The income statement PDF: any run of up to twelve months, across a year
+ * end if need be. Made when it is asked for and never kept: the owner's
+ * download is the only copy.
  */
+const pdfOpen = ref(false);
+const pdfMonths = computed(() => {
+    const all: string[] = [];
+
+    for (
+        let month = props.pdfRange.latest;
+        month >= props.pdfRange.earliest;
+        month = shiftMonth(month, -1)
+    ) {
+        all.push(month);
+    }
+
+    return all;
+});
+// The last twelve finished months by default.
+const pdfTo = ref(props.months[0]?.value ?? props.pdfRange.latest);
+const pdfFrom = ref(
+    [
+        shiftMonth(pdfTo.value, 1 - props.pdfRange.maxMonths),
+        props.pdfRange.earliest,
+    ]
+        .sort()
+        .at(-1)!,
+);
+/** The end month runs from the start month to twelve months on. */
+const pdfToOptions = computed(() =>
+    pdfMonths.value.filter(
+        (month) =>
+            month >= pdfFrom.value &&
+            month <= shiftMonth(pdfFrom.value, props.pdfRange.maxMonths - 1),
+    ),
+);
+watch(pdfFrom, (from) => {
+    if (!pdfToOptions.value.includes(pdfTo.value)) {
+        pdfTo.value = [
+            shiftMonth(from, props.pdfRange.maxMonths - 1),
+            props.pdfRange.latest,
+        ].sort()[0];
+    }
+});
 const pdfHref = computed(() => {
-    const query = new URLSearchParams({ year: year.value });
+    const query = new URLSearchParams({ from: pdfFrom.value, to: pdfTo.value });
 
     if (portfolio.value !== '') {
         query.set('portfolio', portfolio.value);
@@ -178,12 +249,67 @@ watch(
                     >
                 </SelectContent>
             </Select>
-            <Button as-child variant="outline" class="sm:ml-auto">
-                <a :href="pdfHref" download>
-                    <Download class="size-4" aria-hidden="true" />
-                    Download {{ year }} income statement (PDF)
-                </a>
-            </Button>
+            <Dialog v-model:open="pdfOpen">
+                <DialogTrigger as-child>
+                    <Button variant="outline" class="sm:ml-auto">
+                        <Download class="size-4" aria-hidden="true" />
+                        Income statement (PDF)
+                    </Button>
+                </DialogTrigger>
+                <DialogContent class="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Income statement</DialogTitle>
+                        <DialogDescription>
+                            Month by month, up to
+                            {{ pdfRange.maxMonths }} months, across a year end
+                            if you like. It downloads to your device; we keep no
+                            copy.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="grid gap-2">
+                            <Label for="pdf-from">From</Label>
+                            <Select v-model="pdfFrom">
+                                <SelectTrigger id="pdf-from" class="w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem
+                                        v-for="month in pdfMonths"
+                                        :key="month"
+                                        :value="month"
+                                        >{{ monthLabel(month) }}</SelectItem
+                                    >
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="pdf-to">To</Label>
+                            <Select v-model="pdfTo">
+                                <SelectTrigger id="pdf-to" class="w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem
+                                        v-for="month in pdfToOptions"
+                                        :key="month"
+                                        :value="month"
+                                        >{{ monthLabel(month) }}</SelectItem
+                                    >
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button as-child @click="pdfOpen = false">
+                            <a :href="pdfHref" download>
+                                <Download class="size-4" aria-hidden="true" />
+                                Download PDF
+                            </a>
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
 
         <div v-if="statement === undefined" class="flex flex-col gap-4">

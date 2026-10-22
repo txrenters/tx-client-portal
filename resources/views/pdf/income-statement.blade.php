@@ -7,7 +7,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Income Statement {{ $report['year'] }} – {{ $report['portfolio']['name'] ?? 'Portfolio' }}</title>
+    <title>Income Statement {{ $report['label'] }} – {{ $report['portfolio']['name'] ?? 'Portfolio' }}</title>
     <style>
         @page { size: letter landscape; margin: 28px 30px 40px; }
         * { font-family: DejaVu Sans, sans-serif; }
@@ -50,7 +50,7 @@
         <tr>
             <td><img class="logo" src="{{ $logo }}" alt="TexasRenters.com"></td>
             <td class="title">
-                <h1>Income Statement by Month – {{ $report['year'] }}</h1>
+                <h1>Income Statement by Month – {{ $report['label'] }}</h1>
                 <p>A 12-month summary of income and expense. This report is available for either cash or accrual accounting basis.</p>
             </td>
         </tr>
