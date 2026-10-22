@@ -61,7 +61,7 @@ beforeEach(function () {
 test('shows the tenant what they were charged and what they paid, newest first', function () {
     $this->actingAs($this->tenant);
 
-    $response = partialGet(route('resident.lease'), 'resident/Lease', 'ledger')->assertOk();
+    $response = partialGet(route('resident.lease', ['range' => 'all']), 'resident/Lease', 'ledger')->assertOk();
 
     $entries = $response->json('props.ledger.entries');
 
@@ -91,7 +91,7 @@ test('pages the transactions, counting every one in the totals', function () {
 
     $this->actingAs($this->tenant);
 
-    $first = partialGet(route('resident.lease'), 'resident/Lease', 'ledger')->assertOk();
+    $first = partialGet(route('resident.lease', ['range' => 'all']), 'resident/Lease', 'ledger')->assertOk();
 
     expect($first->json('props.ledger.entries'))->toHaveCount(10)
         ->and($first->json('props.ledger.results.total'))->toBe(30)
@@ -99,7 +99,7 @@ test('pages the transactions, counting every one in the totals', function () {
         // Every entry counts towards the totals, not just this page.
         ->and($first->json('props.ledger.charged'))->toEqual(3000.0);
 
-    $last = partialGet(route('resident.lease', ['page' => 3]), 'resident/Lease', 'ledger')->assertOk();
+    $last = partialGet(route('resident.lease', ['range' => 'all', 'page' => 3]), 'resident/Lease', 'ledger')->assertOk();
 
     expect($last->json('props.ledger.entries'))->toHaveCount(10)
         ->and($last->json('props.ledger.results.current_page'))->toBe(3);
@@ -123,6 +123,29 @@ test('narrows the transactions and their totals to the period the tenant picks',
     $this->actingAs($this->tenant)
         ->get(route('resident.lease', ['range' => 'last-month', 'from' => '2026-09-01', 'to' => '2026-09-30']))
         ->assertInertia(fn ($page) => $page->where('filters', ['range' => 'last-month', 'from' => '2026-09-01', 'to' => '2026-09-30']));
+});
+
+test('opens on the month the tenant is in, and shows all of it when asked', function () {
+    $this->travelTo('2026-09-15 12:00:00');
+    $this->actingAs($this->tenant);
+
+    $thisMonth = partialGet(route('resident.lease'), 'resident/Lease', 'ledger', 'filters')->assertOk();
+
+    expect($thisMonth->json('props.filters'))->toBe(['range' => 'this-month', 'from' => '2026-09-01', 'to' => '2026-09-30'])
+        ->and(collect($thisMonth->json('props.ledger.entries'))->pluck('date')->all())->toBe(['2026-09-03', '2026-09-01']);
+
+    $allTime = partialGet(route('resident.lease', ['range' => 'all']), 'resident/Lease', 'ledger')->assertOk();
+
+    expect($allTime->json('props.ledger.results.total'))->toBe(5);
+});
+
+test('the app still reads the whole tenancy when it names no period', function () {
+    $this->travelTo('2026-09-15 12:00:00');
+    Sanctum::actingAs($this->tenant);
+
+    $this->getJson(route('api.v1.accounts.payments', $this->account))
+        ->assertOk()
+        ->assertJsonPath('meta.total', 5);
 });
 
 test('the app narrows the ledger to a period too, and refuses one that ends before it starts', function () {
@@ -153,7 +176,7 @@ test('tells the tenant which payments have settled and which are still pending',
     ];
     $this->actingAs($this->tenant);
 
-    $entries = collect(partialGet(route('resident.lease'), 'resident/Lease', 'ledger')->assertOk()->json('props.ledger.entries'))->keyBy('id');
+    $entries = collect(partialGet(route('resident.lease', ['range' => 'all']), 'resident/Lease', 'ledger')->assertOk()->json('props.ledger.entries'))->keyBy('id');
     $byExternalId = LeaseLedgerEntry::query()->pluck('id', 'external_id');
 
     expect($entries[$byExternalId['2']])->toMatchArray(['settled' => true, 'settledOn' => '2026-09-05'])

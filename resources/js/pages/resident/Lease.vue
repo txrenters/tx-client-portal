@@ -114,15 +114,12 @@ const periodGroups = [
 ];
 
 /**
- * Which preset the period control shows. Dates carried on their own — a link
+ * Which preset the period control shows. The server opens the page on this
+ * month and names every preset, so dates carried on their own — a link
  * someone kept, or a range picked by hand — are a custom period.
  */
 function appliedRange(applied: Filters): string {
-    if (applied.range !== null) {
-        return applied.range;
-    }
-
-    return applied.from === null && applied.to === null ? 'all' : 'custom';
+    return applied.range ?? 'custom';
 }
 
 const range = ref(appliedRange(props.filters));
@@ -136,10 +133,7 @@ function picked(): Filters {
     const dates = presetDates(range.value, from.value, to.value);
 
     return {
-        range:
-            range.value === 'custom' || range.value === 'all'
-                ? null
-                : range.value,
+        range: range.value === 'custom' ? null : range.value,
         from: dates.from ?? null,
         to: dates.to ?? null,
     };
@@ -173,10 +167,15 @@ function goToPage(page: number): void {
     visit(props.filters, page);
 }
 
+/** Whether the list covers less than the whole tenancy. */
 const isFiltered = computed(() => range.value !== 'all');
 
+/** Whether the period differs from the month the page opens on. */
+const isChanged = computed(() => range.value !== 'this-month');
+
+/** Clearing goes back to the month the page opens on. */
 function clear(): void {
-    range.value = 'all';
+    range.value = 'this-month';
     from.value = '';
     to.value = '';
 }
@@ -422,7 +421,7 @@ const term = computed(() => [
                         </div>
 
                         <Button
-                            v-if="isFiltered"
+                            v-if="isChanged"
                             variant="ghost"
                             :disabled="isLoading"
                             @click="clear"
