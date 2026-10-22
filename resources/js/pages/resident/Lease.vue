@@ -602,23 +602,22 @@ const term = computed(() => [
                                         class="shrink-0 text-sm font-semibold tabular-nums"
                                         :class="
                                             entry.kind === 'payment'
-                                                ? 'text-primary'
+                                                ? 'text-destructive'
                                                 : 'text-foreground'
                                         "
                                     >
-                                        {{ entry.kind === 'payment' ? '−' : '+'
+                                        {{ entry.kind === 'payment' ? '−' : ''
                                         }}{{ money.format(entry.amount) }}
                                     </span>
                                 </li>
                             </ul>
 
                             <p class="text-muted-foreground mt-4 text-xs">
-                                <span class="text-primary font-medium">−</span>
-                                payments come off your balance;
-                                <span class="text-foreground font-medium"
-                                    >+</span
+                                <span class="text-destructive font-medium"
+                                    >−</span
                                 >
-                                charges add to it. A payment is
+                                Payments come off your balance; charges add to
+                                it. A payment is
                                 <span class="font-medium">Pending</span> while
                                 it is on its way to the bank and
                                 <span class="text-primary font-medium"
