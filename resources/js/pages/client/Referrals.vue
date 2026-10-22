@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
+import { GIFT_CARD_NOTICE } from '@/lib/referrals';
 import { appDateFormatter } from '@/lib/timezone';
 import { dashboard as ownerDashboard } from '@/routes/owner';
 import {
@@ -89,9 +90,13 @@ function statusVariant(
                 >Referral reward</AlertTitle
             >
             <AlertDescription
-                class="text-primary-foreground/90 text-sm whitespace-pre-line"
-                >{{ reward }}</AlertDescription
+                class="text-primary-foreground/90 flex flex-col gap-1 text-sm"
             >
+                <span class="whitespace-pre-line">{{ reward }}</span>
+                <span class="text-primary-foreground/75 text-xs">{{
+                    GIFT_CARD_NOTICE
+                }}</span>
+            </AlertDescription>
         </Alert>
 
         <div class="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">

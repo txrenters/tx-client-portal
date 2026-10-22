@@ -38,6 +38,7 @@ import { index as messages } from '@/routes/owner/messages';
 import { index as properties } from '@/routes/owner/properties';
 import { index as referrals } from '@/routes/owner/referrals';
 
+import { GIFT_CARD_NOTICE } from '@/lib/referrals';
 import OwnerLedgerSummary from '@/components/OwnerLedgerSummary.vue';
 import RecentActivityCard from '@/components/RecentActivityCard.vue';
 import type {
@@ -233,7 +234,14 @@ function refreshDashboard(): void {
             <AlertDescription
                 class="text-primary-foreground/90 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between"
             >
-                <span class="whitespace-pre-line">{{ referralReward }}</span>
+                <div class="flex flex-col gap-1">
+                    <span class="whitespace-pre-line">{{
+                        referralReward
+                    }}</span>
+                    <span class="text-primary-foreground/75 text-xs">{{
+                        GIFT_CARD_NOTICE
+                    }}</span>
+                </div>
                 <Button as-child variant="secondary" size="sm" class="shrink-0">
                     <Link :href="referrals()">Refer an owner</Link>
                 </Button>
