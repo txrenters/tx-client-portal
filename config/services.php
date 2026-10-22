@@ -59,6 +59,12 @@ return [
     ))),
 
     /*
+     * The one address that gets security alerts, such as an address being
+     * blocked automatically. Admins see the same events on the Security page.
+     */
+    'security_alert_email' => (string) (env('SECURITY_ALERT_EMAIL') ?: 'it@texasrenters.com'),
+
+    /*
      * tx-scheduling: staff availability and bookings. The portal shows what a
      * page offers and books against it; availability, reminders and calendar
      * sync all stay in that app rather than being rebuilt here.

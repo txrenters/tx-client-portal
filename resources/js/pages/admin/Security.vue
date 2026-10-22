@@ -388,9 +388,9 @@ const activeBlocks = props.blocks.filter((item) => item.active).length;
                         </li>
                         <li>
                             Blocks last {{ thresholds.autoBlockHours }} hours,
-                            and owners and admins are emailed. Addresses staff
-                            have signed in from in the last 30 days, and private
-                            network addresses, are never blocked automatically.
+                            and IT is emailed. Addresses staff have signed in
+                            from in the last 30 days, and private network
+                            addresses, are never blocked automatically.
                         </li>
                     </ul>
                 </AppCard>
