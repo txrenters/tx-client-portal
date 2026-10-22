@@ -17,6 +17,7 @@ import { record } from '@/routes/promotions';
 import { index as ownerReferrals } from '@/routes/owner/referrals';
 import { index as residentReferrals } from '@/routes/resident/referrals';
 import type { Promotion } from '@/types';
+import { GIFT_CARD_NOTICE } from '@/lib/referrals';
 
 /**
  * The once-a-day promotion popup (the referral program first). The portal
@@ -166,6 +167,12 @@ function hideForGood(): void {
                         class="max-w-xs text-base leading-relaxed whitespace-pre-line text-current/90"
                         >{{ promotion.body }}</DialogDescription
                     >
+                    <p
+                        v-if="promotion.link.type === 'referrals'"
+                        class="text-xs text-current/75"
+                    >
+                        {{ GIFT_CARD_NOTICE }}
+                    </p>
                 </DialogHeader>
             </div>
 

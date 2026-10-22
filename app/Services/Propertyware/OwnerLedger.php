@@ -60,20 +60,36 @@ class OwnerLedger
     /** How far back a balance is accumulated when a portfolio has no start date. */
     private const MAX_HISTORY_YEARS = 8;
 
+    /**
+     * The parent account of TexasRenters.com's own fees collected through the
+     * owner's books, such as the Tenant Benefit Package. Each comes in with the
+     * tenant's payment and goes straight back out to us on a bill, so it is
+     * not the owner's income and nets to nothing on their balance; the
+     * ledger leaves both sides out.
+     */
+    private const PASS_THROUGH_PARENT = 'Management Income';
+
     public function __construct(private PropertywareClient $propertyware) {}
 
     /**
      * The ledger for one portfolio over one period.
      *
+     * Each entry carries `settled` (true once a tenant payment has been
+     * deposited, false while it is on its way, null on any other line) and
+     * `settledOn`, the day it was deposited.
+     *
      * @param  array<int, int>  $buildingIds  Only these properties; all of them when empty.
      * @param  array<int, string>  $locations  Building id to the address an owner would recognise.
      * @return array{
-     *     income: float, expense: float, managementFee: float,
+     *     income: float, expense: float, managementFee: float, draws: float,
      *     openingBalance: float, endingBalance: float, net: float,
      *     fromInception: bool, portfolioMinimum: float,
      *     incomeAccounts: array<int, array{name: string, amount: float}>,
      *     expenseAccounts: array<int, array{name: string, amount: float}>,
+     *     incomeByAccount: array<int, array{name: string, amount: float}>,
+     *     expenseByAccount: array<int, array{name: string, amount: float}>,
      *     entries: array<int, array<string, mixed>>, from: string, to: string
+
      * }
      *
      * @throws PropertywareException
@@ -106,9 +122,11 @@ class OwnerLedger
 
         $income = 0.0;
         $expense = 0.0;
+        $draws = 0.0;
         $entries = [];
         $byAccount = ['income' => [], 'expense' => []];
         $managementFee = $this->managementFee($transactions, $portfolioId, $accounts);
+        $deposits = $this->depositDates($portfolioId, $from, $to);
 
         foreach ($transactions as $transaction) {
             $this->tallyAccounts($transaction, $portfolioId, $accounts, $buildingIds, $byAccount);
@@ -119,8 +137,11 @@ class OwnerLedger
                 continue;
             }
 
+            $entry = [...$entry, ...$this->settlement($transaction, $entry, $deposits)];
+
             $income += $entry['income'];
             $expense += $entry['expense'];
+            $draws += $entry['draw'];
             $entries[] = $entry;
         }
 
@@ -133,13 +154,14 @@ class OwnerLedger
         foreach ($entries as $index => $entry) {
             $balance = round($balance + $entry['amount'], 2);
             $entries[$index]['balance'] = $balance;
-            unset($entries[$index]['income'], $entries[$index]['expense'], $entries[$index]['managementFee']);
+            unset($entries[$index]['income'], $entries[$index]['expense'], $entries[$index]['draw'], $entries[$index]['managementFee']);
         }
 
         return [
             'income' => round($income, 2),
             'expense' => round($expense, 2),
             'managementFee' => round($managementFee, 2),
+            'draws' => round($draws, 2),
             'openingBalance' => round($opening, 2),
             'endingBalance' => round($balance, 2),
             'net' => round($balance - $opening, 2),
@@ -147,6 +169,8 @@ class OwnerLedger
             'entries' => array_reverse($entries),
             'incomeAccounts' => $this->topAccounts($byAccount['income']),
             'expenseAccounts' => $this->topAccounts($byAccount['expense']),
+            'incomeByAccount' => $this->everyAccount($byAccount['income']),
+            'expenseByAccount' => $this->everyAccount($byAccount['expense']),
             'portfolioMinimum' => $this->portfolioMinimum($portfolioId),
             'from' => $from,
             'to' => $to,
@@ -238,7 +262,7 @@ class OwnerLedger
      * portfolio's or it nets to nothing for the owner.
      *
      * @param  array<string, mixed>  $transaction
-     * @param  array<int, array{name: string, type: string}>  $accounts
+     * @param  array<int, array{name: string, type: string, passThrough: bool}>  $accounts
      * @param  array<int, int>  $buildingIds
      * @param  array<int, string>  $locations
      * @return array<string, mixed>|null
@@ -262,6 +286,11 @@ class OwnerLedger
             }
 
             $account = $accounts[(int) ($entry['glaccountID'] ?? 0)] ?? null;
+
+            if ($account['passThrough'] ?? false) {
+                continue;
+            }
+
             $name = (string) ($account['name'] ?? '');
             $type = (string) ($account['type'] ?? '');
             $credit = (float) ($entry['credit'] ?? 0);
@@ -308,8 +337,64 @@ class OwnerLedger
             'balance' => 0.0,
             'income' => $income,
             'expense' => $expense,
+            'draw' => $draw,
             'managementFee' => $managementFee,
         ];
+    }
+
+    /**
+     * Whether a tenant's payment has reached the bank yet.
+     *
+     * Propertyware records the day a payment is deposited; an eCheck lands
+     * about five days after it is made, and can still be returned until then.
+     * Null on anything that is not a tenant payment, or when the payment's
+     * record could not be read.
+     *
+     * @param  array<string, mixed>  $transaction
+     * @param  array<string, mixed>  $entry
+     * @param  array<int, string|null>|null  $deposits  Deposit dates by payment id.
+     * @return array{settled: bool|null, settledOn: string|null}
+     */
+    private function settlement(array $transaction, array $entry, ?array $deposits): array
+    {
+        $id = (int) ($transaction['id'] ?? 0);
+
+        if (($transaction['transactionType'] ?? null) !== 'Tenant Payment' || $entry['amount'] <= 0 || $deposits === null || ! array_key_exists($id, $deposits)) {
+            return ['settled' => null, 'settledOn' => null];
+        }
+
+        $depositedOn = $deposits[$id];
+        $today = CarbonImmutable::now(config('app.display_timezone'))->toDateString();
+        $settled = $depositedOn !== null && $depositedOn <= $today;
+
+        return ['settled' => $settled, 'settledOn' => $settled ? $depositedOn : null];
+    }
+
+    /**
+     * When each tenant payment posted in the period was deposited, by its id,
+     * which is also the id of its line in the general ledger. Null when
+     * Propertyware would not say, so lines show no status rather than a wrong one.
+     *
+     * @return array<int, string|null>|null
+     */
+    private function depositDates(int $portfolioId, string $from, string $to): ?array
+    {
+        try {
+            $payments = $this->propertyware->listAll('leases/payments', [
+                'portfolioID' => $portfolioId,
+                'postDateStart' => $from,
+                'postDateEnd' => $to,
+            ], 5000);
+        } catch (PropertywareException) {
+            return null;
+        }
+
+        return collect($payments)
+            ->filter(fn (array $payment): bool => filled($payment['id'] ?? null))
+            ->mapWithKeys(fn (array $payment): array => [(int) $payment['id'] => filled($payment['depositDate'] ?? null)
+                ? substr((string) $payment['depositDate'], 0, 10)
+                : null])
+            ->all();
     }
 
     /**
@@ -361,7 +446,7 @@ class OwnerLedger
      * Propertyware's own owner portal shows.
      *
      * @param  array<int, array<string, mixed>>  $transactions
-     * @param  array<int, array{name: string, type: string}>  $accounts
+     * @param  array<int, array{name: string, type: string, passThrough: bool}>  $accounts
      */
     private function managementFee(array $transactions, int $portfolioId, array $accounts): float
     {
@@ -373,9 +458,10 @@ class OwnerLedger
                     continue;
                 }
 
-                $name = (string) ($accounts[(int) ($entry['glaccountID'] ?? 0)]['name'] ?? '');
+                $account = $accounts[(int) ($entry['glaccountID'] ?? 0)] ?? null;
+                $name = (string) ($account['name'] ?? '');
 
-                if (stripos($name, 'management fee') !== false) {
+                if (! ($account['passThrough'] ?? false) && stripos($name, 'management fee') !== false) {
                     $fee += (float) ($entry['debit'] ?? 0) - (float) ($entry['credit'] ?? 0);
                 }
             }
@@ -389,7 +475,7 @@ class OwnerLedger
      * touched, so the dashboard can show where income and expense came from.
      *
      * @param  array<string, mixed>  $transaction
-     * @param  array<int, array{name: string, type: string}>  $accounts
+     * @param  array<int, array{name: string, type: string, passThrough: bool}>  $accounts
      * @param  array<int, int>  $buildingIds
      * @param  array{income: array<string, float>, expense: array<string, float>}  $byAccount
      */
@@ -410,7 +496,7 @@ class OwnerLedger
             $credit = (float) ($entry['credit'] ?? 0);
             $debit = (float) ($entry['debit'] ?? 0);
 
-            if ($name === '') {
+            if ($name === '' || ($account['passThrough'] ?? false)) {
                 continue;
             }
 
@@ -420,6 +506,24 @@ class OwnerLedger
                 $byAccount['expense'][$name] = round(($byAccount['expense'][$name] ?? 0) + $debit - $credit, 2);
             }
         }
+    }
+
+    /**
+     * Every account that moved, largest first, for a statement that has to add up.
+     *
+     * @param  array<string, float>  $totals
+     * @return array<int, array{name: string, amount: float}>
+     */
+    private function everyAccount(array $totals): array
+    {
+        $totals = array_filter($totals, fn (float $amount): bool => $amount !== 0.0);
+        arsort($totals);
+
+        return array_map(
+            fn (string $name, float $amount): array => ['name' => $name, 'amount' => $amount],
+            array_keys($totals),
+            array_values($totals),
+        );
     }
 
     /**
@@ -536,16 +640,8 @@ class OwnerLedger
         $from = $month->startOfMonth();
         $to = $month->endOfMonth()->gt($until) ? $until : $month->endOfMonth();
 
-        $startOfThisMonth = CarbonImmutable::now()->startOfMonth();
-        $closed = $to->lt($startOfThisMonth);
-        $recent = $to->gte($startOfThisMonth->subMonths(self::RECENT_MONTHS));
-
         $key = "propertyware:owner-ledger:v2:{$portfolioId}:{$from->toDateString()}:{$to->toDateString()}";
-        $ttl = match (true) {
-            ! $closed => now()->addMinutes(self::OPEN_MONTH_MINUTES),
-            $recent => now()->addDays(self::RECENT_MONTH_DAYS),
-            default => now()->addDays(self::SETTLED_MONTH_DAYS),
-        };
+        $ttl = $this->monthTtl($to);
 
         if (! Cache::has($key)) {
             $missing++;
@@ -564,7 +660,13 @@ class OwnerLedger
                         continue;
                     }
 
-                    $type = (string) ($accounts[(int) ($entry['glaccountID'] ?? 0)]['type'] ?? '');
+                    $account = $accounts[(int) ($entry['glaccountID'] ?? 0)] ?? null;
+
+                    if ($account['passThrough'] ?? false) {
+                        continue;
+                    }
+
+                    $type = (string) ($account['type'] ?? '');
                     $credit = (float) ($entry['credit'] ?? 0);
                     $debit = (float) ($entry['debit'] ?? 0);
 
@@ -586,6 +688,108 @@ class OwnerLedger
         });
 
         return $totals;
+    }
+
+    /**
+     * Every income and expense account the portfolio touched in each month
+     * from one month to another, as Propertyware's Published Income Statement
+     * reads it, except our own Management Income accounts: owners are never
+     * shown what TexasRenters.com earns. Months after this one are left empty. An account that moved and came back to nothing
+     * still appears, as it does there.
+     *
+     * @return array{
+     *     months: array<string, array<int, float>>,
+     *     accounts: array<int, array{name: string, type: string, number: string, parent: string, passThrough: bool}>
+     * }
+     *
+     * @throws PropertywareException
+     */
+    public function accountsByMonth(ClientScope $scope, int $portfolioId, CarbonImmutable $first, CarbonImmutable $last): array
+    {
+        if (! in_array($portfolioId, $scope->portfolioIds, strict: true)) {
+            throw new PropertywareException('That portfolio does not belong to this client.');
+        }
+
+        $accounts = $this->accounts();
+        $now = CarbonImmutable::now();
+        $months = [];
+
+        for ($month = $first->startOfMonth(); $month->lte($last); $month = $month->addMonth()) {
+            $months[$month->format('Y-m')] = $month->gt($now)
+                ? []
+                : $this->monthAccounts($portfolioId, $month, $accounts);
+        }
+
+        $touched = array_unique(array_merge(...array_map(array_keys(...), array_values($months))));
+
+        return [
+            'months' => $months,
+            'accounts' => array_intersect_key($accounts, array_flip($touched)),
+        ];
+    }
+
+    /**
+     * One month's movement on each income and expense account, cached like
+     * the month totals: income as credits less debits, expense the other way.
+     *
+     * @param  array<int, array{name: string, type: string, number: string, parent: string, passThrough: bool}>  $accounts
+     * @return array<int, float>
+     *
+     * @throws PropertywareException
+     */
+    private function monthAccounts(int $portfolioId, CarbonImmutable $month, array $accounts): array
+    {
+        $from = $month->startOfMonth();
+        $to = $month->endOfMonth()->gt(CarbonImmutable::now()) ? CarbonImmutable::now()->startOfDay() : $month->endOfMonth();
+
+        return Cache::remember(
+            "propertyware:owner-ledger:accounts:v2:{$portfolioId}:{$from->toDateString()}:{$to->toDateString()}",
+            $this->monthTtl($to),
+            function () use ($portfolioId, $from, $to, $accounts): array {
+                $totals = [];
+
+                foreach ($this->transactions($portfolioId, $from->toDateString(), $to->toDateString()) as $transaction) {
+                    foreach ($transaction['glentries'] ?? [] as $entry) {
+                        if ((int) ($entry['portfolioID'] ?? 0) !== $portfolioId) {
+                            continue;
+                        }
+
+                        $id = (int) ($entry['glaccountID'] ?? 0);
+                        $type = (string) ($accounts[$id]['type'] ?? '');
+
+                        // Our own income is never shown to an owner.
+                        if ($accounts[$id]['passThrough'] ?? false) {
+                            continue;
+                        }
+                        $credit = (float) ($entry['credit'] ?? 0);
+                        $debit = (float) ($entry['debit'] ?? 0);
+
+                        if ($type === 'Income') {
+                            $totals[$id] = round(($totals[$id] ?? 0) + $credit - $debit, 2);
+                        } elseif (str_contains($type, 'Expense')) {
+                            $totals[$id] = round(($totals[$id] ?? 0) + $debit - $credit, 2);
+                        }
+                    }
+                }
+
+                return $totals;
+            },
+        );
+    }
+
+    /**
+     * How long a month read ending on this day is kept: briefly while it is
+     * open, a week while recent, months once settled.
+     */
+    private function monthTtl(CarbonImmutable $to): \DateTimeInterface
+    {
+        $startOfThisMonth = CarbonImmutable::now()->startOfMonth();
+
+        return match (true) {
+            ! $to->lt($startOfThisMonth) => now()->addMinutes(self::OPEN_MONTH_MINUTES),
+            $to->gte($startOfThisMonth->subMonths(self::RECENT_MONTHS)) => now()->addDays(self::RECENT_MONTH_DAYS),
+            default => now()->addDays(self::SETTLED_MONTH_DAYS),
+        };
     }
 
     /**
@@ -676,19 +880,35 @@ class OwnerLedger
     }
 
     /**
-     * Propertyware's chart of accounts, keyed by id.
+     * The chart of accounts, for a report that names accounts which did not move.
      *
-     * @return array<int, array{name: string, type: string}>
+     * @return array<int, array{name: string, type: string, number: string, parent: string, passThrough: bool}>
+     */
+    public function chartOfAccounts(): array
+    {
+        return $this->accounts();
+    }
+
+    /**
+     * Propertyware's chart of accounts, keyed by id, marking our own pass-through fees.
+     *
+     * @return array<int, array{name: string, type: string, number: string, parent: string, passThrough: bool}>
      */
     private function accounts(): array
     {
-        return Cache::remember('propertyware:gl-accounts', now()->addDay(), function (): array {
+        return Cache::remember('propertyware:gl-accounts:owner-ledger:v3', now()->addDay(), function (): array {
             try {
                 return collect($this->propertyware->listAll('accounting/glaccounts', [], 2000))
                     ->filter(fn (array $account): bool => filled($account['id'] ?? null))
                     ->mapWithKeys(fn (array $account): array => [(int) $account['id'] => [
                         'name' => trim((string) ($account['name'] ?? '')),
                         'type' => (string) ($account['accountType'] ?? ''),
+                        'number' => trim((string) ($account['accountNumber'] ?? '')),
+                        'parent' => trim((string) ($account['parentRef'] ?? '')),
+                        // Under Management Income, or named for it at the top level
+                        // as 4025 Management Income Admin Charge is.
+                        'passThrough' => trim((string) ($account['parentRef'] ?? '')) === self::PASS_THROUGH_PARENT
+                            || str_starts_with(trim((string) ($account['name'] ?? '')), self::PASS_THROUGH_PARENT),
                     ]])
                     ->all();
             } catch (PropertywareException) {

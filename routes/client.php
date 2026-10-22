@@ -9,12 +9,14 @@ use App\Http\Controllers\Owner\ConversationController as OwnerConversationContro
 use App\Http\Controllers\Owner\DashboardController as OwnerDashboardController;
 use App\Http\Controllers\Owner\DocumentController as OwnerDocumentController;
 use App\Http\Controllers\Owner\FinancialController as OwnerFinancialController;
+use App\Http\Controllers\Owner\IncomeStatementController as OwnerIncomeStatementController;
 use App\Http\Controllers\Owner\MaintenanceController as OwnerMaintenanceController;
 use App\Http\Controllers\Owner\MeetingController as OwnerMeetingController;
 use App\Http\Controllers\Owner\MessageController as OwnerMessageController;
 use App\Http\Controllers\Owner\PortfolioController as OwnerPortfolioController;
 use App\Http\Controllers\Owner\PropertyController as OwnerPropertyController;
 use App\Http\Controllers\Owner\ReferralController as OwnerReferralController;
+use App\Http\Controllers\Owner\StatementController as OwnerStatementController;
 use App\Http\Controllers\Resident\ConversationController as ResidentConversationController;
 use App\Http\Controllers\Resident\DashboardController as ResidentDashboardController;
 use App\Http\Controllers\Resident\DocumentController as ResidentDocumentController;
@@ -95,7 +97,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('referrals', [OwnerReferralController::class, 'index'])->name('referrals.index');
         Route::post('referrals', [OwnerReferralController::class, 'store'])->middleware('throttle:10,1')->name('referrals.store');
         Route::get('financials', OwnerFinancialController::class)->name('financials');
-        Route::inertia('statements', 'client/ComingSoon', ['title' => 'Statements'])->name('statements');
+        Route::get('statements', OwnerStatementController::class)->name('statements');
+        Route::get('statements/income-statement.pdf', OwnerIncomeStatementController::class)->middleware('throttle:10,1')->name('statements.income-pdf');
         Route::get('documents', [OwnerDocumentController::class, 'index'])->name('documents');
         Route::post('documents', [OwnerDocumentController::class, 'store'])
             ->middleware('throttle:10,1')

@@ -22,8 +22,11 @@ class ReferralProgram
     /** The Setting key staff edit the reward text under. */
     public const REWARD_SETTING = 'referral_reward';
 
-    /** The wording on the printed Refer a Friend card, until staff change it. */
-    public const DEFAULT_REWARD = "Refer a property owner and get 2 free months! They'll also get 2 free months.";
+    /**
+     * The wording until staff change it. Texas law caps what a referrer can be
+     * given at a $50 gift card; the owner they send us gets the free months.
+     */
+    public const DEFAULT_REWARD = "Refer a property owner and get a \$50 gift card! They'll get 2 months of management fees free.";
 
     public const PER_PAGE = 20;
 

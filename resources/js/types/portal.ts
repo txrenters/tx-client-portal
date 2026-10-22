@@ -106,9 +106,18 @@ export type ApprovalSummary = {
     items: WorkOrder[];
 };
 
+/** What a document is, read from its name: the Documents page's buttons. */
+export type DocumentKind =
+    | 'leases'
+    | 'statements'
+    | 'tax'
+    | 'invoices'
+    | 'other';
+
 export type DocumentFilterValues = {
     search: string | null;
     category: string | null;
+    kind: DocumentKind | null;
     type: 'images' | 'pdf' | 'other' | null;
     from: string | null;
     to: string | null;
@@ -149,6 +158,7 @@ export type DocumentsPage = {
     status: 'ready';
     total: number;
     categories: string[];
+    kindCounts: Record<DocumentKind, number>;
     typeCounts: Record<'images' | 'pdf' | 'other', number>;
     properties: { id: number; name: string }[];
     workOrders: {
@@ -470,6 +480,29 @@ export type OwnerLedgerEntry = {
     details: string | null;
     amount: number;
     balance: number;
+    /** On a tenant payment: whether it has reached the bank. Null on any other line. */
+    settled?: boolean | null;
+    settledOn?: string | null;
+};
+
+/** An owner's statement for one portfolio and one finished month. */
+export type OwnerStatement = {
+    portfolio: { id: number; name: string } | null;
+    month: string;
+    label: string;
+    from: string;
+    to: string;
+    openingBalance: number;
+    income: number;
+    expense: number;
+    managementFee: number;
+    draws: number;
+    endingBalance: number;
+    fromInception: boolean;
+    incomeAccounts: { name: string; amount: number }[];
+    expenseAccounts: { name: string; amount: number }[];
+    /** Oldest first, each with the balance it left behind. */
+    entries: OwnerLedgerEntry[];
 };
 
 export type OwnerLedgerData = {

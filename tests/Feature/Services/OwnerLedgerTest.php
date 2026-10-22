@@ -47,7 +47,11 @@ function glEntry(int $portfolioId, int $accountId, float $credit = 0, float $deb
     ];
 }
 
-function fakeLedger(array $transactions): void
+/**
+ * @param  array<int, array<string, mixed>>  $transactions
+ * @param  array<int, array<string, mixed>>  $payments  Propertyware's tenant payment records.
+ */
+function fakeLedger(array $transactions, array $payments = []): void
 {
     Http::fake([
         '*/accounting/glaccounts*' => Http::response([
@@ -56,8 +60,11 @@ function fakeLedger(array $transactions): void
             ['id' => 30, 'name' => 'Management Fees', 'accountType' => 'Expense'],
             ['id' => 40, 'name' => 'Owner Draw', 'accountType' => 'Equity'],
             ['id' => 50, 'name' => 'Operating Bank', 'accountType' => 'Bank'],
+            ['id' => 60, 'name' => 'Management Income', 'accountType' => 'Income'],
+            ['id' => 61, 'name' => 'Tenant Benefit Package', 'accountType' => 'Income', 'parentRef' => 'Management Income'],
         ]),
         '*/accounting/generalledger*' => Http::response($transactions),
+        '*/leases/payments*' => Http::response($payments),
         // A recent start date keeps the balance walk short; without one the
         // service falls back to years of history and gives up as cold.
         '*/portfolios/*' => Http::response([
@@ -261,6 +268,7 @@ test('charts the biggest five accounts and adds the rest together', function () 
                 ->map(fn (int $n): array => ['id' => 100 + $n, 'name' => "Account {$n}", 'accountType' => 'Expense'])
                 ->all(),
         ),
+        '*/leases/payments*' => Http::response([]),
         '*/accounting/generalledger*' => Http::response(
             collect(range(1, 7))
                 ->map(fn (int $n): array => transaction($n, '2026-09-05', 'Bill Payment', [
@@ -279,4 +287,58 @@ test('charts the biggest five accounts and adds the rest together', function () 
         ])
         // 200 + 100, the two that did not make the chart.
         ->and($accounts[5]['amount'])->toBe(300.0);
+});
+
+test('leaves out our own fees that only pass through the owner\'s books', function () {
+    fakeLedger([
+        transaction(1, '2026-09-01', 'Tenant Payment', [
+            glEntry(7, 10, credit: 1500.00),
+            glEntry(7, 50, debit: 1500.00),
+            glEntry(7, 61, credit: 40.00),
+            glEntry(7, 50, debit: 40.00),
+        ]),
+        transaction(2, '2026-09-03', 'Bill Payment', [
+            glEntry(7, 61, debit: 40.00),
+            glEntry(7, 50, credit: 40.00),
+        ]),
+    ]);
+
+    $ledger = app(OwnerLedger::class)->forPortfolio($this->scope, 7, '2026-09-01', '2026-09-30');
+
+    expect($ledger['income'])->toBe(1500.00)
+        ->and($ledger['endingBalance'])->toBe(1500.00)
+        ->and($ledger['entries'])->toHaveCount(1)
+        ->and($ledger['entries'][0])->toMatchArray(['amount' => 1500.00, 'details' => 'Rent'])
+        ->and(collect($ledger['incomeAccounts'])->pluck('name')->all())->toBe(['Rent']);
+});
+
+test('says whether each tenant payment has been deposited yet', function () {
+    $this->travelTo('2026-09-10 12:00:00');
+
+    fakeLedger([
+        transaction(1, '2026-09-01', 'Tenant Payment', [glEntry(7, 10, credit: 1500.00), glEntry(7, 50, debit: 1500.00)]),
+        transaction(2, '2026-09-08', 'Tenant Payment', [glEntry(7, 10, credit: 900.00), glEntry(7, 50, debit: 900.00)]),
+        transaction(3, '2026-09-09', 'Tenant Payment', [glEntry(7, 10, credit: 800.00), glEntry(7, 50, debit: 800.00)]),
+        transaction(4, '2026-09-09', 'Bill Payment', [glEntry(7, 20, debit: 100.00), glEntry(7, 50, credit: 100.00)]),
+    ], [
+        ['id' => 1, 'depositDate' => '2026-09-06'],
+        ['id' => 2, 'depositDate' => '2026-09-13'],
+        ['id' => 3, 'depositDate' => null],
+    ]);
+
+    $entries = collect(app(OwnerLedger::class)->forPortfolio($this->scope, 7, '2026-09-01', '2026-09-30')['entries'])->keyBy('id');
+
+    expect($entries[1])->toMatchArray(['settled' => true, 'settledOn' => '2026-09-06'])
+        ->and($entries[2])->toMatchArray(['settled' => false, 'settledOn' => null])
+        ->and($entries[3])->toMatchArray(['settled' => false, 'settledOn' => null])
+        ->and($entries[4])->toMatchArray(['settled' => null, 'settledOn' => null]);
+});
+
+test('shows no settled status when Propertyware will not list the payments', function () {
+    fakeLedger([
+        transaction(1, '2026-09-01', 'Tenant Payment', [glEntry(7, 10, credit: 1500.00), glEntry(7, 50, debit: 1500.00)]),
+    ]);
+    Http::fake(['*/leases/payments*' => Http::response([], 500)]);
+
+    expect(app(OwnerLedger::class)->forPortfolio($this->scope, 7, '2026-09-01', '2026-09-30')['entries'][0]['settled'])->toBeNull();
 });

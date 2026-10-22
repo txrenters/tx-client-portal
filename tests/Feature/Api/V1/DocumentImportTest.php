@@ -56,10 +56,10 @@ test('answers "importing" first, then the documents once they have been read', f
         ->assertJsonPath('data.0.fileName', 'Statement.pdf');
 });
 
-test('reads attachments only for open work orders and those updated in the last year', function () {
+test('does not read work order attachments, which only show on each work order', function () {
     $this->getJson(route('api.v1.accounts.documents.index', $this->account))->assertOk();
 
-    expect(documentRequestsFor('WORK_ORDER'))->toBe([70, 72]);
+    expect(documentRequestsFor('WORK_ORDER'))->toBe([]);
 });
 
 test('serves the kept list right away and refreshes it in the background', function () {
