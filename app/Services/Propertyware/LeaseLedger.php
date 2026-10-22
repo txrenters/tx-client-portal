@@ -80,6 +80,7 @@ class LeaseLedger
                 'description' => $entry->description,
                 'detail' => $entry->detail,
                 'reference' => $entry->reference,
+                ...$this->settlement($entry, $today),
             ])
             ->all();
 
@@ -117,6 +118,26 @@ class LeaseLedger
             'from' => $from,
             'to' => $to,
         ];
+    }
+
+    /**
+     * Whether a payment has reached the bank: `settled` is true once it was
+     * deposited, false while it is on its way and can still be returned, and
+     * null on any other line or when its record could not be read.
+     * `settledOn` is the day it was deposited.
+     *
+     * @return array{settled: bool|null, settledOn: string|null}
+     */
+    private function settlement(LeaseLedgerEntry $entry, string $today): array
+    {
+        if ($entry->kind !== 'payment' || ! $entry->deposit_checked) {
+            return ['settled' => null, 'settledOn' => null];
+        }
+
+        $depositedOn = $entry->deposited_on?->toDateString();
+        $settled = $depositedOn !== null && $depositedOn <= $today;
+
+        return ['settled' => $settled, 'settledOn' => $settled ? $depositedOn : null];
     }
 
     /**

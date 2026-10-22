@@ -392,6 +392,13 @@ export type LeaseLedgerEntry = {
     description: string;
     detail: string | null;
     reference: string | null;
+    /**
+     * Whether a payment has reached the bank: false while it is on its way,
+     * null on any other line or when Propertyware would not say.
+     */
+    settled: boolean | null;
+    /** The day a settled payment was deposited. */
+    settledOn: string | null;
 };
 
 export type LeaseLedger = {

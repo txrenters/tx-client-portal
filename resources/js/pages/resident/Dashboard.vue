@@ -15,6 +15,7 @@ import {
     ScrollText,
     Wrench,
 } from '@lucide/vue';
+import PaymentStatusBadge from '@/components/PaymentStatusBadge.vue';
 import DashboardHeader from '@/components/DashboardHeader.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import WorkOrderLoadStatus from '@/components/WorkOrderLoadStatus.vue';
@@ -268,10 +269,10 @@ function refreshDashboard(): void {
                         class="border-border/60 flex items-center gap-3 border-b py-2.5 last:border-0"
                     >
                         <span
-                            class="flex size-8 shrink-0 items-center justify-center rounded-lg"
+                            class="flex size-8 shrink-0 items-center justify-center rounded-full"
                             :class="
                                 entry.kind === 'payment'
-                                    ? 'bg-destructive/10 text-destructive'
+                                    ? 'bg-success/10 text-success'
                                     : 'bg-muted text-muted-foreground'
                             "
                         >
@@ -286,9 +287,17 @@ function refreshDashboard(): void {
                             />
                         </span>
                         <span class="flex min-w-0 flex-1 flex-col">
-                            <span class="truncate text-sm font-medium">{{
-                                entry.description
-                            }}</span>
+                            <span
+                                class="flex items-center gap-2 text-sm font-medium"
+                            >
+                                <span class="truncate">{{
+                                    entry.description
+                                }}</span>
+                                <PaymentStatusBadge
+                                    v-if="entry.settled != null"
+                                    :settled="entry.settled"
+                                />
+                            </span>
                             <span class="text-muted-foreground text-xs">{{
                                 formatDate(entry.date)
                             }}</span>
@@ -297,7 +306,7 @@ function refreshDashboard(): void {
                             class="shrink-0 text-sm font-medium tabular-nums"
                             :class="
                                 entry.kind === 'payment'
-                                    ? 'text-destructive'
+                                    ? 'text-success'
                                     : entry.kind === 'charge'
                                       ? 'text-foreground'
                                       : 'text-muted-foreground'

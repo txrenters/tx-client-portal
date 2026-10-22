@@ -18,6 +18,8 @@ function ledgerEntry(string $externalId, string $date, float $amount, string $ki
         'description' => $description,
         'detail' => null,
         'reference' => null,
+        'deposit_checked' => false,
+        'deposited_on' => null,
     ];
 }
 

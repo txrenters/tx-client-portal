@@ -22,8 +22,10 @@ use Illuminate\Support\Carbon;
  * @property string $description
  * @property ?string $detail
  * @property ?string $reference
+ * @property bool $deposit_checked Whether the payment's own record was read.
+ * @property ?Carbon $deposited_on The day a payment reached the bank.
  */
-#[Fillable(['lease_id', 'external_id', 'occurred_on', 'kind', 'direction', 'amount', 'description', 'detail', 'reference'])]
+#[Fillable(['lease_id', 'external_id', 'occurred_on', 'kind', 'direction', 'amount', 'description', 'detail', 'reference', 'deposit_checked', 'deposited_on'])]
 class LeaseLedgerEntry extends Model
 {
     protected function casts(): array
@@ -31,6 +33,8 @@ class LeaseLedgerEntry extends Model
         return [
             'occurred_on' => 'date',
             'amount' => 'decimal:2',
+            'deposit_checked' => 'boolean',
+            'deposited_on' => 'date',
         ];
     }
 }

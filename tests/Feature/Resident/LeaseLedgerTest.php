@@ -40,6 +40,7 @@ beforeEach(function () {
         // Rent credited back.
         ['id' => 5, 'leaseID' => 55, 'date' => '2026-07-01', 'amount' => -100.0, 'glAccountID' => 4000, 'comments' => 'Rent adjustment'],
     ];
+    $this->payments = [];
 
     Http::fake([
         '*/accounting/glaccounts*' => Http::response([
@@ -49,6 +50,8 @@ beforeEach(function () {
             ['id' => 2000, 'name' => 'Prepayments', 'accountType' => 'Current Liability'],
         ]),
         '*/leases/adjustments*' => fn () => Http::response($this->ledger),
+        // Read only for when each payment was deposited.
+        '*/leases/payments*' => fn () => Http::response($this->payments),
     ]);
 
     $this->tenant = User::factory()->create();
@@ -136,6 +139,40 @@ test('the app narrows the ledger to a period too, and refuses one that ends befo
     $this->getJson(route('api.v1.accounts.payments', ['account' => $this->account, 'from' => '2026-09-01', 'to' => '2026-08-01']))
         ->assertUnprocessable()
         ->assertJsonValidationErrors('to');
+});
+
+test('tells the tenant which payments have settled and which are still pending', function () {
+    $this->travelTo('2026-09-21 12:00:00');
+    $this->ledger[] = ['id' => 6, 'leaseID' => 55, 'date' => '2026-09-18', 'amount' => -200.0, 'glAccountID' => 1000];
+    $this->ledger[] = ['id' => 7, 'leaseID' => 55, 'date' => '2026-09-20', 'amount' => -300.0, 'glAccountID' => 1000];
+    $this->payments = [
+        ['id' => 2, 'leaseID' => 55, 'depositDate' => '2026-09-05'],
+        // Not deposited yet, and deposited only tomorrow: both still on their way.
+        ['id' => 6, 'leaseID' => 55, 'depositDate' => null],
+        ['id' => 7, 'leaseID' => 55, 'depositDate' => '2026-09-22'],
+    ];
+    $this->actingAs($this->tenant);
+
+    $entries = collect(partialGet(route('resident.lease'), 'resident/Lease', 'ledger')->assertOk()->json('props.ledger.entries'))->keyBy('id');
+    $byExternalId = LeaseLedgerEntry::query()->pluck('id', 'external_id');
+
+    expect($entries[$byExternalId['2']])->toMatchArray(['settled' => true, 'settledOn' => '2026-09-05'])
+        ->and($entries[$byExternalId['6']])->toMatchArray(['settled' => false, 'settledOn' => null])
+        ->and($entries[$byExternalId['7']])->toMatchArray(['settled' => false, 'settledOn' => null])
+        // Charges and prepaid money carry no status.
+        ->and($entries[$byExternalId['1']])->toMatchArray(['settled' => null, 'settledOn' => null])
+        ->and($entries[$byExternalId['4']])->toMatchArray(['settled' => null, 'settledOn' => null]);
+});
+
+test('the app sees whether each payment has settled', function () {
+    $this->payments = [['id' => 2, 'leaseID' => 55, 'depositDate' => '2026-09-05']];
+    Sanctum::actingAs($this->tenant);
+
+    $this->getJson(route('api.v1.accounts.payments', $this->account))
+        ->assertOk()
+        ->assertJsonPath('data.0.kind', 'payment')
+        ->assertJsonPath('data.0.settled', true)
+        ->assertJsonPath('data.0.settledOn', '2026-09-05');
 });
 
 test('the app reads the same ledger with the lease balance', function () {
