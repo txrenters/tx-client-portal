@@ -5,6 +5,7 @@ namespace App\Services\Admin;
 use App\Models\ClientAccount;
 use App\Models\ClientInvitation;
 use App\Models\HelpRequest;
+use App\Models\PropertywareApproval;
 use App\Models\User;
 use App\Models\WorkOrderApproval;
 use Illuminate\Support\Collection;
@@ -18,6 +19,9 @@ use Illuminate\Support\Facades\DB;
  * app session was last used — and merges them with the admin audit trail into
  * one feed. Client-side events only exist where they leave a row behind, so
  * only the staff actions amount to an audit log.
+ *
+ * Owners and admins also see the approvals and approval comments read from
+ * Propertyware (ApprovalHistory), including ones made outside the portal.
  */
 class PortalActivity
 {
@@ -28,9 +32,9 @@ class PortalActivity
      *
      * @return array<int, array{type: string, at: string, summary: string, actor: ?string}>
      */
-    public function recent(int $limit = 50): array
+    public function recent(int $limit = 50, bool $withApprovalHistory = false): array
     {
-        return $this->events()
+        return $this->events($withApprovalHistory)
             ->filter(fn (array $event): bool => $event['at'] !== null)
             ->sortByDesc('at')
             ->take($limit)
@@ -44,7 +48,7 @@ class PortalActivity
      *
      * @return Collection<int, array{type: string, at: ?string, summary: string, actor: ?string}>
      */
-    private function events(): Collection
+    private function events(bool $withApprovalHistory): Collection
     {
         $signups = User::query()
             ->latest()
@@ -128,6 +132,28 @@ class PortalActivity
                 'actor' => $request->user?->email,
             ]);
 
-        return collect([$signups, $links, $invitations, $approvals, $sessions, $helpRequests, $this->audit->recent(50)])->flatten(1);
+        $approvalHistory = ! $withApprovalHistory ? collect() : PropertywareApproval::query()
+            ->latest('recorded_at')
+            ->limit(50)
+            ->get()
+            ->map(fn (PropertywareApproval $approval): array => [
+                'type' => 'propertyware_approval',
+                'at' => $approval->recorded_at->toIso8601String(),
+                'summary' => $this->approvalHistorySummary($approval),
+                'actor' => $approval->approved_by,
+            ]);
+
+        return collect([$signups, $links, $invitations, $approvals, $approvalHistory, $sessions, $helpRequests, $this->audit->recent(50)])->flatten(1);
+    }
+
+    /**
+     * How a work order's approval read in Propertyware, with its comment.
+     */
+    private function approvalHistorySummary(PropertywareApproval $approval): string
+    {
+        $summary = 'Work order #'.($approval->work_order_number ?? $approval->work_order_id)
+            .($approval->approved ? ' approved in Propertyware' : ' not approved in Propertyware');
+
+        return $approval->approval_comment !== null ? $summary.': "'.$approval->approval_comment.'"' : $summary;
     }
 }
