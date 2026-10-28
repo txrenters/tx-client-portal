@@ -193,6 +193,19 @@ function matchesApplied(): boolean {
     );
 }
 
+/**
+ * Whether the figures on screen are about to be replaced: from the moment a
+ * period is picked, through the pause before it is sent, until the new ones
+ * arrive.
+ */
+const isRefreshing = computed(() => isLoading.value || !matchesApplied());
+
+/** Dims what the period decides while it is being replaced. */
+const refreshingClass = computed(() => [
+    'transition-opacity',
+    { 'pointer-events-none opacity-50': isRefreshing.value },
+]);
+
 // Picking a period applies it straight away, as on the owner's ledger. Typing
 // into the custom dates pauses first so a half-typed year never gets sent.
 watchDebounced(
@@ -456,10 +469,23 @@ const term = computed(() => [
                         >
                             Clear filter
                         </Button>
+
+                        <p
+                            v-if="isRefreshing"
+                            class="text-muted-foreground flex h-9 items-center gap-2 text-sm"
+                            role="status"
+                        >
+                            <Spinner class="size-4" />
+                            Updating…
+                        </p>
                     </div>
 
                     <div class="grid gap-4 sm:grid-cols-3">
-                        <AppCard title="Charged">
+                        <AppCard
+                            title="Charged"
+                            :class="refreshingClass"
+                            :aria-busy="isRefreshing"
+                        >
                             <Skeleton
                                 v-if="ledgerAvailable && ledger === undefined"
                                 class="h-9 w-28"
@@ -477,7 +503,11 @@ const term = computed(() => [
                             </p>
                         </AppCard>
 
-                        <AppCard title="Paid">
+                        <AppCard
+                            title="Paid"
+                            :class="refreshingClass"
+                            :aria-busy="isRefreshing"
+                        >
                             <Skeleton
                                 v-if="ledgerAvailable && ledger === undefined"
                                 class="h-9 w-28"
@@ -543,7 +573,11 @@ const term = computed(() => [
                         </AppCard>
                     </div>
 
-                    <AppCard title="Transactions">
+                    <AppCard
+                        title="Transactions"
+                        :class="refreshingClass"
+                        :aria-busy="isRefreshing"
+                    >
                         <div
                             v-if="ledger?.syncing"
                             class="border-border/60 bg-muted/40 mb-4 flex items-center gap-3 rounded-xl border p-3"

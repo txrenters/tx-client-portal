@@ -25,6 +25,7 @@ import { useFormattedDate } from '@/composables/useFormattedDate';
 import { PERIOD_PRESETS, presetDates } from '@/lib/dateRange';
 import { dashboard, financials as financialsRoute } from '@/routes/owner';
 import OwnerLedgerPanel from '@/components/OwnerLedgerPanel.vue';
+import { Spinner } from '@/components/ui/spinner';
 import type { OwnerFinancials, OwnerLedgerData, OwnerRevenue } from '@/types';
 
 defineOptions({
@@ -301,6 +302,13 @@ function matchesApplied(): boolean {
     );
 }
 
+/**
+ * Whether the ledger on screen is about to be replaced: from the moment a
+ * filter is picked, through the pause before it is sent, until the new one
+ * arrives.
+ */
+const isRefreshing = computed(() => isLoading.value || !matchesApplied());
+
 // Filtering applies itself, as it does on the properties page: picking a
 // period or a property asks the server straight away rather than waiting for
 // a button. Typing into the custom dates pauses first so a half-typed year
@@ -565,8 +573,22 @@ const hasSeveralPortfolios = computed(
             >
                 Clear filters
             </Button>
+
+            <p
+                v-if="isRefreshing"
+                class="text-muted-foreground flex h-9 items-center gap-2 text-sm"
+                role="status"
+            >
+                <Spinner class="size-4" />
+                Updating…
+            </p>
         </div>
 
-        <OwnerLedgerPanel :ledger="ledger" />
+        <OwnerLedgerPanel
+            :ledger="ledger"
+            class="transition-opacity"
+            :class="{ 'pointer-events-none opacity-50': isRefreshing }"
+            :aria-busy="isRefreshing"
+        />
     </div>
 </template>
