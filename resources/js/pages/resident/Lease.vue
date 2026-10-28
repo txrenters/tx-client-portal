@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import {
     ArrowDownLeft,
     ArrowUpRight,
     CalendarDays,
+    CreditCard,
     Receipt,
     ScrollText,
 } from '@lucide/vue';
@@ -230,6 +231,32 @@ const money = new Intl.NumberFormat('en-US', {
     currency: 'USD',
 });
 
+const page = usePage();
+
+/** Rent is paid in the Propertyware tenant portal; offer it while something is owed. */
+const payUrl = computed(() =>
+    (props.lease?.balance ?? 0) > 0
+        ? (page.props.client?.propertywarePortalUrl ?? null)
+        : null,
+);
+
+/** What the Unpaid card says under the balance. */
+const remainingLabel = computed(() => {
+    const balance = props.lease?.balance;
+
+    if (balance == null) {
+        return 'still owed on your lease';
+    }
+
+    if (balance < 0) {
+        return `all paid, with ${money.format(-balance)} in credit`;
+    }
+
+    return balance === 0
+        ? 'all paid up'
+        : 'still owed on your lease, as of today';
+});
+
 const term = computed(() => [
     ...(props.lease?.name ? [{ label: 'Lease', value: props.lease.name }] : []),
     {
@@ -431,7 +458,7 @@ const term = computed(() => [
                         </Button>
                     </div>
 
-                    <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="grid gap-4 sm:grid-cols-3">
                         <AppCard title="Charged">
                             <Skeleton
                                 v-if="ledgerAvailable && ledger === undefined"
@@ -468,6 +495,51 @@ const term = computed(() => [
                                         : 'received from you'
                                 }}
                             </p>
+                        </AppCard>
+
+                        <!-- Propertyware's own balance, not charged less paid:
+                             that would miss what carried over from earlier
+                             months and prepaid money applied to a charge. -->
+                        <AppCard title="Unpaid">
+                            <Skeleton
+                                v-if="lease === undefined"
+                                class="h-9 w-28"
+                            />
+                            <p
+                                v-else
+                                class="text-3xl leading-none font-semibold"
+                                :class="
+                                    (lease?.balance ?? 0) > 0
+                                        ? 'text-destructive'
+                                        : 'text-success'
+                                "
+                            >
+                                {{
+                                    lease?.balance == null
+                                        ? '—'
+                                        : money.format(
+                                              Math.max(lease.balance, 0),
+                                          )
+                                }}
+                            </p>
+                            <p class="text-muted-foreground mt-1 text-sm">
+                                {{ remainingLabel }}
+                            </p>
+                            <Button
+                                v-if="payUrl"
+                                as-child
+                                size="sm"
+                                class="mt-3"
+                            >
+                                <a
+                                    :href="payUrl"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <CreditCard class="size-4" />
+                                    Pay rent
+                                </a>
+                            </Button>
                         </AppCard>
                     </div>
 
@@ -585,12 +657,12 @@ const term = computed(() => [
                                                 ·
                                                 <span
                                                     :class="{
-                                                        'text-primary':
+                                                        'text-success':
                                                             entry.settled,
                                                     }"
                                                     >{{
                                                         entry.settledOn
-                                                            ? `In the bank ${formatDate(entry.settledOn)}`
+                                                            ? `Settled ${formatDate(entry.settledOn)}`
                                                             : 'On its way to the bank'
                                                     }}</span
                                                 >
@@ -602,26 +674,25 @@ const term = computed(() => [
                                         class="shrink-0 text-sm font-semibold tabular-nums"
                                         :class="
                                             entry.kind === 'payment'
-                                                ? 'text-primary'
+                                                ? 'text-destructive'
                                                 : 'text-foreground'
                                         "
                                     >
-                                        {{ entry.kind === 'payment' ? '−' : '+'
+                                        {{ entry.kind === 'payment' ? '−' : ''
                                         }}{{ money.format(entry.amount) }}
                                     </span>
                                 </li>
                             </ul>
 
                             <p class="text-muted-foreground mt-4 text-xs">
-                                <span class="text-primary font-medium">−</span>
-                                payments come off your balance;
-                                <span class="text-foreground font-medium"
-                                    >+</span
+                                <span class="text-destructive font-medium"
+                                    >−</span
                                 >
-                                charges add to it. A payment is
+                                Payments come off your balance; charges add to
+                                it. A payment is
                                 <span class="font-medium">Pending</span> while
                                 it is on its way to the bank and
-                                <span class="text-primary font-medium"
+                                <span class="text-success font-medium"
                                     >Settled</span
                                 >
                                 once it has been deposited. Payments are made in

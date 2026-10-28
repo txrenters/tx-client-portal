@@ -310,13 +310,13 @@ function refreshDashboard(): void {
                             class="shrink-0 text-sm font-medium tabular-nums"
                             :class="
                                 entry.kind === 'payment'
-                                    ? 'text-primary'
+                                    ? 'text-destructive'
                                     : entry.kind === 'charge'
                                       ? 'text-foreground'
                                       : 'text-muted-foreground'
                             "
                         >
-                            {{ entry.direction === 'credit' ? '−' : '+'
+                            {{ entry.direction === 'credit' ? '−' : ''
                             }}{{ exact.format(entry.amount) }}
                         </span>
                     </li>

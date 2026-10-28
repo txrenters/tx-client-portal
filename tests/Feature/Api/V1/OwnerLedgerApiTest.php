@@ -76,7 +76,11 @@ test('answers what the portfolio earned, spent and has left', function () {
     expect($response->json('data.entries'))->toHaveCount(3)
         ->and($response->json('data.entries.0.description'))->toBe('Bill Payment')
         ->and($response->json('data.entries.2.description'))->toBe('Tenant Payment')
-        ->and($response->json('data.entries.2.amount'))->toEqual(1771.00);
+        ->and($response->json('data.entries.2.amount'))->toEqual(1771.00)
+        // What each line was, so the app can badge it as the portal does.
+        ->and($response->json('data.entries.0.kind'))->toBe('expense')
+        ->and($response->json('data.entries.2.kind'))->toBe('income')
+        ->and($response->json('data.entries.2.settled'))->toBeTrue();
 
     // Income against expense, oldest month first, for the chart.
     expect($response->json('data.months'))->toHaveCount(12)
