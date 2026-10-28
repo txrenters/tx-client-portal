@@ -48,6 +48,15 @@ test('does not email owners who left monthly statements off', function () {
     Notification::assertNothingSent();
 });
 
+test('does not email an owner whose email address is not confirmed', function () {
+    Notification::fake();
+    $this->owner->forceFill(['email_verified_at' => null])->save();
+
+    $this->artisan('statements:email-monthly', ['--month' => '2026-10'])->assertSuccessful();
+
+    Notification::assertNothingSent();
+});
+
 test('owners can turn monthly statements on in their settings', function () {
     $this->owner->forceFill(['notification_preferences' => []])->save();
 

@@ -39,10 +39,12 @@ class EmailMonthlyStatements extends Command
         $skipped = 0;
 
         // The App Review demo logins hold made-up records and a fake
-        // Propertyware contact; looking them up would hit the real API.
+        // Propertyware contact; looking them up would hit the real API. A
+        // statement holds the owner's figures, so it only goes to an email
+        // address they have confirmed.
         $accounts = ClientAccount::query()
             ->where('role', ClientRole::Owner)
-            ->whereHas('user', fn ($user) => $user->where('is_demo', false)->whereNull('suspended_at'))
+            ->whereHas('user', fn ($user) => $user->where('is_demo', false)->whereNull('suspended_at')->whereNotNull('email_verified_at'))
             ->whereNotIn('id', OwnerStatementEmail::query()->where('month', $month)->select('client_account_id'))
             ->with('user')
             ->get()
