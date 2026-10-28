@@ -1,0 +1,35 @@
+name: pull request
+
+# Runs before a merge, which here is also a deploy: the deploy workflow only
+# fires on a push to the default branch. Nothing in this file deploys.
+on:
+  pull_request:
+
+# A new push to the same PR supersedes the run in flight. Deliberately not the
+# deploy group, so a PR check never queues behind or holds up a rollout.
+concurrency:
+  group: pull-request-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # tests.yml covers the suite on PRs already. The Dockerfile installs Node
+  # through NodeSource rather than setup-node, so only an image build exercises
+  # the production toolchain.
+  image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # Both runtime targets, explicitly: a plain build stops at the last stage
+      # and skips any stage it does not copy from. Same context and Dockerfile
+      # as deploy/docker-compose.yml.
+      - name: Build the app image
+        run: docker build --pull -f deploy/Dockerfile --target app .
+
+      - name: Build the web image
+        run: docker build -f deploy/Dockerfile --target web .
