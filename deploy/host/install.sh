@@ -37,7 +37,14 @@ for volume in pgdata storage-app storage-logs build-history; do
     echo "${SLUG}_${volume}"
 done
 
-log "Nightly database backup (03:15 UTC)"
+log "rclone, for copying backups off this server"
+apt-get install -y rclone
+if [ ! -f "$HERE/../backup.env" ]; then
+    echo "Backups stay on this server until you run 'rclone config' and put"
+    echo "BACKUP_REMOTE=<remote>:<bucket> in $(cd "$HERE/.." && pwd)/backup.env."
+fi
+
+log "Nightly database and file backup (03:15 UTC)"
 chmod +x "$HERE/backup-db.sh"
 echo "15 3 * * * root $HERE/backup-db.sh >> /var/log/txclient-backup.log 2>&1" > /etc/cron.d/txclient-backup
 chmod 0644 /etc/cron.d/txclient-backup

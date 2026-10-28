@@ -59,6 +59,7 @@ rsync "${rsync_flags[@]}" \
     --exclude '/deploy/.env' \
     --exclude '/deploy/.env.docker' \
     --exclude '/deploy/backups/' \
+    --exclude '/deploy/backup.env' \
     --exclude '/.phpunit.cache/' \
     --exclude '/.phpunit.result.cache' \
     --exclude '/database/database.sqlite' \

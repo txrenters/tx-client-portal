@@ -49,3 +49,4 @@ yarn-error.log
 # Production deploy (deploy/): secrets and dumps live only on the VPS
 /deploy/.env.docker
 /deploy/backups
+/deploy/backup.env
