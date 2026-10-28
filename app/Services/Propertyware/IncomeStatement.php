@@ -190,18 +190,23 @@ class IncomeStatement
     }
 
     /**
+     * A single month fits a portrait page, as the monthly email sends it; a
+     * run of months needs landscape for its columns.
+     *
      * @param  array<string, mixed>  $report
      */
     private function pdf(array $report): DomPdf
     {
         $logo = 'data:image/png;base64,'.base64_encode((string) file_get_contents(public_path('texas-renters-logo.png')));
+        $portrait = count($report['months'] ?? []) === 1;
 
         return Pdf::loadView('pdf.income-statement', [
             'report' => $report,
             'logo' => $logo,
+            'portrait' => $portrait,
             'generatedOn' => CarbonImmutable::now(config('app.display_timezone'))->format('m/d/Y'),
         ])
-            ->setPaper('letter', 'landscape')
+            ->setPaper('letter', $portrait ? 'portrait' : 'landscape')
             // Only the letters used, not the whole font: a tenth of the size.
             ->setOption('isFontSubsettingEnabled', true);
     }
