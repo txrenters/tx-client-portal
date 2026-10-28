@@ -4,6 +4,7 @@ namespace App\Services\Propertyware;
 
 use App\Services\Propertyware\Data\ClientScope;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Barryvdh\DomPDF\PDF as DomPdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -163,8 +164,37 @@ class IncomeStatement
      */
     public function download(array $report): Response
     {
-        $logo = 'data:image/png;base64,'.base64_encode((string) file_get_contents(public_path('texas-renters-logo.png')));
+        return $this->pdf($report)
+            ->download($this->fileName($report))
+            ->withHeaders(['Cache-Control' => 'no-store, private']);
+    }
+
+    /**
+     * The statement as PDF bytes, such as for the monthly email.
+     *
+     * @param  array<string, mixed>  $report
+     */
+    public function pdfContents(array $report): string
+    {
+        return $this->pdf($report)->output();
+    }
+
+    /**
+     * @param  array<string, mixed>  $report
+     */
+    public function fileName(array $report): string
+    {
         $name = Str::of($report['portfolio']['name'] ?? 'Portfolio')->replaceMatches('/[^A-Za-z0-9 ,.-]+/', '')->trim();
+
+        return 'Income Statement '.str_replace(' – ', ' to ', $report['label'])." - {$name}.pdf";
+    }
+
+    /**
+     * @param  array<string, mixed>  $report
+     */
+    private function pdf(array $report): DomPdf
+    {
+        $logo = 'data:image/png;base64,'.base64_encode((string) file_get_contents(public_path('texas-renters-logo.png')));
 
         return Pdf::loadView('pdf.income-statement', [
             'report' => $report,
@@ -173,9 +203,7 @@ class IncomeStatement
         ])
             ->setPaper('letter', 'landscape')
             // Only the letters used, not the whole font: a tenth of the size.
-            ->setOption('isFontSubsettingEnabled', true)
-            ->download('Income Statement '.str_replace(' – ', ' to ', $report['label'])." - {$name}.pdf")
-            ->withHeaders(['Cache-Control' => 'no-store, private']);
+            ->setOption('isFontSubsettingEnabled', true);
     }
 
     /**

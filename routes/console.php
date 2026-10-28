@@ -26,6 +26,12 @@ Schedule::command('work-orders:notify-updates')->everyThirtyMinutes()->between('
 // Tenants who still owe rent, from the 1st until late fees start.
 Schedule::command('rent:remind')->dailyAt('09:00')->timezone('America/Chicago')->withoutOverlapping();
 
+// Last month's income statement for owners who turned it on. The 5th and
+// 6th, so bills and deposits posted in the first days of the month are in;
+// the second run picks up anyone Propertyware could not be read for.
+Schedule::command('statements:email-monthly')->monthlyOn(5, '08:00')->timezone('America/Chicago')->withoutOverlapping();
+Schedule::command('statements:email-monthly')->monthlyOn(6, '08:00')->timezone('America/Chicago')->withoutOverlapping();
+
 // Owners and tenants whose lease ends within 90 days.
 Schedule::command('leases:notify-expiring')->dailyAt('09:00')->timezone('America/Chicago')->withoutOverlapping();
 

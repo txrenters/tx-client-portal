@@ -23,7 +23,10 @@ const props = defineProps<{
         message_replies_email: boolean;
         /** Pushed to the mobile app; there is no switch for it here. */
         message_replies_push: boolean;
+        /** Owners: last month's income statement by email. */
+        monthly_statement_email: boolean;
     };
+    isOwner: boolean;
     /**
      * Texted replies live in the messaging hub: undefined while it answers,
      * null when this login has no client account or the hub is unreachable.
@@ -80,6 +83,27 @@ function saveSms(): void {
             <Switch
                 id="message-replies-email"
                 v-model="form.message_replies_email"
+                :disabled="form.processing"
+                @update:model-value="save"
+            />
+        </div>
+
+        <div
+            v-if="isOwner"
+            class="flex items-start justify-between gap-4 rounded-xl border p-4"
+        >
+            <div class="space-y-1">
+                <Label for="monthly-statement-email"
+                    >Email me my monthly statement</Label
+                >
+                <p class="text-muted-foreground text-sm">
+                    Early each month we'll email last month's income statement,
+                    as a PDF for each of your portfolios.
+                </p>
+            </div>
+            <Switch
+                id="monthly-statement-email"
+                v-model="form.monthly_statement_email"
                 :disabled="form.processing"
                 @update:model-value="save"
             />
