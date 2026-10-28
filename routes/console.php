@@ -15,6 +15,9 @@ Artisan::command('inspire', function () {
 // Owner approvals that could not reach Propertyware straight away.
 Schedule::command('approvals:push')->everyTenMinutes()->withoutOverlapping();
 
+// Copies of approvals and approval comments changed in Propertyware, which keeps no history of them.
+Schedule::command('approvals:history')->everyThirtyMinutes()->withoutOverlapping();
+
 // Tell owners about work orders newly waiting for their approval; daytime only,
 // so nobody is woken for it. Overnight ones go out at 8.
 Schedule::command('approvals:notify')->everyThirtyMinutes()->between('8:00', '20:00')->timezone('America/Chicago')->withoutOverlapping();

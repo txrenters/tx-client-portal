@@ -118,6 +118,9 @@ class AppServiceProvider extends ServiceProvider
         // Adding and removing staff: owners and admins, not plain staff.
         Gate::define('manage-staff', fn (User $user): bool => $user->canManageStaff() && ! $user->isSuspended());
 
+        // The history of approvals and approval comments read from Propertyware: owners and admins, not plain staff.
+        Gate::define('view-approval-history', fn (User $user): bool => $user->canManageStaff() && ! $user->isSuspended());
+
         // The log viewer package authorises through its own gate; point it at
         // the same rule so there is only one answer to "who is an admin".
         Gate::define('viewLogViewer', fn (?User $user): bool => $user !== null && Gate::forUser($user)->allows('admin'));

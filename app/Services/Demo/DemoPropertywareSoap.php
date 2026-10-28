@@ -15,4 +15,9 @@ final class DemoPropertywareSoap extends PropertywareSoap
     }
 
     public function approveWorkOrder(int $workOrderId, string $approvedDate, string $comment, bool $approved = true): void {}
+
+    public function workOrderApproval(int $workOrderNumber): ?array
+    {
+        return null;
+    }
 }

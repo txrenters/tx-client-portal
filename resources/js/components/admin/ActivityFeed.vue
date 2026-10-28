@@ -2,6 +2,7 @@
 import {
     Building2,
     CircleCheck,
+    ClipboardCheck,
     LifeBuoy,
     MailCheck,
     ShieldCheck,
@@ -29,6 +30,7 @@ const icons: Record<string, unknown> = {
     invitation_accepted: CircleCheck,
     work_order_approved: Wrench,
     work_order_declined: Wrench,
+    propertyware_approval: ClipboardCheck,
     app_session: Smartphone,
     help_request: LifeBuoy,
     admin_action: ShieldCheck,
