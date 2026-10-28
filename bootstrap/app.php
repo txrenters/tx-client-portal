@@ -11,6 +11,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SyncPropertywareAccounts;
 use App\Http\Middleware\TrackLastSeen;
+use App\Services\Admin\ErrorAlerts;
 use App\Services\Propertyware\PropertywareException;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
@@ -62,6 +63,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // Emailed to the owners as well as logged; see ErrorAlerts.
+        $exceptions->report(fn (Throwable $exception) => app(ErrorAlerts::class)->report($exception));
 
         $exceptions->render(fn (PropertywareException $exception, Request $request) => $request->is('api/*')
             ? response()->json(['message' => __('Propertyware data is unavailable right now. Please try again in a moment.')], 503)
