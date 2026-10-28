@@ -637,10 +637,10 @@ export type Promotion = {
     link: { type: 'referrals' } | { type: 'url'; url: string };
 };
 
-/** A stored notice: a lease reminder or a work order update. */
+/** A stored notice: a lease reminder, a work order update or a rent reminder. */
 export type Notice = {
     id: string;
-    type: 'lease_expiring' | 'work_order_update';
+    type: 'lease_expiring' | 'work_order_update' | 'rent_due';
     role: 'owner' | 'resident' | null;
     title: string;
     body: string;
@@ -652,6 +652,8 @@ export type Notice = {
     endDate: string | null;
     renewalDeadline: string | null;
     url: string | null;
+    /** Rent reminders: the Propertyware tenant portal, where rent is paid. */
+    payUrl: string | null;
     readAt: string | null;
     createdAt: string | null;
 };

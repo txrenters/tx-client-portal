@@ -4,6 +4,7 @@ import { echo, echoIsConfigured } from '@laravel/echo-vue';
 import {
     Bell,
     CalendarClock,
+    CreditCard,
     CircleCheck,
     MessageSquare,
     Wrench,
@@ -180,7 +181,9 @@ const count = (): number => latest.value?.count ?? 0;
                                 :is="
                                     notice.type === 'work_order_update'
                                         ? Wrench
-                                        : CalendarClock
+                                        : notice.type === 'rent_due'
+                                          ? CreditCard
+                                          : CalendarClock
                                 "
                                 class="text-primary mt-0.5 size-4 shrink-0"
                                 aria-hidden="true"

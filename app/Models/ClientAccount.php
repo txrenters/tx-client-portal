@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Links a client login to the Propertyware tenant or owner record it represents.
@@ -28,6 +29,14 @@ class ClientAccount extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return HasMany<RentReminderNotice, $this>
+     */
+    public function rentReminders(): HasMany
+    {
+        return $this->hasMany(RentReminderNotice::class);
     }
 
     protected function casts(): array
