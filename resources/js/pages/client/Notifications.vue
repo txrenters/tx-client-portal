@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { CalendarClock, CircleCheck, MessageSquare } from '@lucide/vue';
+import { CalendarClock, CircleCheck, MessageSquare, Wrench } from '@lucide/vue';
 import AppCard from '@/components/AppCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
@@ -48,7 +48,7 @@ const timeFormatter = appDateFormatter({
         <AppCard
             v-if="notices.length > 0"
             title="Reminders"
-            description="Reminders about leases ending soon."
+            description="Leases ending soon and updates on your work orders."
         >
             <ul class="divide-border/60 divide-y">
                 <li v-for="notice in notices" :key="notice.id">
@@ -58,7 +58,12 @@ const timeFormatter = appDateFormatter({
                         as="button"
                         class="hover:bg-muted/50 flex w-full items-start gap-3 rounded-lg px-2 py-3 text-left transition-colors"
                     >
-                        <CalendarClock
+                        <component
+                            :is="
+                                notice.type === 'work_order_update'
+                                    ? Wrench
+                                    : CalendarClock
+                            "
                             class="text-primary mt-0.5 size-4 shrink-0"
                             aria-hidden="true"
                         />

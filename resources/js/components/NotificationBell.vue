@@ -176,7 +176,12 @@ const count = (): number => latest.value?.count ?? 0;
                             as="button"
                             class="flex w-full cursor-pointer items-start gap-3 text-left"
                         >
-                            <CalendarClock
+                            <component
+                                :is="
+                                    notice.type === 'work_order_update'
+                                        ? Wrench
+                                        : CalendarClock
+                                "
                                 class="text-primary mt-0.5 size-4 shrink-0"
                                 aria-hidden="true"
                             />

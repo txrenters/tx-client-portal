@@ -637,10 +637,10 @@ export type Promotion = {
     link: { type: 'referrals' } | { type: 'url'; url: string };
 };
 
-/** A stored notice, such as a lease reminder. */
+/** A stored notice: a lease reminder or a work order update. */
 export type Notice = {
     id: string;
-    type: 'lease_expiring';
+    type: 'lease_expiring' | 'work_order_update';
     role: 'owner' | 'resident' | null;
     title: string;
     body: string;

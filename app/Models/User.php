@@ -211,6 +211,9 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         // relist, the tenant whether to renew. Always kept in the app's list;
         // this only decides whether the phone is buzzed.
         'lease_expiry_push' => true,
+        // A work order was scheduled, completed or canceled. Always kept in the
+        // app's list; this only decides whether the phone is buzzed.
+        'work_order_updates_push' => true,
     ];
 
     /**

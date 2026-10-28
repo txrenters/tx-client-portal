@@ -19,6 +19,10 @@ Schedule::command('approvals:push')->everyTenMinutes()->withoutOverlapping();
 // so nobody is woken for it. Overnight ones go out at 8.
 Schedule::command('approvals:notify')->everyThirtyMinutes()->between('8:00', '20:00')->timezone('America/Chicago')->withoutOverlapping();
 
+// Owners and tenants whose work orders were scheduled, completed or canceled;
+// daytime only, like approvals.
+Schedule::command('work-orders:notify-updates')->everyThirtyMinutes()->between('8:00', '20:00')->timezone('America/Chicago')->withoutOverlapping();
+
 // Owners and tenants whose lease ends within 90 days.
 Schedule::command('leases:notify-expiring')->dailyAt('09:00')->timezone('America/Chicago')->withoutOverlapping();
 
