@@ -61,6 +61,22 @@ class Lease
     }
 
     /**
+     * The last day of the month rent can be paid without a late fee, from a
+     * rule such as "7.00% of rent charges after due day 3, …"; null when the
+     * rule does not say.
+     */
+    public function lateFeeGraceDay(): ?int
+    {
+        if ($this->lateFeeRule === null || ! preg_match('/after due day (\d{1,2})\b/i', $this->lateFeeRule, $match)) {
+            return null;
+        }
+
+        $day = (int) $match[1];
+
+        return $day >= 1 && $day <= 28 ? $day : null;
+    }
+
+    /**
      * Whether the lease is running out: it ends, or they move out, within 60 days.
      */
     public function endsSoon(): bool

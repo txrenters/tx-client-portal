@@ -23,6 +23,9 @@ Schedule::command('approvals:notify')->everyThirtyMinutes()->between('8:00', '20
 // daytime only, like approvals.
 Schedule::command('work-orders:notify-updates')->everyThirtyMinutes()->between('8:00', '20:00')->timezone('America/Chicago')->withoutOverlapping();
 
+// Tenants who still owe rent, from the 1st until late fees start.
+Schedule::command('rent:remind')->dailyAt('09:00')->timezone('America/Chicago')->withoutOverlapping();
+
 // Owners and tenants whose lease ends within 90 days.
 Schedule::command('leases:notify-expiring')->dailyAt('09:00')->timezone('America/Chicago')->withoutOverlapping();
 

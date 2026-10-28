@@ -58,7 +58,7 @@ class NeedsAttention
     }
 
     /**
-     * The stored lease and work order notices that belong to one of the user's accounts.
+     * The stored lease, work order and rent notices that belong to one of the user's accounts.
      *
      * The account is matched with a JSON "contains" rather than `=`: its
      * binding is JSON text, so Postgres compares jsonb to jsonb instead of the
@@ -71,7 +71,7 @@ class NeedsAttention
     public function notices(User $user, ClientAccount $account): MorphMany
     {
         return $user->notifications()
-            ->whereIn('data->type', ['lease_expiring', 'work_order_update'])
+            ->whereIn('data->type', ['lease_expiring', 'work_order_update', 'rent_due'])
             ->whereJsonContains('data->account_id', $account->id);
     }
 
@@ -98,6 +98,7 @@ class NeedsAttention
             'endDate' => $data['end_date'] ?? null,
             'renewalDeadline' => $data['renewal_deadline'] ?? null,
             'url' => $data['url'] ?? null,
+            'payUrl' => $data['pay_url'] ?? null,
             'readAt' => $notification->read_at?->toIso8601String(),
             'createdAt' => $notification->created_at?->toIso8601String(),
         ];

@@ -214,6 +214,10 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         // A work order was scheduled, completed or canceled. Always kept in the
         // app's list; this only decides whether the phone is buzzed.
         'work_order_updates_push' => true,
+        // Rent is still owed early in the month, before late fees start.
+        // Tenants only. Always kept in the app's list; this only decides
+        // whether the phone is buzzed.
+        'rent_reminders_push' => true,
     ];
 
     /**
