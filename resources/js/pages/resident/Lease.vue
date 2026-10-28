@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import {
     ArrowDownLeft,
     ArrowUpRight,
     CalendarDays,
+    CreditCard,
     Receipt,
     ScrollText,
 } from '@lucide/vue';
@@ -229,6 +230,15 @@ const money = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
 });
+
+const page = usePage();
+
+/** Rent is paid in the Propertyware tenant portal; offer it while something is owed. */
+const payUrl = computed(() =>
+    (props.lease?.balance ?? 0) > 0
+        ? (page.props.client?.propertywarePortalUrl ?? null)
+        : null,
+);
 
 /** What the Unpaid card says under the balance. */
 const remainingLabel = computed(() => {
@@ -515,6 +525,21 @@ const term = computed(() => [
                             <p class="text-muted-foreground mt-1 text-sm">
                                 {{ remainingLabel }}
                             </p>
+                            <Button
+                                v-if="payUrl"
+                                as-child
+                                size="sm"
+                                class="mt-3"
+                            >
+                                <a
+                                    :href="payUrl"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <CreditCard class="size-4" />
+                                    Pay rent
+                                </a>
+                            </Button>
                         </AppCard>
                     </div>
 
