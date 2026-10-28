@@ -218,6 +218,9 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         // Tenants only. Always kept in the app's list; this only decides
         // whether the phone is buzzed.
         'rent_reminders_push' => true,
+        // The last month's income statement, emailed as a PDF early each
+        // month. Owners only, and off until they turn it on.
+        'monthly_statement_email' => false,
     ];
 
     /**

@@ -9,7 +9,7 @@
     <meta charset="utf-8">
     <title>Income Statement {{ $report['label'] }} – {{ $report['portfolio']['name'] ?? 'Portfolio' }}</title>
     <style>
-        @page { size: letter landscape; margin: 28px 30px 40px; }
+        @page { size: letter {{ $portrait ? 'portrait' : 'landscape' }}; margin: 28px 30px 40px; }
         * { font-family: DejaVu Sans, sans-serif; }
         body { color: #1f2937; font-size: 8px; margin: 0; }
         .brand { width: 100%; border-bottom: 3px solid #183c90; padding-bottom: 8px; }
@@ -29,7 +29,7 @@
         /* Fixed columns, so Income, Expense and the net lines all line up. */
         table.report, table.net { width: 100%; border-collapse: collapse; table-layout: fixed; }
         .report th { font-size: 7.5px; text-align: right; padding: 4px 3px; border-bottom: 1px solid #9ca3af; color: #111827; }
-        .report th.account, .report td.account, .net td.account { text-align: left; width: 16%; }
+        .report th.account, .report td.account, .net td.account { text-align: left; width: {{ $portrait ? '50%' : '16%' }}; }
         .report td { text-align: right; padding: 3px; border-bottom: 1px solid #e5e7eb; }
         .report td.account { white-space: normal; color: #374151; }
         .report tr.child td.account { padding-left: 12px; }
@@ -51,7 +51,11 @@
             <td><img class="logo" src="{{ $logo }}" alt="TexasRenters.com"></td>
             <td class="title">
                 <h1>Income Statement by Month – {{ $report['label'] }}</h1>
-                <p>A 12-month summary of income and expense. This report is available for either cash or accrual accounting basis.</p>
+                @if ($portrait)
+                    <p>Income and expense for the month. This report is available for either cash or accrual accounting basis.</p>
+                @else
+                    <p>A 12-month summary of income and expense. This report is available for either cash or accrual accounting basis.</p>
+                @endif
             </td>
         </tr>
     </table>

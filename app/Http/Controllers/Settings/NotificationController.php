@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Enums\ClientRole;
 use App\Http\Controllers\Concerns\ResolvesClientScope;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\NotificationPreferencesRequest;
@@ -28,6 +29,7 @@ class NotificationController extends Controller
 
         return Inertia::render('settings/Notifications', [
             'preferences' => $request->user()->notificationPreferences(),
+            'isOwner' => $request->user()->clientAccounts()->where('role', ClientRole::Owner)->exists(),
             'sms' => $account === null
                 ? null
                 : Inertia::defer(fn (): ?array => $conversations->smsReplies($account)),
