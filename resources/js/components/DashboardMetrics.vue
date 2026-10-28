@@ -12,6 +12,14 @@ import {
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
+export type MetricTone =
+    | 'blue'
+    | 'green'
+    | 'amber'
+    | 'violet'
+    | 'rose'
+    | 'teal';
+
 export type Metric = {
     label: string;
     value: string | number | null;
@@ -20,6 +28,8 @@ export type Metric = {
     icon?: LucideIcon;
     caption?: string | null;
     hint?: string | null;
+    /** Colours the card; without one it stays the plain glass panel. */
+    tone?: MetricTone;
 };
 
 const props = defineProps<{
@@ -39,6 +49,10 @@ const rows = computed<Metric[][]>(() => {
 
     return chunks;
 });
+
+function toneStyle(metric: Metric): Record<string, string> | undefined {
+    return metric.tone ? { '--tone': `var(--tone-${metric.tone})` } : undefined;
+}
 
 const tracks = ref<HTMLElement[]>([]);
 const activeSlides = ref<number[]>([]);
@@ -87,13 +101,28 @@ function goToSlide(rowIndex: number, slideIndex: number): void {
                 <Card
                     v-for="metric in row"
                     :key="metric.label"
-                    class="glass @container/card min-w-0 shrink-0 basis-full snap-center rounded-2xl"
+                    class="glass @container/card relative min-w-0 shrink-0 basis-full snap-center overflow-hidden rounded-2xl"
+                    :class="{
+                        'bg-linear-to-br from-(--tone)/20 via-transparent to-transparent transition-transform motion-safe:hover:-translate-y-0.5':
+                            metric.tone,
+                    }"
+                    :style="toneStyle(metric)"
                 >
+                    <div
+                        v-if="metric.tone"
+                        class="pointer-events-none absolute -top-10 -right-10 size-32 rounded-full bg-(--tone)/30 blur-2xl"
+                        aria-hidden="true"
+                    />
                     <CardHeader>
                         <CardDescription class="flex items-center gap-2">
                             <span
                                 v-if="metric.icon"
-                                class="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-lg"
+                                class="flex size-7 items-center justify-center rounded-lg"
+                                :class="
+                                    metric.tone
+                                        ? 'bg-(--tone)/20 text-(--tone) ring-1 ring-(--tone)/25'
+                                        : 'bg-primary/10 text-primary'
+                                "
                             >
                                 <component :is="metric.icon" class="size-4" />
                             </span>

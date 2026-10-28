@@ -122,24 +122,28 @@ const metrics = computed<Metric[]>(() => [
         value: props.portfolio?.propertyCount ?? null,
         loading: props.portfolio === undefined,
         icon: Building2,
+        tone: 'blue',
     },
     {
         label: 'Open work orders',
         value: props.maintenance?.counts.open ?? null,
         loading: props.maintenance === undefined,
         icon: Wrench,
+        tone: 'amber',
     },
     {
         label: 'Scheduled',
         value: props.maintenance?.counts.scheduled ?? null,
         loading: props.maintenance === undefined,
         icon: Clock,
+        tone: 'violet',
     },
     {
         label: 'Completed',
         value: props.maintenance?.counts.completed ?? null,
         loading: props.maintenance === undefined,
         icon: TrendingUp,
+        tone: 'green',
     },
     {
         label: 'Income',
@@ -147,6 +151,7 @@ const metrics = computed<Metric[]>(() => [
         value: ledgerValue(props.ledger?.income),
         loading: ledgerLoading.value,
         icon: Banknote,
+        tone: 'teal',
     },
     {
         label: 'Expense',
@@ -154,6 +159,7 @@ const metrics = computed<Metric[]>(() => [
         value: ledgerValue(props.ledger?.expense),
         loading: ledgerLoading.value,
         icon: Receipt,
+        tone: 'rose',
     },
     {
         // Only a balance that ran from the portfolio's first day is the
@@ -169,6 +175,7 @@ const metrics = computed<Metric[]>(() => [
         ),
         loading: ledgerLoading.value,
         icon: Wallet,
+        tone: 'blue',
     },
     {
         label: 'Management fee',
@@ -176,6 +183,7 @@ const metrics = computed<Metric[]>(() => [
         value: ledgerValue(props.ledger?.managementFee),
         loading: ledgerLoading.value,
         icon: Percent,
+        tone: 'violet',
     },
 ]);
 

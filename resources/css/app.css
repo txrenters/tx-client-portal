@@ -58,6 +58,17 @@
     --color-category-accounting-deep: var(--category-accounting-deep);
     --color-category-maintenance-deep: var(--category-maintenance-deep);
     --color-category-leasing-deep: var(--category-leasing-deep);
+    /* Dashboard tones: one hue per metric card so a row of figures reads at a glance. */
+    --color-tone-blue: var(--tone-blue);
+    --color-tone-green: var(--tone-green);
+    --color-tone-amber: var(--tone-amber);
+    --color-tone-violet: var(--tone-violet);
+    --color-tone-rose: var(--tone-rose);
+    --color-tone-teal: var(--tone-teal);
+    /* The dashboard greeting's gradient, deep enough in both themes for white text. */
+    --color-hero-from: var(--hero-from);
+    --color-hero-via: var(--hero-via);
+    --color-hero-to: var(--hero-to);
     --color-chart-1: var(--chart-1);
     --color-chart-2: var(--chart-2);
     --color-chart-3: var(--chart-3);
@@ -136,14 +147,24 @@
      */
     --chart-income: oklch(0.55 0.19 263.5);
     --chart-expense: oklch(0.66 0.18 27);
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.386 0.145 263.521);
-    --sidebar-primary-foreground: oklch(0.985 0.005 263);
-    --sidebar-accent: oklch(0.955 0.025 263);
-    --sidebar-accent-foreground: oklch(0.386 0.145 263.521);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.478 0.164 263.661);
+    --tone-blue: oklch(0.55 0.2 260);
+    --tone-green: oklch(0.58 0.15 150);
+    --tone-amber: oklch(0.66 0.16 60);
+    --tone-violet: oklch(0.54 0.22 300);
+    --tone-rose: oklch(0.58 0.2 15);
+    --tone-teal: oklch(0.56 0.11 195);
+    --hero-from: oklch(0.26 0.11 266);
+    --hero-via: oklch(0.36 0.16 262);
+    --hero-to: oklch(0.42 0.12 165);
+    /* The sidebar is a deep shade of the primary navy, with white text on it. */
+    --sidebar: oklch(0.24 0.09 264);
+    --sidebar-foreground: oklch(0.985 0.005 263);
+    --sidebar-primary: oklch(0.985 0.005 263);
+    --sidebar-primary-foreground: oklch(0.24 0.09 264);
+    --sidebar-accent: oklch(1 0 0 / 12%);
+    --sidebar-accent-foreground: oklch(1 0 0);
+    --sidebar-border: oklch(1 0 0 / 16%);
+    --sidebar-ring: oklch(0.72 0.12 263.6);
 }
 
 .dark {
@@ -183,7 +204,16 @@
     --chart-5: oklch(0.6 0.13 263.5);
     --chart-income: oklch(0.62 0.16 263.5);
     --chart-expense: oklch(0.66 0.17 27);
-    --sidebar: oklch(0.205 0 0);
+    --tone-blue: oklch(0.72 0.15 260);
+    --tone-green: oklch(0.76 0.15 150);
+    --tone-amber: oklch(0.8 0.14 70);
+    --tone-violet: oklch(0.72 0.17 300);
+    --tone-rose: oklch(0.72 0.17 15);
+    --tone-teal: oklch(0.76 0.11 195);
+    --hero-from: oklch(0.22 0.09 266);
+    --hero-via: oklch(0.32 0.14 262);
+    --hero-to: oklch(0.36 0.1 165);
+    --sidebar: oklch(0.2 0.07 264);
     --sidebar-foreground: oklch(0.985 0 0);
     --sidebar-primary: oklch(0.72 0.12 263.6);
     --sidebar-primary-foreground: oklch(0.18 0.05 263);

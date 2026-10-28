@@ -79,6 +79,7 @@ const metrics = computed<Metric[]>(() => [
         value: props.maintenance?.counts.open ?? null,
         loading: props.maintenance === undefined,
         icon: Wrench,
+        tone: 'amber',
         caption: 'We are on it',
     },
     {
@@ -89,6 +90,7 @@ const metrics = computed<Metric[]>(() => [
                 : money.format(props.lease.rent),
         loading: props.lease === undefined,
         icon: Banknote,
+        tone: 'green',
         caption: 'Each month',
     },
     {
@@ -96,6 +98,7 @@ const metrics = computed<Metric[]>(() => [
         value: props.lease?.name ?? null,
         loading: props.lease === undefined,
         icon: ScrollText,
+        tone: 'violet',
         caption: props.lease?.status ?? null,
     },
     {
@@ -103,6 +106,7 @@ const metrics = computed<Metric[]>(() => [
         value: props.property?.unitName ?? props.property?.address ?? null,
         loading: props.property === undefined,
         icon: Building2,
+        tone: 'blue',
         caption: props.property?.city ?? null,
     },
 ]);
