@@ -177,6 +177,41 @@ const failedAt = appDateFormatter({ dateStyle: 'medium', timeStyle: 'short' });
                     </div>
                 </li>
             </ul>
+
+            <div
+                v-if="queue.failingSchedules.length > 0"
+                class="border-border/60 mt-4 border-t pt-4"
+            >
+                <p class="text-sm font-medium">Scheduled jobs failing now</p>
+                <p class="text-muted-foreground text-xs text-pretty">
+                    The owners were emailed when each started failing. They
+                    clear once the job runs successfully again.
+                </p>
+                <ul class="divide-border/60 mt-2 divide-y">
+                    <li
+                        v-for="schedule in queue.failingSchedules"
+                        :key="schedule.command"
+                        class="py-3"
+                    >
+                        <p class="text-sm font-medium">
+                            {{ schedule.command }}
+                            <span class="text-muted-foreground font-normal"
+                                >failing since
+                                {{ failedAt.format(new Date(schedule.since)) }}
+                                · last
+                                {{
+                                    failedAt.format(
+                                        new Date(schedule.lastFailedAt),
+                                    )
+                                }}</span
+                            >
+                        </p>
+                        <p class="text-destructive mt-1 text-xs break-words">
+                            {{ schedule.reason }}
+                        </p>
+                    </li>
+                </ul>
+            </div>
         </AppCard>
     </div>
 </template>

@@ -46,6 +46,15 @@ export type AdminQueueHealth = {
     failed: number;
     pending: number;
     lastFailureAt: string | null;
+    /** Scheduled commands failing now, cleared when they next succeed. */
+    failingSchedules: AdminFailingSchedule[];
+};
+
+export type AdminFailingSchedule = {
+    command: string;
+    since: string;
+    lastFailedAt: string;
+    reason: string;
 };
 
 export type AdminActivityEvent = {

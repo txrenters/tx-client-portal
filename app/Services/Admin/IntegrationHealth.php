@@ -27,6 +27,7 @@ class IntegrationHealth
         private PropertywareClient $propertyware,
         private PropertywareSoap $soap,
         private ChatHubClient $hub,
+        private ScheduledTaskFailures $scheduledTasks,
     ) {}
 
     /**
@@ -78,7 +79,10 @@ class IntegrationHealth
      * How much queued work has failed, which is usually the first sign that an
      * integration broke while nobody was looking at this page.
      *
-     * @return array{failed: int, pending: int, lastFailureAt: ?string}
+     * Scheduled commands failing now are listed too, since they fail outside
+     * the queue.
+     *
+     * @return array{failed: int, pending: int, lastFailureAt: ?string, failingSchedules: array<int, array{command: string, since: string, lastFailedAt: string, reason: string}>}
      */
     public function queue(): array
     {
@@ -88,6 +92,7 @@ class IntegrationHealth
             'failed' => DB::table('failed_jobs')->count(),
             'pending' => DB::table('jobs')->count(),
             'lastFailureAt' => $lastFailure === null ? null : (string) $lastFailure,
+            'failingSchedules' => array_values($this->scheduledTasks->failing()),
         ];
     }
 
