@@ -56,24 +56,28 @@ const tiles = [
         value: props.stats.users.total,
         detail: `${props.stats.users.verified} confirmed, ${props.stats.users.unverified} not yet`,
         icon: Users,
+        tone: 'var(--tone-blue)',
     },
     {
         label: 'Client accounts',
         value: props.stats.accounts.total,
         detail: `${props.stats.accounts.owners} owner, ${props.stats.accounts.residents} resident`,
         icon: KeyRound,
+        tone: 'var(--tone-violet)',
     },
     {
         label: 'App sessions',
         value: props.stats.sessions.mobileTokens,
         detail: `${props.stats.sessions.activeThisWeek} used this week`,
         icon: Smartphone,
+        tone: 'var(--tone-teal)',
     },
     {
         label: 'New this month',
         value: props.stats.users.joinedThisMonth,
         detail: `${props.stats.users.withTwoFactor} account(s) use two-factor`,
         icon: UserPlus,
+        tone: 'var(--tone-green)',
     },
 ];
 </script>
@@ -109,7 +113,16 @@ const tiles = [
         </PageHeader>
 
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <AppCard v-for="tile in tiles" :key="tile.label">
+            <AppCard
+                v-for="tile in tiles"
+                :key="tile.label"
+                class="relative overflow-hidden bg-linear-to-br from-(--tone)/20 via-transparent to-transparent"
+                :style="{ '--tone': tile.tone }"
+            >
+                <div
+                    class="pointer-events-none absolute -top-10 -right-10 size-32 rounded-full bg-(--tone)/30 blur-2xl"
+                    aria-hidden="true"
+                />
                 <div class="flex items-start justify-between gap-3">
                     <div class="space-y-1">
                         <p class="text-muted-foreground text-sm font-medium">
@@ -122,10 +135,11 @@ const tiles = [
                             {{ tile.detail }}
                         </p>
                     </div>
-                    <component
-                        :is="tile.icon"
-                        class="text-primary size-5 shrink-0"
-                    />
+                    <span
+                        class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-(--tone)/20 text-(--tone) ring-1 ring-(--tone)/25"
+                    >
+                        <component :is="tile.icon" class="size-5" />
+                    </span>
                 </div>
             </AppCard>
         </div>

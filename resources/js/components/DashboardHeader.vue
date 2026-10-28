@@ -29,8 +29,22 @@ const greeting = computed(() => {
 
 <template>
     <header
-        class="bg-scrim text-scrim-foreground flex min-w-0 flex-col items-start gap-3 rounded-2xl p-5 sm:p-7"
+        class="from-hero-from via-hero-via to-hero-to text-scrim-foreground relative isolate flex min-w-0 flex-col items-start gap-3 overflow-hidden rounded-2xl bg-linear-to-br p-5 shadow-lg sm:p-7"
     >
+        <div
+            class="pointer-events-none absolute inset-0 -z-10"
+            aria-hidden="true"
+        >
+            <div
+                class="bg-success/40 absolute -top-16 -right-10 size-56 rounded-full blur-3xl"
+            />
+            <div
+                class="bg-tone-blue/40 absolute -bottom-24 left-1/3 size-64 rounded-full blur-3xl"
+            />
+            <div
+                class="bg-scrim-foreground/10 absolute top-6 right-1/4 size-24 rounded-full blur-2xl"
+            />
+        </div>
         <div
             v-if="portalLabel || $slots.actions"
             class="flex flex-wrap items-center gap-3"

@@ -3,10 +3,9 @@ import type { InertiaLinkProps } from '@inertiajs/vue3';
 import { Link } from '@inertiajs/vue3';
 
 /**
- * The logo at the top of the client and staff sidebars, full width in its
- * original colors (white in dark mode), with the portal name set in small
- * capitals between two hairlines beneath it. Collapsed to icons, only the
- * logo shows.
+ * The logo at the top of the client and staff sidebars, full width and in
+ * white against the navy sidebar, with the portal name set in small capitals
+ * between two hairlines beneath it. Collapsed to icons, only the logo shows.
  */
 defineProps<{
     href: NonNullable<InertiaLinkProps['href']>;
@@ -22,12 +21,12 @@ defineProps<{
         <img
             src="/texas-renters-logo.png"
             alt="TexasRenters.com"
-            class="h-auto w-full min-w-0 object-contain dark:brightness-0 dark:invert"
+            class="h-auto w-full min-w-0 object-contain brightness-0 invert"
             width="400"
             height="111"
         />
         <span
-            class="text-sidebar-primary dark:text-sidebar-foreground flex w-full items-center gap-3 text-xs font-bold tracking-[0.2em] uppercase group-data-[collapsible=icon]:hidden"
+            class="text-sidebar-foreground flex w-full items-center gap-3 text-xs font-bold tracking-[0.2em] uppercase group-data-[collapsible=icon]:hidden"
         >
             <span class="bg-sidebar-border h-px flex-1" />
             {{ label }}
