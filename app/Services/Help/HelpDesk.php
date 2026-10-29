@@ -8,6 +8,7 @@ use App\Models\HelpRequest;
 use App\Models\HelpRequestAttachment;
 use App\Models\User;
 use App\Notifications\HelpRequestReceivedNotification;
+use App\Services\Images\UploadedPhotos;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
@@ -29,6 +30,8 @@ class HelpDesk
     /** Where attachments live on the private local disk. */
     private const ATTACHMENT_DISK = 'local';
 
+    public function __construct(private UploadedPhotos $photos) {}
+
     /**
      * Take a request with any screenshots that came with it, and tell staff about it.
      *
@@ -46,7 +49,7 @@ class HelpDesk
             'status' => HelpRequestStatus::Open,
         ]);
 
-        foreach ($attachments as $file) {
+        foreach ($this->photos->optimizeAll($attachments) as $file) {
             $request->attachments()->create([
                 'path' => $file->store('help-requests/'.$request->id, self::ATTACHMENT_DISK),
                 'name' => mb_substr($file->getClientOriginalName(), 0, 255),

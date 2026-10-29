@@ -97,6 +97,26 @@ test('a client attaches screenshots so staff can see what they saw', function ()
         fn ($notification) => str_contains(implode(' ', $notification->toMail(new AnonymousNotifiable)->introLines), 'attached 2 files'));
 });
 
+test('a large photo attached to a help request is kept scaled down', function () {
+    Storage::fake('local');
+    Notification::fake();
+
+    $this->actingAs($this->user)
+        ->post(route('help.store'), [
+            'topic' => 'something_broken',
+            'message' => 'The documents page is blank on my phone.',
+            'attachments' => [UploadedFile::fake()->image('phone.jpg', 4000, 3000)],
+        ])
+        ->assertSessionHasNoErrors();
+
+    $attachment = HelpRequest::sole()->attachments->sole();
+    $size = getimagesizefromstring(Storage::disk('local')->get($attachment->path));
+
+    expect([$size[0], $size[1]])->toBe([2000, 1500])
+        ->and($attachment->name)->toBe('phone.jpg')
+        ->and($attachment->mime_type)->toBe('image/jpeg');
+});
+
 test('a help request takes at most five files, and only pictures and PDFs', function () {
     Storage::fake('local');
 

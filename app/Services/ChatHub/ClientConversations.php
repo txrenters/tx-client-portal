@@ -6,6 +6,7 @@ use App\Events\ClientConversationUpdated;
 use App\Models\ClientAccount;
 use App\Models\ConversationRead;
 use App\Models\User;
+use App\Services\Images\UploadedPhotos;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 
@@ -21,7 +22,7 @@ class ClientConversations
     /** Further pages read when one holds only conversations without messages. */
     private const EMPTY_PAGES_READ_AHEAD = 10;
 
-    public function __construct(private ChatHubClient $hub) {}
+    public function __construct(private ChatHubClient $hub, private UploadedPhotos $photos) {}
 
     public function isAvailable(): bool
     {
@@ -244,7 +245,7 @@ class ClientConversations
      */
     private function post(ClientAccount $account, int $threadId, ?string $body, string $idempotencyKey, array $attachments): void
     {
-        $attachments = array_values($attachments);
+        $attachments = array_values($this->photos->optimizeAll($attachments));
 
         $this->hub->postClientMessage($threadId, $body, $idempotencyKey, $attachments[0] ?? null);
 

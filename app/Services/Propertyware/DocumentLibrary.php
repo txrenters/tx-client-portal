@@ -3,6 +3,7 @@
 namespace App\Services\Propertyware;
 
 use App\Enums\ClientRole;
+use App\Services\Images\UploadedPhotos;
 use App\Services\Propertyware\Data\ClientScope;
 use App\Services\Propertyware\Data\Document;
 use App\Services\Propertyware\Data\Property;
@@ -32,6 +33,7 @@ class DocumentLibrary
         private PropertywareClient $propertyware,
         private MaintenanceSummary $maintenance,
         private PropertywareDirectory $directory,
+        private UploadedPhotos $photos,
         private int $cacheSeconds = 300,
     ) {}
 
@@ -308,6 +310,7 @@ class DocumentLibrary
     public function upload(ClientScope $scope, UploadedFile $file, ?string $description = null, ?string $attachTo = null, ?int $targetId = null): Document
     {
         [$entityType, $entityId] = $this->uploadTarget($scope, $attachTo, $targetId);
+        $file = $this->photos->optimize($file);
         $fileName = $file->getClientOriginalName();
 
         $publishing = [
