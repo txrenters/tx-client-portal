@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Services\ChatHub\ChatHubClient;
+use App\Services\Images\UploadedPhotos;
 use App\Services\Propertyware\DocumentLibrary;
 use App\Services\Propertyware\Financials;
 use App\Services\Propertyware\LeaseLedger;
@@ -96,6 +97,7 @@ class AppServiceProvider extends ServiceProvider
             $this->app->make(PropertywareClient::class),
             $this->app->make(MaintenanceSummary::class),
             $this->app->make(PropertywareDirectory::class),
+            $this->app->make(UploadedPhotos::class),
             config('services.propertyware.cache_seconds'),
         ));
 
