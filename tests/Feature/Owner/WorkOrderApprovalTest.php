@@ -150,11 +150,22 @@ test('approves in propertyware with the owner and their comment in the approval 
     $this->travelTo('2026-09-19 20:04:00 UTC');
     $this->mock(PropertywareSoap::class)
         ->shouldReceive('approveWorkOrder')->once()
-        ->with(1, '2026-09-19', 'I approve this work order. - Olivia Owner, 09/19/2026. Comment: Use the same plumber', true);
+        ->with(1, '2026-09-19T15:04:00', 'I approve this work order. - Olivia Owner, 09/19/2026. Comment: Use the same plumber', true);
 
     $this->actingAs($this->user)->post(route('owner.maintenance.approval', '1'), ['decision' => 'approved', 'note' => 'Use the same plumber']);
 
     expect(WorkOrderApproval::sole())->propertyware_synced_at->not->toBeNull()->sync_error->toBeNull();
+});
+
+test('sends curly quotes and dashes in the owner\'s comment as plain ones propertyware can store', function () {
+    $this->travelTo('2026-09-19 20:04:00 UTC');
+    $approval = WorkOrderApproval::factory()->for($this->user)->for($this->account)->create([
+        'approver_name' => 'Olivia Owner', 'decided_at' => now(),
+        'note' => "It\u{2019}s the tenant\u{2019}s \u{2014} \u{201C}per lease\u{201D}\u{2026}",
+    ]);
+
+    expect(app(WorkOrderApprovals::class)->approvalComment($approval))
+        ->toBe('I approve this work order. - Olivia Owner, 09/19/2026. Comment: It\'s the tenant\'s - "per lease"...');
 });
 
 test('puts the owner\'s decline and reason in the propertyware approval comment', function () {
@@ -162,7 +173,7 @@ test('puts the owner\'s decline and reason in the propertyware approval comment'
     $this->travelTo('2026-09-19 20:04:00 UTC');
     $this->mock(PropertywareSoap::class)
         ->shouldReceive('approveWorkOrder')->once()
-        ->with(1, '2026-09-19', 'I decline this work order. - Olivia Owner, 09/19/2026. Comment: Please get a second quote', false);
+        ->with(1, '2026-09-19T15:04:00', 'I decline this work order. - Olivia Owner, 09/19/2026. Comment: Please get a second quote', false);
 
     $this->actingAs($this->user)->post(route('owner.maintenance.approval', '1'), ['decision' => 'declined', 'note' => 'Please get a second quote']);
 

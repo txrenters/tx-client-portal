@@ -34,6 +34,16 @@ class WorkOrderApprovals
      */
     public const SUPERSEDED = 'Replaced by a later decision; not sent.';
 
+    /**
+     * Typographic punctuation, as phones type it, and the plain form Propertyware can store.
+     *
+     * @var array<string, string>
+     */
+    private const PLAIN_PUNCTUATION = [
+        "\u{2018}" => "'", "\u{2019}" => "'", "\u{201C}" => '"', "\u{201D}" => '"',
+        "\u{2013}" => '-', "\u{2014}" => '-', "\u{2026}" => '...', "\u{00A0}" => ' ',
+    ];
+
     public function __construct(
         private MaintenanceSummary $maintenance,
         private PropertywareSoap $soap,
@@ -191,6 +201,9 @@ class WorkOrderApprovals
      * writes, naming the owner, since Propertyware credits the API login as
      * the approver, followed by the owner's own comment when they left one.
      * The full record of who decided stays in the portal.
+     *
+     * Propertyware stores the comment as a question mark wherever a phone's
+     * curly quote or dash was ("it?s"), so those go as their plain forms.
      */
     public function approvalComment(WorkOrderApproval $approval): string
     {
@@ -199,7 +212,7 @@ class WorkOrderApprovals
         $line = "I {$verb} this work order. - ".($approval->approver_name !== '' ? $approval->approver_name : 'the owner')
             .', '.Carbon::parse($approval->decided_at)->setTimezone(config('app.display_timezone'))->format('m/d/Y');
 
-        return filled($approval->note) ? $line.'. Comment: '.$approval->note : $line;
+        return strtr(filled($approval->note) ? $line.'. Comment: '.$approval->note : $line, self::PLAIN_PUNCTUATION);
     }
 
     /**
@@ -227,7 +240,9 @@ class WorkOrderApprovals
         try {
             $this->soap->approveWorkOrder(
                 (int) $approval->work_order_id,
-                Carbon::parse($approval->decided_at)->setTimezone(config('app.display_timezone'))->toDateString(),
+                // An xsd:dateTime: Propertyware accepts a bare date and then
+                // drops it, leaving the work order approved with no date.
+                Carbon::parse($approval->decided_at)->setTimezone(config('app.display_timezone'))->format('Y-m-d\TH:i:s'),
                 $this->approvalComment($approval),
                 $approval->decision === 'approved',
             );
