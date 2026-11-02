@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
 import type { LucideIcon } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +31,8 @@ export type Metric = {
     hint?: string | null;
     /** Colours the card; without one it stays the plain glass panel. */
     tone?: MetricTone;
+    /** Where the card goes when clicked: the list behind the number. */
+    href?: string;
 };
 
 const props = defineProps<{
@@ -98,66 +101,81 @@ function goToSlide(rowIndex: number, slideIndex: number): void {
                 class="flex min-w-0 snap-x snap-mandatory [scrollbar-width:none] gap-4 overflow-x-auto @xl/main:grid @xl/main:grid-cols-2 @xl/main:overflow-visible @5xl/main:grid-cols-4 [&::-webkit-scrollbar]:hidden"
                 @scroll.passive="onTrackScroll(rowIndex)"
             >
-                <Card
+                <component
+                    :is="metric.href ? Link : 'div'"
                     v-for="metric in row"
                     :key="metric.label"
-                    class="glass @container/card relative min-w-0 shrink-0 basis-full snap-center overflow-hidden rounded-2xl"
-                    :class="{
-                        'bg-linear-to-br from-(--tone)/20 via-transparent to-transparent transition-transform motion-safe:hover:-translate-y-0.5':
-                            metric.tone,
-                    }"
-                    :style="toneStyle(metric)"
+                    :href="metric.href"
+                    class="focus-visible:ring-ring flex min-w-0 shrink-0 basis-full snap-center rounded-2xl focus-visible:ring-2 focus-visible:outline-none"
+                    :class="{ 'cursor-pointer': metric.href }"
                 >
-                    <div
-                        v-if="metric.tone"
-                        class="pointer-events-none absolute -top-10 -right-10 size-32 rounded-full bg-(--tone)/30 blur-2xl"
-                        aria-hidden="true"
-                    />
-                    <CardHeader>
-                        <CardDescription class="flex items-center gap-2">
-                            <span
-                                v-if="metric.icon"
-                                class="flex size-7 items-center justify-center rounded-lg"
-                                :class="
-                                    metric.tone
-                                        ? 'bg-(--tone)/20 text-(--tone) ring-1 ring-(--tone)/25'
-                                        : 'bg-primary/10 text-primary'
-                                "
-                            >
-                                <component :is="metric.icon" class="size-4" />
-                            </span>
-                            {{ metric.label }}
-                        </CardDescription>
-                        <CardTitle
-                            class="min-w-0 text-2xl font-semibold wrap-anywhere tabular-nums @[250px]/card:text-3xl"
-                        >
-                            <Skeleton
-                                v-if="metric.loading ?? loading"
-                                class="h-8 w-20"
-                            />
-                            <template v-else>{{
-                                metric.value ?? '—'
-                            }}</template>
-                        </CardTitle>
-                        <CardAction v-if="metric.badge">
-                            <Badge variant="outline">{{ metric.badge }}</Badge>
-                        </CardAction>
-                    </CardHeader>
-                    <CardFooter
-                        v-if="metric.caption || metric.hint"
-                        class="flex-col items-start gap-1.5 text-sm"
+                    <Card
+                        class="glass @container/card relative min-w-0 flex-1 overflow-hidden rounded-2xl"
+                        :class="{
+                            'bg-linear-to-br from-(--tone)/20 via-transparent to-transparent transition-transform motion-safe:hover:-translate-y-0.5':
+                                metric.tone,
+                        }"
+                        :style="toneStyle(metric)"
                     >
                         <div
-                            v-if="metric.caption"
-                            class="text-muted-foreground text-xs wrap-anywhere"
+                            v-if="metric.tone"
+                            class="pointer-events-none absolute -top-10 -right-10 size-32 rounded-full bg-(--tone)/30 blur-2xl"
+                            aria-hidden="true"
+                        />
+                        <CardHeader>
+                            <CardDescription class="flex items-center gap-2">
+                                <span
+                                    v-if="metric.icon"
+                                    class="flex size-7 items-center justify-center rounded-lg"
+                                    :class="
+                                        metric.tone
+                                            ? 'bg-(--tone)/20 text-(--tone) ring-1 ring-(--tone)/25'
+                                            : 'bg-primary/10 text-primary'
+                                    "
+                                >
+                                    <component
+                                        :is="metric.icon"
+                                        class="size-4"
+                                    />
+                                </span>
+                                {{ metric.label }}
+                            </CardDescription>
+                            <CardTitle
+                                class="min-w-0 text-2xl font-semibold wrap-anywhere tabular-nums @[250px]/card:text-3xl"
+                            >
+                                <Skeleton
+                                    v-if="metric.loading ?? loading"
+                                    class="h-8 w-20"
+                                />
+                                <template v-else>{{
+                                    metric.value ?? '—'
+                                }}</template>
+                            </CardTitle>
+                            <CardAction v-if="metric.badge">
+                                <Badge variant="outline">{{
+                                    metric.badge
+                                }}</Badge>
+                            </CardAction>
+                        </CardHeader>
+                        <CardFooter
+                            v-if="metric.caption || metric.hint"
+                            class="flex-col items-start gap-1.5 text-sm"
                         >
-                            {{ metric.caption }}
-                        </div>
-                        <div v-if="metric.hint" class="text-muted-foreground">
-                            {{ metric.hint }}
-                        </div>
-                    </CardFooter>
-                </Card>
+                            <div
+                                v-if="metric.caption"
+                                class="text-muted-foreground text-xs wrap-anywhere"
+                            >
+                                {{ metric.caption }}
+                            </div>
+                            <div
+                                v-if="metric.hint"
+                                class="text-muted-foreground"
+                            >
+                                {{ metric.hint }}
+                            </div>
+                        </CardFooter>
+                    </Card>
+                </component>
             </div>
 
             <div

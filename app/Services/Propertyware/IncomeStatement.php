@@ -117,15 +117,19 @@ class IncomeStatement
     }
 
     /**
+     * The whole portfolio, or one of its properties when `$property` is given.
+     * The caller checks the property is the owner's and in this portfolio.
+     *
+     * @param  array{id: int, name: string}|null  $property
      * @return array<string, mixed>
      *
      * @throws PropertywareException
      */
-    public function for(ClientScope $scope, int $portfolioId, string $fromMonth, string $toMonth): array
+    public function for(ClientScope $scope, int $portfolioId, string $fromMonth, string $toMonth, ?array $property = null): array
     {
         $first = CarbonImmutable::createFromFormat('!Y-m', $fromMonth, config('app.display_timezone'));
         $last = CarbonImmutable::createFromFormat('!Y-m', $toMonth, config('app.display_timezone'));
-        $book = $this->ledger->accountsByMonth($scope, $portfolioId, $first, $last);
+        $book = $this->ledger->accountsByMonth($scope, $portfolioId, $first, $last, $property === null ? [] : [$property['id']]);
         $monthKeys = array_keys($book['months']);
 
         $income = $this->section($book, 'Income');
@@ -134,6 +138,7 @@ class IncomeStatement
 
         return [
             'portfolio' => collect($this->statements->portfolios($scope))->firstWhere('id', $portfolioId),
+            'property' => $property,
             'year' => (int) $first->format('Y'),
             // "2026" for a calendar year, "Jul 2025 – Jun 2026" for any other run.
             'label' => $first->format('m') === '01' && $last->format('m') === '12' && $first->year === $last->year
@@ -164,7 +169,7 @@ class IncomeStatement
     public function download(array $report): Response
     {
         $logo = 'data:image/png;base64,'.base64_encode((string) file_get_contents(public_path('texas-renters-logo.png')));
-        $name = Str::of($report['portfolio']['name'] ?? 'Portfolio')->replaceMatches('/[^A-Za-z0-9 ,.-]+/', '')->trim();
+        $name = Str::of($report['property']['name'] ?? $report['portfolio']['name'] ?? 'Portfolio')->replaceMatches('/[^A-Za-z0-9 ,.-]+/', '')->trim();
 
         return Pdf::loadView('pdf.income-statement', [
             'report' => $report,

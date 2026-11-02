@@ -25,6 +25,8 @@ class Property
         public readonly ?string $neighborhood = null,
         public readonly ?string $county = null,
         public readonly bool $occupied = false,
+        /** The building's current lease; never sent to the client as is. */
+        public readonly ?int $leaseId = null,
     ) {}
 
     /**
@@ -55,6 +57,7 @@ class Property
             neighborhood: $record['neighborhood'] ?? null,
             county: $record['county'] ?? null,
             occupied: filled($record['leaseID'] ?? null),
+            leaseId: filled($record['leaseID'] ?? null) ? (int) $record['leaseID'] : null,
         );
     }
 

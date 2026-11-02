@@ -50,3 +50,20 @@ test('rejects an unknown occupancy filter', function () {
     $this->getJson(route('api.v1.accounts.properties.index', [$this->account, 'occupancy' => 'sold']))
         ->assertJsonValidationErrors(['occupancy' => 'The selected occupancy is invalid.']);
 });
+
+test('shows the owner each property\'s rent and when its lease ends', function () {
+    $this->travelTo('2026-11-03 12:00:00');
+
+    Http::fake([
+        '*/leases/55' => Http::response(['id' => 55, 'active' => true, 'baseRent' => 1850, 'endDate' => '2027-07-31']),
+        '*/leases/56' => Http::response(['id' => 56, 'active' => true, 'baseRent' => '2100.50', 'endDate' => '2026-12-15']),
+    ]);
+
+    $rows = collect($this->getJson(route('api.v1.accounts.properties.index', $this->account))->assertOk()->json('data'))->keyBy('id');
+
+    expect($rows[7]['lease'])->toBe(['rent' => 1850, 'endDate' => '2027-07-31', 'moveOutDate' => null, 'endsSoon' => false])
+        ->and($rows[9]['lease'])->toBe(['rent' => 2100.5, 'endDate' => '2026-12-15', 'moveOutDate' => null, 'endsSoon' => true])
+        // Vacant: no lease to speak of.
+        ->and($rows[8]['lease'])->toBeNull()
+        ->and($rows[7])->not->toHaveKey('leaseId');
+});

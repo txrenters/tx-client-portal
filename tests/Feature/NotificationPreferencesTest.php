@@ -2,7 +2,6 @@
 
 use App\Models\ClientAccount;
 use App\Models\User;
-use App\Services\ChatHub\ChatHubClient;
 use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 
@@ -33,32 +32,25 @@ test('the app reads and changes notification settings', function () {
         ->assertJsonPath('data.message_replies_email', false);
 });
 
-test('turns texted replies on through the messaging hub', function () {
-    config([
-        'services.chat_hub.url' => 'https://support.test/api/v1',
-        'services.chat_hub.token' => 'hub-token',
-    ]);
-    $this->app->forgetInstance(ChatHubClient::class);
-
-    Http::fake([
-        'https://support.test/api/v1/contacts/500' => Http::response(['data' => [
-            'contact_id' => '500', 'phone' => '+15125550100', 'sms_replies' => false,
-        ]]),
-    ]);
+test('clients cannot turn texts off, though older apps still send the switch', function () {
+    Http::fake();
 
     $user = User::factory()->create();
     ClientAccount::factory()->owner()->for($user)->create(['propertyware_id' => '500']);
-    $this->actingAs($user);
+    Sanctum::actingAs($user);
 
-    $this->get(route('notifications.edit'))->assertOk();
-    $this->put(route('notifications.update'), ['message_replies_sms' => true])->assertRedirect(route('notifications.edit'));
+    // An app already installed hides its texts switch when this is null.
+    $this->getJson(route('api.v1.notification-preferences.show'))->assertOk()->assertJsonPath('meta.sms', null);
 
-    // The hub holds it, not us: nothing about texts lands in our own settings.
+    $this->putJson(route('api.v1.notification-preferences.update'), ['message_replies_sms' => false])
+        ->assertOk()
+        ->assertJsonPath('meta.sms', null);
+
+    $this->actingAs($user)->put(route('notifications.update'), ['message_replies_sms' => false])->assertRedirect(route('notifications.edit'));
+
+    // Nothing reaches the messaging hub, and nothing about texts is stored here.
+    Http::assertNothingSent();
     expect($user->refresh()->notificationPreferences())->toBe(['message_replies_email' => true, 'message_replies_push' => true, 'work_order_approvals_push' => true, 'lease_expiry_push' => true, 'work_order_updates_push' => true]);
-
-    Http::assertSent(fn ($request) => $request->method() === 'PATCH'
-        && $request->url() === 'https://support.test/api/v1/contacts/500'
-        && $request['sms_replies'] === true);
 });
 
 test('ignores settings that do not exist', function () {

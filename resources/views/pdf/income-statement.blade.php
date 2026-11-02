@@ -7,7 +7,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Income Statement {{ $report['label'] }} – {{ $report['portfolio']['name'] ?? 'Portfolio' }}</title>
+    <title>Income Statement {{ $report['label'] }} – {{ $report['property']['name'] ?? $report['portfolio']['name'] ?? 'Portfolio' }}</title>
     <style>
         @page { size: letter landscape; margin: 28px 30px 40px; }
         * { font-family: DejaVu Sans, sans-serif; }
@@ -59,6 +59,9 @@
     <table class="meta">
         <tr>
             <td><strong>Portfolio:</strong> {{ $report['portfolio']['name'] ?? '' }}</td>
+            @if (($report['property'] ?? null) !== null)
+                <td><strong>Property:</strong> {{ $report['property']['name'] }}</td>
+            @endif
             <td><strong>Report period:</strong> {{ \Carbon\CarbonImmutable::parse($report['from'])->format('m/d/Y') }} – {{ \Carbon\CarbonImmutable::parse($report['to'])->format('m/d/Y') }}</td>
             <td><strong>Accounting basis:</strong> {{ ucfirst($report['basis']) }}</td>
             <td style="text-align: right"><strong>Run date:</strong> {{ $generatedOn }}</td>

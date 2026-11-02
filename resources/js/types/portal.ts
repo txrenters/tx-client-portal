@@ -229,6 +229,21 @@ export type PortalProperty = {
     neighborhood: string | null;
     county: string | null;
     occupied: boolean;
+    /**
+     * The current lease, on an owner's property list only: what it rents for
+     * and when it ends. Null when vacant; absent elsewhere.
+     */
+    lease?: PortalPropertyLease | null;
+};
+
+export type PortalPropertyLease = {
+    rent: number | null;
+    /** YYYY-MM-DD; null when the lease runs month to month. */
+    endDate: string | null;
+    /** YYYY-MM-DD the tenant is moving out, when they have given notice. */
+    moveOutDate: string | null;
+    /** It ends, or they move out, within 60 days. */
+    endsSoon: boolean;
 };
 
 /** A group of what Propertyware holds on the client, e.g. Contact or Mailing address. */

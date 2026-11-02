@@ -253,8 +253,25 @@ class PropertywareDirectory
                 ->contains(fn (string $value): bool => str_contains(mb_strtolower($value), $search)))
             ->values();
 
+        $onPage = $matching->forPage($page, $perPage)->values();
+        // An owner sees each property's rent and when its lease ends. Only the
+        // leases on this page are read, all at once.
+        $leases = $scope->role === ClientRole::Owner
+            ? $this->findLeases($onPage->pluck('leaseId')->filter()->all())
+            : [];
+
         $paginator = new LengthAwarePaginator(
-            $matching->forPage($page, $perPage)->map(fn (Property $property): array => $property->toArray())->values(),
+            $onPage->map(fn (Property $property): array => [
+                ...$property->toArray(),
+                'lease' => $property->leaseId !== null && isset($leases[$property->leaseId])
+                    ? [
+                        'rent' => $leases[$property->leaseId]->rent,
+                        'endDate' => $leases[$property->leaseId]->endDate,
+                        'moveOutDate' => $leases[$property->leaseId]->moveOutDate,
+                        'endsSoon' => $leases[$property->leaseId]->endsSoon(),
+                    ]
+                    : null,
+            ])->values(),
             $matching->count(),
             $perPage,
             $page,
@@ -301,6 +318,30 @@ class PropertywareDirectory
                     ->map(fn (array $building): array => Property::fromArray($building)->toArray())
                     ->values()->all(),
             ])->values()->all();
+    }
+
+    /**
+     * One portfolio's own properties, named the way the owner knows them: the
+     * building's name when Propertyware holds one, its address when not.
+     *
+     * Only the owner's own buildings, and only ones in this portfolio, so an id
+     * checked against these keys can never reach anyone else's.
+     *
+     * @return array<int, string>
+     *
+     * @throws PropertywareException
+     */
+    public function propertyNamesInPortfolio(ClientScope $scope, int $portfolioId): array
+    {
+        $inPortfolio = collect($this->buildingsInPortfolios([$portfolioId]))
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all();
+
+        return collect($this->propertiesFor($scope))
+            ->filter(fn (Property $property): bool => in_array($property->id, $inPortfolio, strict: true))
+            ->mapWithKeys(fn (Property $property): array => [$property->id => $property->name ?: $property->address])
+            ->all();
     }
 
     /**
@@ -465,6 +506,44 @@ class PropertywareDirectory
         );
 
         return isset($lease['id']) ? Lease::fromArray($lease) : null;
+    }
+
+    /**
+     * Read several leases by id, fetching the uncached ones at the same time.
+     *
+     * The rent and dates are extras on a list: if Propertyware will not answer,
+     * the list still shows, only without them.
+     *
+     * @param  array<int, int>  $leaseIds
+     * @return array<int, Lease>
+     */
+    private function findLeases(array $leaseIds): array
+    {
+        $leaseIds = array_values(array_unique($leaseIds));
+
+        $cached = collect($leaseIds)
+            ->mapWithKeys(fn (int $leaseId): array => [$leaseId => Cache::get("propertyware:lease:{$leaseId}")])
+            ->filter(fn (mixed $lease): bool => is_array($lease));
+
+        try {
+            $fetched = $this->propertyware->getMany(collect($leaseIds)
+                ->reject(fn (int $leaseId): bool => $cached->has($leaseId))
+                ->mapWithKeys(fn (int $leaseId): array => [$leaseId => "leases/{$leaseId}"])
+                ->all());
+        } catch (PropertywareException) {
+            $fetched = [];
+        }
+
+        foreach ($fetched as $leaseId => $lease) {
+            if (is_array($lease) && isset($lease['id'])) {
+                Cache::put("propertyware:lease:{$leaseId}", $lease, $this->cacheSeconds);
+            }
+        }
+
+        return $cached->union($fetched)
+            ->filter(fn (mixed $lease): bool => is_array($lease) && isset($lease['id']))
+            ->map(fn (array $lease): Lease => Lease::fromArray($lease))
+            ->all();
     }
 
     /**

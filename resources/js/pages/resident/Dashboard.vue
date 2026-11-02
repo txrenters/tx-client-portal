@@ -32,7 +32,13 @@ import DashboardMetrics from '@/components/DashboardMetrics.vue';
 import type { Metric } from '@/components/DashboardMetrics.vue';
 import { computed } from 'vue';
 import { useFormattedDate } from '@/composables/useFormattedDate';
-import { dashboard, documents, lease as leaseRoute } from '@/routes/resident';
+import {
+    dashboard,
+    documents,
+    lease as leaseRoute,
+    payments,
+    property as propertyRoute,
+} from '@/routes/resident';
 import {
     index as maintenanceRoute,
     show as maintenanceShow,
@@ -81,6 +87,7 @@ const metrics = computed<Metric[]>(() => [
         icon: Wrench,
         tone: 'amber',
         caption: 'We are on it',
+        href: maintenanceRoute({ query: { status: 'open' } }).url,
     },
     {
         label: 'Rent',
@@ -92,6 +99,7 @@ const metrics = computed<Metric[]>(() => [
         icon: Banknote,
         tone: 'green',
         caption: 'Each month',
+        href: payments().url,
     },
     {
         label: 'Lease',
@@ -100,6 +108,7 @@ const metrics = computed<Metric[]>(() => [
         icon: ScrollText,
         tone: 'violet',
         caption: props.lease?.status ?? null,
+        href: leaseRoute().url,
     },
     {
         label: 'Your home',
@@ -108,6 +117,7 @@ const metrics = computed<Metric[]>(() => [
         icon: Building2,
         tone: 'blue',
         caption: props.property?.city ?? null,
+        href: propertyRoute().url,
     },
 ]);
 

@@ -718,6 +718,11 @@ class OwnerLedger
      * shown what TexasRenters.com earns. Months after this one are left empty. An account that moved and came back to nothing
      * still appears, as it does there.
      *
+     * Narrowed to one or more properties, only the entries Propertyware filed
+     * against those buildings count. Anything charged to the portfolio as a
+     * whole, with no building, then drops out: it belongs to no one property.
+     *
+     * @param  array<int, int>  $buildingIds  Only these properties; all of them when empty.
      * @return array{
      *     months: array<string, array<int, float>>,
      *     accounts: array<int, array{name: string, type: string, number: string, parent: string, passThrough: bool}>
@@ -725,7 +730,7 @@ class OwnerLedger
      *
      * @throws PropertywareException
      */
-    public function accountsByMonth(ClientScope $scope, int $portfolioId, CarbonImmutable $first, CarbonImmutable $last): array
+    public function accountsByMonth(ClientScope $scope, int $portfolioId, CarbonImmutable $first, CarbonImmutable $last, array $buildingIds = []): array
     {
         if (! in_array($portfolioId, $scope->portfolioIds, strict: true)) {
             throw new PropertywareException('That portfolio does not belong to this client.');
@@ -738,7 +743,7 @@ class OwnerLedger
         for ($month = $first->startOfMonth(); $month->lte($last); $month = $month->addMonth()) {
             $months[$month->format('Y-m')] = $month->gt($now)
                 ? []
-                : $this->monthAccounts($portfolioId, $month, $accounts);
+                : $this->monthAccounts($portfolioId, $month, $accounts, $buildingIds);
         }
 
         $touched = array_unique(array_merge(...array_map(array_keys(...), array_values($months))));
@@ -754,24 +759,31 @@ class OwnerLedger
      * the month totals: income as credits less debits, expense the other way.
      *
      * @param  array<int, array{name: string, type: string, number: string, parent: string, passThrough: bool}>  $accounts
+     * @param  array<int, int>  $buildingIds
      * @return array<int, float>
      *
      * @throws PropertywareException
      */
-    private function monthAccounts(int $portfolioId, CarbonImmutable $month, array $accounts): array
+    private function monthAccounts(int $portfolioId, CarbonImmutable $month, array $accounts, array $buildingIds = []): array
     {
         $from = $month->startOfMonth();
         $to = $month->endOfMonth()->gt(CarbonImmutable::now()) ? CarbonImmutable::now()->startOfDay() : $month->endOfMonth();
+        sort($buildingIds);
+        $buildings = $buildingIds === [] ? '' : ':b'.implode(',', $buildingIds);
 
         return Cache::remember(
-            "propertyware:owner-ledger:accounts:v2:{$portfolioId}:{$from->toDateString()}:{$to->toDateString()}",
+            "propertyware:owner-ledger:accounts:v2:{$portfolioId}:{$from->toDateString()}:{$to->toDateString()}{$buildings}",
             $this->monthTtl($to),
-            function () use ($portfolioId, $from, $to, $accounts): array {
+            function () use ($portfolioId, $from, $to, $accounts, $buildingIds): array {
                 $totals = [];
 
                 foreach ($this->transactions($portfolioId, $from->toDateString(), $to->toDateString()) as $transaction) {
                     foreach ($transaction['glentries'] ?? [] as $entry) {
                         if ((int) ($entry['portfolioID'] ?? 0) !== $portfolioId) {
+                            continue;
+                        }
+
+                        if ($buildingIds !== [] && ! in_array((int) ($entry['buildingID'] ?? 0), $buildingIds, strict: true)) {
                             continue;
                         }
 

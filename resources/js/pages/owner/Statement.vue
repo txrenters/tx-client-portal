@@ -54,6 +54,8 @@ const props = defineProps<{
     /** The months an income statement PDF can be made between. */
     pdfRange: { earliest: string; latest: string; maxMonths: number };
     portfolios?: { id: number; name: string }[];
+    /** The selected portfolio's properties, for an income statement of just one. */
+    properties?: { id: number; name: string }[];
     /** Undefined while loading, null when it couldn't be read. */
     statement?: OwnerStatement | null;
 }>();
@@ -148,11 +150,17 @@ watch(pdfFrom, (from) => {
         ].sort()[0];
     }
 });
+/** One of the portfolio's properties, or 'all' for the whole portfolio. */
+const pdfProperty = ref('all');
 const pdfHref = computed(() => {
     const query = new URLSearchParams({ from: pdfFrom.value, to: pdfTo.value });
 
     if (portfolio.value !== '') {
         query.set('portfolio', portfolio.value);
+    }
+
+    if (pdfProperty.value !== 'all') {
+        query.set('property', pdfProperty.value);
     }
 
     return `${statements().url}/income-statement.pdf?${query}`;
@@ -184,11 +192,16 @@ watch(
             return;
         }
 
+        // Properties belong to one portfolio, so a pick does not carry over.
+        if (pickedPortfolio !== lastPortfolio) {
+            pdfProperty.value = 'all';
+        }
+
         router.get(
             statements().url,
             { month: pickedMonth, portfolio: pickedPortfolio || undefined },
             {
-                only: ['statement', 'filters'],
+                only: ['statement', 'filters', 'properties'],
                 preserveState: true,
                 preserveScroll: true,
                 replace: true,
@@ -268,6 +281,28 @@ watch(
                         </DialogDescription>
                     </DialogHeader>
                     <div class="grid gap-4 sm:grid-cols-2">
+                        <div
+                            v-if="properties && properties.length > 1"
+                            class="grid gap-2 sm:col-span-2"
+                        >
+                            <Label for="pdf-property">Property</Label>
+                            <Select v-model="pdfProperty">
+                                <SelectTrigger id="pdf-property" class="w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all"
+                                        >All properties</SelectItem
+                                    >
+                                    <SelectItem
+                                        v-for="item in properties"
+                                        :key="item.id"
+                                        :value="String(item.id)"
+                                        >{{ item.name }}</SelectItem
+                                    >
+                                </SelectContent>
+                            </Select>
+                        </div>
                         <div class="grid gap-2">
                             <Label for="pdf-from">From</Label>
                             <Select v-model="pdfFrom">

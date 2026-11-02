@@ -44,6 +44,22 @@ class StatementController extends Controller
                     return [];
                 }
             }, 'options'),
+            // The selected portfolio's properties, so the income statement PDF
+            // can be made for one of them. The page reloads on a portfolio change.
+            'properties' => Inertia::defer(function () use ($request, $directory, $portfolio): array {
+                try {
+                    $scope = $this->clientScope($request, ClientRole::Owner, $directory);
+                    $portfolioId = in_array($portfolio, $scope->portfolioIds, strict: true) ? $portfolio : ($scope->portfolioIds[0] ?? null);
+
+                    return $portfolioId === null ? [] : collect($directory->propertyNamesInPortfolio($scope, $portfolioId))
+                        ->map(fn (string $name, int $id): array => ['id' => $id, 'name' => $name])
+                        ->sortBy('name')
+                        ->values()
+                        ->all();
+                } catch (PropertywareException) {
+                    return [];
+                }
+            }, 'options'),
             'statement' => Inertia::defer(function () use ($request, $directory, $statements, $portfolio, $month): ?array {
                 try {
                     $scope = $this->clientScope($request, ClientRole::Owner, $directory);
