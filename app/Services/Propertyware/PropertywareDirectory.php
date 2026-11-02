@@ -535,13 +535,13 @@ class PropertywareDirectory
         }
 
         foreach ($fetched as $leaseId => $lease) {
-            if (is_array($lease) && isset($lease['id'])) {
+            if (isset($lease['id'])) {
                 Cache::put("propertyware:lease:{$leaseId}", $lease, $this->cacheSeconds);
             }
         }
 
         return $cached->union($fetched)
-            ->filter(fn (mixed $lease): bool => is_array($lease) && isset($lease['id']))
+            ->filter(fn (array $lease): bool => isset($lease['id']))
             ->map(fn (array $lease): Lease => Lease::fromArray($lease))
             ->all();
     }
