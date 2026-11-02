@@ -2,11 +2,8 @@
 
 namespace App\Http\Controllers\Settings;
 
-use App\Http\Controllers\Concerns\ResolvesClientScope;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\NotificationPreferencesRequest;
-use App\Services\ChatHub\ChatHubException;
-use App\Services\ChatHub\ClientConversations;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,42 +11,20 @@ use Inertia\Response;
 
 class NotificationController extends Controller
 {
-    use ResolvesClientScope;
-
     /**
-     * Show which notifications the client receives.
-     *
-     * Texted replies are the messaging hub's to decide, so that switch reads
-     * from the hub rather than from anything stored here.
+     * Show which notifications the client receives. Texts are not among
+     * them: whether a message is texted is TexasRenters.com's to decide.
      */
-    public function edit(Request $request, ClientConversations $conversations): Response
+    public function edit(Request $request): Response
     {
-        $account = $this->currentClientAccount($request);
-
         return Inertia::render('settings/Notifications', [
             'preferences' => $request->user()->notificationPreferences(),
-            'sms' => $account === null
-                ? null
-                : Inertia::defer(fn (): ?array => $conversations->smsReplies($account)),
         ]);
     }
 
-    public function update(NotificationPreferencesRequest $request, ClientConversations $conversations): RedirectResponse
+    public function update(NotificationPreferencesRequest $request): RedirectResponse
     {
         $request->user()->forceFill(['notification_preferences' => $request->preferences()])->save();
-
-        $account = $this->currentClientAccount($request);
-        $wanted = $request->smsReplies();
-
-        if ($account !== null && $wanted !== null) {
-            try {
-                $conversations->setSmsReplies($account, $wanted);
-            } catch (ChatHubException) {
-                Inertia::flash('toast', ['type' => 'error', 'message' => __('We saved your other settings, but could not change texted replies. Please try again.')]);
-
-                return to_route('notifications.edit');
-            }
-        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Notification settings saved.')]);
 

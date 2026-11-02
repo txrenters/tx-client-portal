@@ -42,7 +42,6 @@ const kinds: { value: DocumentKind | 'all'; label: string }[] = [
     { value: 'leases', label: 'Leases' },
     { value: 'statements', label: 'Statements' },
     { value: 'tax', label: 'Tax documents' },
-    { value: 'invoices', label: 'Invoices' },
     { value: 'other', label: 'Other' },
 ];
 

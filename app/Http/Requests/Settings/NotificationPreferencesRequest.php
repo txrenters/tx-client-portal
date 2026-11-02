@@ -15,17 +15,10 @@ class NotificationPreferencesRequest extends FormRequest
     {
         return [
             ...collect(User::NOTIFICATION_DEFAULTS)->map(fn (): array => ['sometimes', 'boolean'])->all(),
-            // Kept in the messaging hub, not here: it decides what gets texted.
+            // Clients can no longer turn texts off. Apps already installed still
+            // send this, so it is accepted and ignored rather than refused.
             'message_replies_sms' => ['sometimes', 'boolean'],
         ];
-    }
-
-    /**
-     * Whether the client changed texted replies on this save.
-     */
-    public function smsReplies(): ?bool
-    {
-        return $this->has('message_replies_sms') ? $this->boolean('message_replies_sms') : null;
     }
 
     /**

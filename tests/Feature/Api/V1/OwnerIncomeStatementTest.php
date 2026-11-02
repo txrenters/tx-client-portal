@@ -24,7 +24,7 @@ beforeEach(function () {
     // The Pesek portfolio's year from Propertyware's own report: rent from
     // July, a leasing fee and trip charge that month, the management fee
     // every month, and a pass-through fee that comes in and goes back out.
-    $ledger = [
+    $this->ledger = [
         incomeTransaction(1, '2026-07-03', [['glaccountID' => 10, 'credit' => 4200], ['glaccountID' => 50, 'debit' => 4200]]),
         incomeTransaction(2, '2026-07-05', [['glaccountID' => 21, 'debit' => 2600], ['glaccountID' => 22, 'debit' => 69], ['glaccountID' => 20, 'debit' => 89], ['glaccountID' => 50, 'credit' => 2758]]),
         incomeTransaction(3, '2026-07-06', [['glaccountID' => 31, 'credit' => 25], ['glaccountID' => 50, 'debit' => 25]]),
@@ -39,9 +39,11 @@ beforeEach(function () {
         [...incomeTransaction(9, '2026-10-04', [['glaccountID' => 10, 'credit' => 999]]), 'glentries' => [['portfolioID' => 3, 'glaccountID' => 10, 'credit' => 999, 'debit' => 0]]],
     ];
 
+    $this->buildings = [['id' => 7, 'portfolioID' => 2, 'name' => 'Elm House', 'address' => ['address' => '12 Elm St']]];
+
     Http::fake([
         '*/contacts/*' => Http::response(['id' => '500', 'type' => 'OWNER', 'attachedLeases' => [], 'attachedPortfolios' => [['id' => 2, 'name' => 'Pesek,Douglas']]]),
-        '*/buildings*' => Http::response([['id' => 7, 'portfolioID' => 2, 'name' => 'Elm House', 'address' => ['address' => '12 Elm St']]]),
+        '*/buildings*' => fn () => Http::response($this->buildings),
         '*/units*' => Http::response([]),
         '*/portfolios*' => Http::response(['id' => 2, 'name' => 'Pesek,Douglas', 'createdDateTime' => '2026-06-01T00:00:00Z']),
         '*/accounting/glaccounts*' => Http::response([
@@ -54,11 +56,11 @@ beforeEach(function () {
             ['id' => 22, 'name' => 'Vendor Trip Charge', 'accountType' => 'Expense', 'accountNumber' => '5625', 'parentRef' => ''],
             ['id' => 50, 'name' => 'Operating Bank', 'accountType' => 'Bank', 'accountNumber' => '1000', 'parentRef' => ''],
         ]),
-        '*/accounting/generalledger*' => function (Request $request) use ($ledger) {
+        '*/accounting/generalledger*' => function (Request $request) {
             $from = $request->data()['postDateStart'];
             $to = $request->data()['postDateEnd'];
 
-            return Http::response(array_values(array_filter($ledger, fn (array $tx): bool => $tx['postDate'] >= $from && $tx['postDate'] <= $to)));
+            return Http::response(array_values(array_filter($this->ledger, fn (array $tx): bool => $tx['postDate'] >= $from && $tx['postDate'] <= $to)));
         },
     ]);
 
@@ -172,3 +174,50 @@ test('refuses more than twelve months, months out of order, or months not on off
     'too long ago' => [['from' => '2020-12', 'to' => '2021-03'], 'from'],
     'not yet' => [['from' => '2026-10', 'to' => '2026-11'], 'from'],
 ]);
+
+test('narrows to one property, leaving out the rest of the portfolio', function () {
+    Sanctum::actingAs($this->user);
+
+    // A second property's rent in August, and a bank charge filed against
+    // the portfolio as a whole, with no building.
+    $this->buildings[] = ['id' => 8, 'portfolioID' => 2, 'name' => '', 'address' => ['address' => '9 Oak Ave']];
+    $this->ledger = [
+        ['id' => 1, 'txDate' => '2026-08-03', 'postDate' => '2026-08-03', 'transactionType' => 'Journal', 'comment' => null, 'glentries' => [
+            ['portfolioID' => 2, 'buildingID' => 7, 'glaccountID' => 10, 'credit' => 1000, 'debit' => 0, 'comment' => null],
+            ['portfolioID' => 2, 'buildingID' => 8, 'glaccountID' => 10, 'credit' => 500, 'debit' => 0, 'comment' => null],
+            ['portfolioID' => 2, 'buildingID' => null, 'glaccountID' => 22, 'credit' => 0, 'debit' => 30, 'comment' => null],
+        ]],
+    ];
+
+    $whole = $this->getJson(route('api.v1.accounts.income-statement', [$this->account, 'from' => '2026-08', 'to' => '2026-08']))->assertOk();
+
+    expect($whole->json('data.totalIncome'))->toEqual(1500)
+        ->and($whole->json('data.totalExpense'))->toEqual(30)
+        ->and($whole->json('data.property'))->toBeNull()
+        ->and($whole->json('meta.properties'))->toBe([['id' => 8, 'name' => '9 Oak Ave'], ['id' => 7, 'name' => 'Elm House']]);
+
+    $one = $this->getJson(route('api.v1.accounts.income-statement', [$this->account, 'from' => '2026-08', 'to' => '2026-08', 'property' => 8]))->assertOk();
+
+    expect($one->json('data.totalIncome'))->toEqual(500)
+        ->and($one->json('data.totalExpense'))->toEqual(0)
+        ->and($one->json('data.property'))->toBe(['id' => 8, 'name' => '9 Oak Ave']);
+
+    $this->get(route('api.v1.accounts.income-statement.pdf', [$this->account, 'from' => '2026-08', 'to' => '2026-08', 'property' => 8]))
+        ->assertOk()
+        ->assertHeader('Content-Disposition', 'attachment; filename="Income Statement Aug 2026 - 9 Oak Ave.pdf"');
+
+    // A building that is not the owner's, or not in this portfolio, is not found.
+    $this->getJson(route('api.v1.accounts.income-statement', [$this->account, 'property' => 99]))->assertNotFound();
+    $this->get(route('api.v1.accounts.income-statement.pdf', [$this->account, 'property' => 99]))->assertNotFound();
+});
+
+test('owners download one property\'s statement from the web portal too', function () {
+    $this->actingAs($this->user);
+    $this->buildings[] = ['id' => 8, 'portfolioID' => 2, 'name' => '', 'address' => ['address' => '9 Oak Ave']];
+
+    $this->get(route('owner.statements.income-pdf', ['year' => 2026, 'property' => 8]))
+        ->assertOk()
+        ->assertHeader('Content-Disposition', 'attachment; filename="Income Statement 2026 - 9 Oak Ave.pdf"');
+
+    $this->get(route('owner.statements.income-pdf', ['year' => 2026, 'property' => 99]))->assertNotFound();
+});

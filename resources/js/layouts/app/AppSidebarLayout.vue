@@ -10,7 +10,6 @@ import ImpersonationBanner from '@/components/ImpersonationBanner.vue';
 import ClientSidebar from '@/components/ClientSidebar.vue';
 import MobileNavigation from '@/components/MobileNavigation.vue';
 import PageGlow from '@/components/PageGlow.vue';
-import PromotionPopup from '@/components/PromotionPopup.vue';
 import { Toaster } from '@/components/ui/sonner';
 import type { BreadcrumbItem } from '@/types';
 
@@ -53,6 +52,5 @@ const staffSettings = computed(
         </AppContent>
         <MobileNavigation v-if="!staffSettings" />
         <Toaster />
-        <PromotionPopup v-if="!staffSettings" />
     </AppShell>
 </template>

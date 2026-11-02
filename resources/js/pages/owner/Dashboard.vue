@@ -123,6 +123,7 @@ const metrics = computed<Metric[]>(() => [
         loading: props.portfolio === undefined,
         icon: Building2,
         tone: 'blue',
+        href: properties().url,
     },
     {
         label: 'Open work orders',
@@ -130,6 +131,7 @@ const metrics = computed<Metric[]>(() => [
         loading: props.maintenance === undefined,
         icon: Wrench,
         tone: 'amber',
+        href: maintenanceRoute({ query: { status: 'open' } }).url,
     },
     {
         label: 'Scheduled',
@@ -137,6 +139,7 @@ const metrics = computed<Metric[]>(() => [
         loading: props.maintenance === undefined,
         icon: Clock,
         tone: 'violet',
+        href: maintenanceRoute({ query: { status: 'scheduled' } }).url,
     },
     {
         label: 'Completed',
@@ -144,6 +147,7 @@ const metrics = computed<Metric[]>(() => [
         loading: props.maintenance === undefined,
         icon: TrendingUp,
         tone: 'green',
+        href: maintenanceRoute({ query: { status: 'completed' } }).url,
     },
     {
         label: 'Income',
@@ -152,6 +156,7 @@ const metrics = computed<Metric[]>(() => [
         loading: ledgerLoading.value,
         icon: Banknote,
         tone: 'teal',
+        href: financials().url,
     },
     {
         label: 'Expense',
@@ -160,6 +165,7 @@ const metrics = computed<Metric[]>(() => [
         loading: ledgerLoading.value,
         icon: Receipt,
         tone: 'rose',
+        href: financials().url,
     },
     {
         // Only a balance that ran from the portfolio's first day is the
@@ -176,6 +182,7 @@ const metrics = computed<Metric[]>(() => [
         loading: ledgerLoading.value,
         icon: Wallet,
         tone: 'blue',
+        href: financials().url,
     },
     {
         label: 'Management fee',
@@ -184,6 +191,7 @@ const metrics = computed<Metric[]>(() => [
         loading: ledgerLoading.value,
         icon: Percent,
         tone: 'violet',
+        href: financials().url,
     },
 ]);
 
