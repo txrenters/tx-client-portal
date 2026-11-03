@@ -20,6 +20,9 @@ final class DemoData
 
     public const TENANT_CONTACT = 900000002;
 
+    /** A co-tenant on the same lease, for the login deleted in the review screen recording. */
+    public const RECORDING_CONTACT = 900000003;
+
     public const PORTFOLIO = 900000010;
 
     public const HOME_LEASED = 900000021;
@@ -89,6 +92,11 @@ final class DemoData
                 'email' => 'appreview.tenant@texasrenters.com', 'mobilePhone' => '(281) 555-0102',
                 'attachedLeases' => [['id' => self::LEASE, 'name' => 'Lease', 'role' => 'Primary']], 'attachedPortfolios' => [],
             ],
+            self::RECORDING_CONTACT => [
+                'id' => (string) self::RECORDING_CONTACT, 'type' => 'TENANT', 'firstName' => 'Demo', 'lastName' => 'Resident',
+                'email' => 'appreview.recording@texasrenters.com', 'mobilePhone' => '(281) 555-0103',
+                'attachedLeases' => [['id' => self::LEASE, 'name' => 'Lease', 'role' => 'Secondary']], 'attachedPortfolios' => [],
+            ],
             default => null,
         };
     }
@@ -152,7 +160,7 @@ final class DemoData
             'lateFeeRule' => '10.00% of rent charges after due day 3',
             'leaseName' => 'Tenant, D.',
             'location' => 'Demo Owner Portfolio | 1234 Demo Meadow Ln',
-            'contacts' => [['id' => (string) self::TENANT_CONTACT, 'name' => 'Demo Tenant']],
+            'contacts' => [['id' => (string) self::TENANT_CONTACT, 'name' => 'Demo Tenant'], ['id' => (string) self::RECORDING_CONTACT, 'name' => 'Demo Resident']],
         ]];
     }
 
