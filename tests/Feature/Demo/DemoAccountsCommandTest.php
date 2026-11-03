@@ -113,3 +113,39 @@ test('running accounts again keeps the same app account ids', function () {
 
     expect(ClientAccount::orderBy('id')->pluck('id')->all())->toBe($ids)->toHaveCount(2);
 });
+
+test('the recording login is set up on its own, leaving the review passwords alone', function () {
+    $this->artisan('demo:accounts', ['--owner-password' => 'Owner-pass-2026!', '--tenant-password' => 'Tenant-pass-2026!'])->assertSuccessful();
+    expect(User::where('email', 'appreview.recording@texasrenters.com')->exists())->toBeFalse();
+
+    $this->artisan('demo:recording-account', ['--password' => 'Record-pass-2026!'])->assertSuccessful();
+
+    $recording = User::where('email', 'appreview.recording@texasrenters.com')->sole();
+    expect($recording)->is_demo->toBeTrue()->name->toBe('Demo Resident')
+        ->and($recording->email_verified_at)->not->toBeNull()
+        ->and(Hash::check('Record-pass-2026!', $recording->password))->toBeTrue()
+        ->and($recording->clientAccounts->map(fn ($a) => [$a->role, $a->propertyware_id])->all())->toBe([[ClientRole::Resident, (string) DemoData::RECORDING_CONTACT]])
+        ->and(Hash::check('Owner-pass-2026!', User::where('email', 'appreview.owner@texasrenters.com')->sole()->password))->toBeTrue()
+        ->and(Hash::check('Tenant-pass-2026!', User::where('email', 'appreview.tenant@texasrenters.com')->sole()->password))->toBeTrue();
+});
+
+test('deleting the recording login through the app leaves the review logins, and reset brings it back', function () {
+    $this->artisan('demo:accounts', ['--owner-password' => 'Owner-pass-2026!', '--tenant-password' => 'Tenant-pass-2026!'])->assertSuccessful();
+    $this->artisan('demo:recording-account', ['--password' => 'Record-pass-2026!'])->assertSuccessful();
+    $recording = User::where('email', 'appreview.recording@texasrenters.com')->sole();
+
+    $this->actingAs($recording, 'sanctum')->deleteJson(route('api.v1.profile.destroy'), ['password' => 'Record-pass-2026!'])->assertNoContent();
+
+    expect(User::where('email', 'appreview.recording@texasrenters.com')->exists())->toBeFalse()
+        ->and(User::whereIn('email', ['appreview.owner@texasrenters.com', 'appreview.tenant@texasrenters.com'])->count())->toBe(2);
+
+    $this->artisan('demo:reset')->assertSuccessful();
+
+    expect(Hash::check('Record-pass-2026!', User::where('email', 'appreview.recording@texasrenters.com')->sole()->password))->toBeTrue();
+});
+
+test('the recording login refuses a weak password', function () {
+    $this->artisan('demo:recording-account', ['--password' => 'short'])->assertFailed();
+
+    expect(User::where('email', 'appreview.recording@texasrenters.com')->exists())->toBeFalse();
+});
