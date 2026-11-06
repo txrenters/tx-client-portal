@@ -48,8 +48,8 @@
         @php
             $publicPages = [
                 'Welcome' => [
-                    'title' => 'Client portal',
-                    'description' => 'The TexasRenters.com client portal for residents and owners: work orders, messages, documents, leases and property information, in any browser.',
+                    'title' => 'The app for your rental',
+                    'description' => 'The TexasRenters App for residents and owners: work orders, messages, documents, leases and payments. Free on the App Store for iPhone.',
                 ],
                 'Privacy' => [
                     'title' => 'Privacy policy',
@@ -66,6 +66,7 @@
 
         @if ($seo)
             <meta name="description" content="{{ $seo['description'] }}">
+            <meta name="apple-itunes-app" content="app-id={{ config('mobile.ios.app_store_id') }}">
             <link rel="canonical" href="{{ url()->current() }}">
             <meta property="og:type" content="website">
             <meta property="og:site_name" content="{{ $appName }}">

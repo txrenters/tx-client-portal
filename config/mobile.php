@@ -19,6 +19,9 @@ return [
     'ios' => [
         // "TEAMID.bundle.id", e.g. "ABCDE12345.com.texasrenters.portal"; comma-separated for several apps.
         'app_ids' => $list('MOBILE_IOS_APP_IDS'),
+        // The App Store listing, for the Smart App Banner and invitation emails.
+        'app_store_id' => '6818547029',
+        'app_store_url' => 'https://apps.apple.com/us/app/texasrenters-app/id6818547029',
     ],
 
     'android' => [
