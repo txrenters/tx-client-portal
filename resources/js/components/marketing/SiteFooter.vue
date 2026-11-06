@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Globe, LineChart } from '@lucide/vue';
-import AppStoreBadges from '@/components/marketing/AppStoreBadges.vue';
-import { home, login, privacy, register, support } from '@/routes';
+import { appStoreUrl } from '@/lib/appStore';
+import { home, login, privacy, support } from '@/routes';
 </script>
 
 <!-- The footer's links and copyright line, inside a page's own navy <footer>. -->
@@ -26,24 +26,20 @@ import { home, login, privacy, register, support } from '@/routes';
         </div>
 
         <div class="flex flex-col gap-2 text-sm">
-            <p class="font-medium">Portal</p>
-            <Link
-                :href="register()"
-                class="text-scrim-foreground/70 hover:text-scrim-foreground"
-            >
-                Create account
-            </Link>
-            <Link
-                :href="login()"
-                class="text-scrim-foreground/70 hover:text-scrim-foreground"
-            >
-                Sign in
-            </Link>
+            <p class="font-medium">The app</p>
             <a
-                :href="`${home().url}#tour`"
+                :href="appStoreUrl"
+                target="_blank"
+                rel="noopener"
                 class="text-scrim-foreground/70 hover:text-scrim-foreground"
             >
-                Watch the tutorial
+                App Store
+            </a>
+            <a
+                :href="`${home().url}#the-app`"
+                class="text-scrim-foreground/70 hover:text-scrim-foreground"
+            >
+                See the app
             </a>
             <a
                 :href="`${home().url}#how-it-works`"
@@ -60,14 +56,13 @@ import { home, login, privacy, register, support } from '@/routes';
         </div>
 
         <div class="flex flex-col gap-2 text-sm">
-            <p class="font-medium">The app</p>
-            <a
-                :href="`${home().url}#app`"
+            <p class="font-medium">Web portal</p>
+            <Link
+                :href="login()"
                 class="text-scrim-foreground/70 hover:text-scrim-foreground"
             >
-                Preview the app
-            </a>
-            <AppStoreBadges class="pt-2" />
+                Sign in
+            </Link>
         </div>
 
         <div class="flex flex-col gap-2 text-sm">

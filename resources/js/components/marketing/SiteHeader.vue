@@ -3,16 +3,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import ThemeToggle from '@/components/marketing/ThemeToggle.vue';
 import { Button } from '@/components/ui/button';
-import { dashboard, home, login, register } from '@/routes';
-
-// Sections of the landing page, linked from any page that uses this header.
-const navLinks = [
-    { label: 'Tutorial', href: '#tour' },
-    { label: 'Residents and owners', href: '#portal' },
-    { label: 'Getting started', href: '#how-it-works' },
-    { label: 'Security', href: '#security' },
-    { label: 'The app', href: '#app' },
-];
+import { dashboard, home, login } from '@/routes';
 
 const page = usePage();
 const isSignedIn = computed(() => page.props.auth.user !== null);
@@ -36,20 +27,6 @@ const isSignedIn = computed(() => page.props.auth.user !== null);
                     height="111"
                 />
             </Link>
-
-            <nav
-                class="hidden items-center gap-1 lg:flex"
-                aria-label="Sections"
-            >
-                <a
-                    v-for="item in navLinks"
-                    :key="item.href"
-                    :href="`${home().url}${item.href}`"
-                    class="text-scrim-foreground/75 hover:text-scrim-foreground hover:bg-scrim-foreground/10 rounded-md px-3 py-2 text-sm font-medium transition-colors"
-                >
-                    {{ item.label }}
-                </a>
-            </nav>
 
             <div class="flex items-center gap-1">
                 <ThemeToggle
@@ -77,7 +54,7 @@ const isSignedIn = computed(() => page.props.auth.user !== null);
                         size="sm"
                         class="bg-scrim-foreground text-scrim hover:bg-scrim-foreground/90"
                     >
-                        <Link :href="register()">Create account</Link>
+                        <a :href="`${home().url}#download`">Get the app</a>
                     </Button>
                 </template>
             </div>

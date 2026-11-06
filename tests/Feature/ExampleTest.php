@@ -1,12 +1,28 @@
 <?php
 
 use App\Models\User;
+use App\Services\Security\ClientWebPause;
 use Inertia\Testing\AssertableInertia;
 
 test('shows the portal welcome page to visitors', function () {
     $this->get(route('home'))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page->component('Welcome'));
+});
+
+test('tells the welcome page when client sign-in on the website is paused', function () {
+    $this->get(route('home'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('isWebPortalOpen', true));
+
+    app(ClientWebPause::class)->pause();
+
+    $this->get(route('home'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('isWebPortalOpen', false));
+});
+
+test('offers the app on the App Store from the public pages', function () {
+    $this->get(route('home'))
+        ->assertSee('<meta name="apple-itunes-app" content="app-id=6818547029">', false);
 });
 
 test('shows the welcome page to a signed-in client too', function () {
@@ -39,7 +55,7 @@ test('gives the public pages search and share tags without needing JavaScript', 
         ->assertSee("<title>{$title} - ".config('app.name').'</title>', false)
         ->assertDontSee('noindex');
 })->with([
-    ['home', 'Client portal'],
+    ['home', 'The app for your rental'],
     ['privacy', 'Privacy policy'],
     ['support', 'Support'],
 ]);
