@@ -7,6 +7,7 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Throwable;
 
 /**
  * Talks to the messaging hub in tx-chatbot, which holds every conversation
@@ -72,7 +73,7 @@ class ChatHubClient
      */
     public function threads(string $contactId, int $page = 1, array $filters = []): array
     {
-        return $this->send(fn (PendingRequest $http) => $http->get('threads', array_filter([
+        return $this->get('threads', array_filter([
             'contact_id' => $contactId,
             'page' => $page,
             'search' => $filters['search'] ?? null,
@@ -88,7 +89,7 @@ class ChatHubClient
             'to' => $filters['to'] ?? null,
             // Conversations still going come before the ones we have closed.
             'sort' => 'open_first',
-        ], filled(...))))->json();
+        ], filled(...)))->json();
     }
 
     /**
@@ -98,7 +99,7 @@ class ChatHubClient
      */
     public function thread(int $threadId): array
     {
-        return $this->send(fn (PendingRequest $http) => $http->get("threads/{$threadId}"))->json('data');
+        return $this->get("threads/{$threadId}")->json('data');
     }
 
     /**
@@ -115,7 +116,7 @@ class ChatHubClient
 
         // The hub pages 100 at a time; a long thread is read in a few requests.
         do {
-            $page = $this->send(fn (PendingRequest $http) => $http->get("threads/{$threadId}/messages", ['after_id' => $afterId]))->json('data') ?? [];
+            $page = $this->get("threads/{$threadId}/messages", ['after_id' => $afterId])->json('data') ?? [];
             $messages = [...$messages, ...$page];
             $afterId = (int) (end($page)['id'] ?? $afterId);
         } while (count($page) === 100 && count($messages) < 1000);
@@ -151,7 +152,7 @@ class ChatHubClient
      */
     public function contact(string $contactId): array
     {
-        return $this->send(fn (PendingRequest $http) => $http->get("contacts/{$contactId}"))->json('data');
+        return $this->get("contacts/{$contactId}")->json('data');
     }
 
     /**
@@ -190,6 +191,24 @@ class ChatHubClient
                 'idempotency_key' => $idempotencyKey,
             ], filled(...)));
         })->json('data');
+    }
+
+    /**
+     * Read from the hub, trying once more if the first attempt never connected.
+     *
+     * The portal's DNS lookups occasionally stall for a few seconds, so a
+     * second try usually gets through. Only reads retry: a write that timed out
+     * may already have landed on the hub.
+     *
+     * @param  array<string, mixed>  $query
+     *
+     * @throws ChatHubException
+     */
+    private function get(string $path, array $query = []): Response
+    {
+        return $this->send(fn (PendingRequest $http) => $http
+            ->retry(2, 250, fn (Throwable $exception): bool => $exception instanceof ConnectionException, throw: false)
+            ->get($path, $query));
     }
 
     /**
