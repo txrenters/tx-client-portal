@@ -49,7 +49,7 @@
             $publicPages = [
                 'Welcome' => [
                     'title' => 'The app for your rental',
-                    'description' => 'The TexasRenters App for residents and owners: work orders, messages, documents, leases and payments. Free on the App Store for iPhone.',
+                    'description' => 'The TexasRenters App for residents and owners: work orders, messages, documents, leases and payments. Free on the App Store for iPhone and on Google Play for Android.',
                 ],
                 'Privacy' => [
                     'title' => 'Privacy policy',

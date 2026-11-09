@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Globe, LineChart } from '@lucide/vue';
-import { appStoreUrl } from '@/lib/appStore';
+import { appStoreUrl, googlePlayUrl } from '@/lib/appStore';
 import { home, login, privacy, support } from '@/routes';
 </script>
 
@@ -34,6 +34,14 @@ import { home, login, privacy, support } from '@/routes';
                 class="text-scrim-foreground/70 hover:text-scrim-foreground"
             >
                 App Store
+            </a>
+            <a
+                :href="googlePlayUrl"
+                target="_blank"
+                rel="noopener"
+                class="text-scrim-foreground/70 hover:text-scrim-foreground"
+            >
+                Google Play
             </a>
             <a
                 :href="`${home().url}#the-app`"

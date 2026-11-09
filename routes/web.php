@@ -3,6 +3,7 @@
 use App\Http\Controllers\Client\InvitationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailConfirmationController;
+use App\Http\Controllers\GetTheAppController;
 use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\LandingPageEventController;
 use App\Http\Controllers\MobileAppAssociationController;
@@ -13,6 +14,7 @@ Route::post('landing/events', LandingPageEventController::class)->middleware('th
 
 Route::inertia('privacy', 'Privacy')->name('privacy');
 Route::inertia('support', 'Support')->name('support');
+Route::get('get-app', GetTheAppController::class)->name('get-app');
 
 Route::get('invitations/{token}', [InvitationController::class, 'show'])->name('invitations.show');
 Route::post('invitations/{token}', [InvitationController::class, 'store'])

@@ -53,7 +53,7 @@ const steps = [
     {
         title: 'Download the app',
         description:
-            'It is free on the App Store for iPhone. Android is coming soon.',
+            'It is free on the App Store for iPhone and on Google Play for Android.',
     },
     {
         title: 'Sign up with your email',
@@ -391,7 +391,8 @@ const securityPoints = [
                         Get the app
                     </h2>
                     <p class="text-scrim-foreground/75 text-pretty">
-                        Free for iPhone. Sign up with the email we have on file.
+                        Free for iPhone and Android. Sign up with the email we
+                        have on file.
                     </p>
                     <AppStoreBadges />
                 </div>
@@ -399,12 +400,12 @@ const securityPoints = [
                 <!-- Someone on a computer needs a way to reach their phone. -->
                 <div class="hidden items-center gap-4 lg:flex">
                     <p class="text-scrim-foreground/75 w-32 text-right text-sm">
-                        Scan with your iPhone camera
+                        Scan with your phone camera
                     </p>
                     <div class="bg-scrim-foreground rounded-2xl p-3">
                         <img
-                            src="/images/app/app-store-qr.svg"
-                            alt="QR code for the TexasRenters App on the App Store"
+                            src="/images/app/get-the-app-qr.svg"
+                            alt="QR code for the TexasRenters App on the App Store and Google Play"
                             width="128"
                             height="128"
                             class="size-32"

@@ -25,6 +25,15 @@ test('offers the app on the App Store from the public pages', function () {
         ->assertSee('<meta name="apple-itunes-app" content="app-id=6818547029">', false);
 });
 
+test('sends a phone scanning the landing page QR code to its own app store', function (string $userAgent, string $store) {
+    $this->withHeader('User-Agent', $userAgent)
+        ->get(route('get-app'))
+        ->assertRedirect($store);
+})->with([
+    'Android' => ['Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36', 'https://play.google.com/store/apps/details?id=com.texasrenters.portal'],
+    'iPhone' => ['Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 Version/18.1 Mobile/15E148 Safari/604.1', 'https://apps.apple.com/us/app/texasrenters-app/id6818547029'],
+]);
+
 test('shows the welcome page to a signed-in client too', function () {
     $this->actingAs(User::factory()->resident()->create())
         ->get(route('home'))
