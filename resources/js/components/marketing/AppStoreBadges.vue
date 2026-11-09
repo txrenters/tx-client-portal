@@ -33,7 +33,7 @@ const { heading = '' } = defineProps<{
                         alt="Download on the App Store"
                         width="150"
                         height="50"
-                        class="h-[3.25rem] w-auto"
+                        class="h-12 w-auto sm:h-[3.25rem]"
                     />
                 </a>
             </li>
@@ -49,7 +49,7 @@ const { heading = '' } = defineProps<{
                         alt="Get it on Google Play"
                         width="564"
                         height="168"
-                        class="h-[3.25rem] w-auto"
+                        class="h-12 w-auto sm:h-[3.25rem]"
                     />
                 </a>
             </li>
