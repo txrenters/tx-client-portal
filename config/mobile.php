@@ -25,6 +25,8 @@ return [
     ],
 
     'android' => [
+        // The Google Play listing, for the landing page's QR code and invitation emails.
+        'play_store_url' => 'https://play.google.com/store/apps/details?id=com.texasrenters.portal',
         'package' => env('MOBILE_ANDROID_PACKAGE'),
         // SHA-256 signing certificate fingerprints ("AB:CD:..."), comma-separated for debug and release keys.
         'sha256_cert_fingerprints' => $list('MOBILE_ANDROID_SHA256_CERT_FINGERPRINTS'),

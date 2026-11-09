@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { appStoreUrl } from '@/lib/appStore';
+import { appStoreUrl, googlePlayUrl } from '@/lib/appStore';
 
 /**
- * Where to get the mobile apps. The App Store link uses Apple's own badge,
- * unaltered, as its guidelines ask. Android is not on Google Play yet, so it
- * is a label rather than a link; swap it for Google's badge when it launches.
- * The label takes its colour from where it sits, as these badges appear on both
- * the navy panels and the plain page background.
+ * Where to get the mobile apps, with Apple's and Google's own badges, as their
+ * guidelines ask. Google's is trimmed of its transparent margin only, so both
+ * badges stand the same height.
  */
 const { heading = '' } = defineProps<{
     heading?: string;
@@ -39,11 +37,21 @@ const { heading = '' } = defineProps<{
                     />
                 </a>
             </li>
-            <li
-                class="flex h-[3.25rem] flex-col justify-center rounded-lg border border-current/25 px-4 leading-tight opacity-80"
-            >
-                <span class="text-[0.7rem]">Coming soon</span>
-                <span class="text-sm font-semibold">Android</span>
+            <li>
+                <a
+                    :href="googlePlayUrl"
+                    target="_blank"
+                    rel="noopener"
+                    class="focus-visible:ring-ring/50 block rounded-lg outline-none focus-visible:ring-4"
+                >
+                    <img
+                        src="/images/app/get-it-on-google-play.png"
+                        alt="Get it on Google Play"
+                        width="564"
+                        height="168"
+                        class="h-[3.25rem] w-auto"
+                    />
+                </a>
             </li>
         </ul>
     </div>
