@@ -6,6 +6,7 @@ use App\Models\ClientAccount;
 use App\Models\ClientInvitation;
 use App\Models\HelpRequest;
 use App\Models\PropertywareApproval;
+use App\Models\SignInEvent;
 use App\Models\User;
 use App\Models\WorkOrderApproval;
 use Illuminate\Support\Collection;
@@ -107,15 +108,35 @@ class PortalActivity
             ]);
 
         $sessions = collect(DB::table('personal_access_tokens')
-            ->whereNotNull('last_used_at')
-            ->orderByDesc('last_used_at')
+            ->leftJoin('users', fn ($join) => $join
+                ->on('users.id', '=', 'personal_access_tokens.tokenable_id')
+                ->where('personal_access_tokens.tokenable_type', (new User)->getMorphClass()))
+            ->whereNotNull('personal_access_tokens.last_used_at')
+            // The App Review logins' sessions are not for staff.
+            ->where(fn ($query) => $query->whereNull('users.is_demo')->orWhere('users.is_demo', false))
+            ->orderByDesc('personal_access_tokens.last_used_at')
             ->limit(50)
-            ->get(['name', 'last_used_at']))
+            ->get(['personal_access_tokens.last_used_at', 'users.email']))
             ->map(fn (object $token): array => [
                 'type' => 'app_session',
                 'at' => (string) $token->last_used_at,
                 'summary' => 'Used the mobile app',
-                'actor' => null,
+                'actor' => $token->email,
+            ]);
+
+        // Failed attempts stay on the Security page; this feed is who came in.
+        $signIns = SignInEvent::query()
+            ->where('event', 'signed_in')
+            // The App Review logins' sign-ins are not for staff.
+            ->whereDoesntHave('user', fn ($query) => $query->where('is_demo', true))
+            ->latest()
+            ->limit(50)
+            ->get(['email', 'channel', 'created_at'])
+            ->map(fn (SignInEvent $signIn): array => [
+                'type' => 'signed_in',
+                'at' => $signIn->created_at->toIso8601String(),
+                'summary' => $signIn->channel === 'app' ? 'Signed in to the app' : 'Signed in on the web',
+                'actor' => $signIn->email,
             ]);
 
         $helpRequests = HelpRequest::query()
@@ -143,7 +164,7 @@ class PortalActivity
                 'actor' => $approval->approved_by,
             ]);
 
-        return collect([$signups, $links, $invitations, $approvals, $approvalHistory, $sessions, $helpRequests, $this->audit->recent(50)])->flatten(1);
+        return collect([$signups, $links, $invitations, $approvals, $approvalHistory, $sessions, $signIns, $helpRequests, $this->audit->recent(50)])->flatten(1);
     }
 
     /**

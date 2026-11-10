@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ClientAccount;
+use App\Models\SignInEvent;
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Notification;
@@ -123,4 +124,41 @@ test('the activity page reports what has happened', function () {
         ->get(route('admin.activity'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('admin/Activity'));
+});
+
+test('the activity feed shows who signed in, but not failed attempts', function () {
+    $client = User::factory()->create(['email' => 'dana@example.com']);
+    SignInEvent::create(['user_id' => $client->id, 'email' => 'dana@example.com', 'event' => 'signed_in', 'channel' => 'web', 'method' => 'password']);
+    SignInEvent::create(['user_id' => $client->id, 'email' => 'dana@example.com', 'event' => 'signed_in', 'channel' => 'app', 'method' => 'password']);
+    SignInEvent::create(['email' => 'nobody@example.com', 'event' => 'failed', 'channel' => 'web', 'method' => 'password']);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.activity'))
+        ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($page) => $page->where('activity', function ($events) {
+            $signIns = collect($events)->where('type', 'signed_in');
+
+            return $signIns->pluck('summary')->sort()->values()->all() === ['Signed in on the web', 'Signed in to the app']
+                && $signIns->every(fn ($event) => $event['actor'] === 'dana@example.com')
+                && collect($events)->doesntContain('actor', 'nobody@example.com');
+        })));
+});
+
+test('the activity feed leaves out the App Review logins signing in', function () {
+    $demo = User::factory()->create(['is_demo' => true]);
+    SignInEvent::create(['user_id' => $demo->id, 'email' => $demo->email, 'event' => 'signed_in', 'channel' => 'app']);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.activity'))
+        ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($page) => $page->where('activity', fn ($events) => collect($events)->doesntContain('type', 'signed_in'))));
+});
+
+test('the activity feed shows who used the mobile app', function () {
+    $client = User::factory()->create(['email' => 'dana@example.com']);
+    $client->createToken('iphone')->accessToken->forceFill(['last_used_at' => now()])->save();
+    $demo = User::factory()->demo()->create();
+    $demo->createToken('iphone')->accessToken->forceFill(['last_used_at' => now()])->save();
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.activity'))
+        ->assertInertia(fn ($page) => $page->loadDeferredProps(fn ($page) => $page->where('activity', fn ($events) => collect($events)->where('type', 'app_session')->pluck('actor')->all() === ['dana@example.com'])));
 });
