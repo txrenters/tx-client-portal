@@ -17,7 +17,7 @@ return [
     'client_secret' => env('PORTAL_CLIENT_SECRET'),
 
     // Must match the app's Short ID in the portal; the portal lists it in the `apps` claim.
-    'app_slug' => env('PORTAL_APP_SLUG', 'tx-client'),
+    'app_slug' => env('PORTAL_APP_SLUG', 'texasrenters-web-app'),
 
     // Company email domains: only a verified address on one of these links a portal person to a staff account.
     'allowed_domains' => array_values(array_filter(array_map('trim', explode(',', (string) env('PORTAL_ALLOWED_DOMAINS', 'texasrenters.com,texra.net'))))),
