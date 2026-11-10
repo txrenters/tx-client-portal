@@ -46,6 +46,7 @@ class RecordSignInEvents
     private function method(): string
     {
         return match (true) {
+            request()->routeIs('portal.*') => 'portal',
             request()->routeIs('*passkey*') => 'passkey',
             request()->routeIs('two-factor.*') => 'two_factor',
             default => 'password',
