@@ -36,10 +36,30 @@ test('gives up after a second failed connection', function () {
     Http::assertSentCount(2);
 });
 
-test('does not read again when the hub answers with an error', function () {
+test('reads again when the hub fails on its side', function () {
+    Http::fake([
+        'support.test/api/v1/threads/7' => Http::sequence()
+            ->push([], 500)
+            ->push(['data' => ['id' => 7, 'subject' => 'Leak']]),
+    ]);
+
+    expect($this->hub->thread(7))->toBe(['id' => 7, 'subject' => 'Leak']);
+
+    Http::assertSentCount(2);
+});
+
+test('gives up after the hub fails twice', function () {
     Http::fake(['support.test/api/v1/threads/7' => Http::response([], 500)]);
 
     expect(fn () => $this->hub->thread(7))->toThrow(ChatHubException::class, 'The messaging hub answered 500.');
+
+    Http::assertSentCount(2);
+});
+
+test('does not read again when the hub refuses the request', function () {
+    Http::fake(['support.test/api/v1/threads/7' => Http::response([], 404)]);
+
+    expect(fn () => $this->hub->thread(7))->toThrow(ChatHubException::class, 'The messaging hub answered 404.');
 
     Http::assertSentCount(1);
 });
