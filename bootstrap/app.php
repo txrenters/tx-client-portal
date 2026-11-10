@@ -11,6 +11,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SyncPropertywareAccounts;
 use App\Http\Middleware\TrackLastSeen;
+use App\PortalSso\EnsurePortalSession;
 use App\Services\Admin\ErrorAlerts;
 use App\Services\Propertyware\PropertywareException;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
@@ -51,6 +52,8 @@ return Application::configure(basePath: dirname(__DIR__))
             EnsureUserIsNotSuspended::class,
             EnsureLeaseIsNotTerminated::class,
             EnsureClientWebIsNotPaused::class,
+            // Staff sessions re-check with the TR Staff Portal every few minutes.
+            EnsurePortalSession::class,
             TrackLastSeen::class,
             // Before anything reads Propertyware for the page: an App Review login sees made-up records.
             DemoMode::class,
@@ -58,6 +61,9 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        // The portal posts signed logout tokens server-to-server; the signature replaces CSRF.
+        $middleware->validateCsrfTokens(except: ['auth/portal/backchannel-logout']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

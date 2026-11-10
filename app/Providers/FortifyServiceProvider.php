@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Models\User;
+use App\PortalSso\PortalLogoutResponse;
+use App\PortalSso\StaffAccounts;
 use App\Services\Admin\SignInLog;
 use App\Services\Propertyware\TerminatedLeaseGate;
 use App\Services\Security\ClientWebPause;
@@ -17,6 +19,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\LogoutResponse;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 use Laravel\Passkeys\Contracts\PasskeyUser;
@@ -29,7 +32,8 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Staff who signed in through the TR Staff Portal go back to it after signing out.
+        $this->app->singleton(LogoutResponse::class, PortalLogoutResponse::class);
     }
 
     /**
@@ -57,6 +61,13 @@ class FortifyServiceProvider extends ServiceProvider
             $user = User::query()->where(Fortify::username(), $request->input(Fortify::username()))->first();
 
             if ($user === null || ! Hash::check((string) $request->input('password'), $user->password)) {
+                return null;
+            }
+
+            // While the TR Staff Portal is on, staff sign in only through it (unless the
+            // emergency switch is on). Fortify's one generic message, so the answer never
+            // reveals who is staff. Residents and owners are unaffected.
+            if (StaffAccounts::mustUsePortal($user)) {
                 return null;
             }
 
@@ -89,6 +100,11 @@ class FortifyServiceProvider extends ServiceProvider
 
         // Passkey sign-ins on the web and in the apps both ask this before logging in.
         Passkeys::authorizeLoginUsing(function (Request $request, PasskeyUser $user): bool {
+            // Same rule as the password form, for the website only; the apps are left alone.
+            if ($user instanceof User && ! $request->is('api/*') && StaffAccounts::mustUsePortal($user)) {
+                return false;
+            }
+
             if ($user instanceof User && app(TerminatedLeaseGate::class)->shutsOut($user)) {
                 app(SignInLog::class)->record($request, 'blocked', $user, null, $request->is('api/*') ? 'app' : 'web', 'passkey');
 
@@ -116,6 +132,7 @@ class FortifyServiceProvider extends ServiceProvider
             'canRegister' => Features::enabled(Features::registration()),
             'status' => $request->session()->get('status'),
             'accessPaused' => app(ClientWebPause::class)->isPaused(),
+            'portalEnabled' => (bool) config('portal.enabled'),
         ]));
 
         Fortify::registerView(fn () => Inertia::render('auth/Register', [

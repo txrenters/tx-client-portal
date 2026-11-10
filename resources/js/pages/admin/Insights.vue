@@ -177,6 +177,7 @@ const eventLabels: Record<AdminSignInEvent['event'], string> = {
 const methodLabels: Record<string, string> = {
     password: 'password',
     passkey: 'passkey',
+    portal: 'TR Staff Portal',
     remembered: 'remembered device',
     two_factor: 'password + 2FA',
 };

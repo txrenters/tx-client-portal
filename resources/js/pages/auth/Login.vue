@@ -27,6 +27,7 @@ defineProps<{
     canResetPassword: boolean;
     canRegister: boolean;
     accessPaused?: boolean;
+    portalEnabled?: boolean;
 }>();
 </script>
 
@@ -114,6 +115,22 @@ defineProps<{
         >
             Don't have an account?
             <TextLink :href="register()" :tabindex="6">Sign up</TextLink>
+        </div>
+
+        <div
+            v-if="portalEnabled"
+            class="text-muted-foreground border-t pt-4 text-center text-sm"
+        >
+            TexasRenters staff?
+            <!-- A full page load: the sign-in continues on login.texasrenters.com. -->
+            <a
+                href="/auth/portal/redirect"
+                :tabindex="7"
+                data-test="portal-login"
+                class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+            >
+                Sign in with TR Staff Portal
+            </a>
         </div>
     </Form>
 </template>

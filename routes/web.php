@@ -35,6 +35,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 require __DIR__.'/admin.php';
 require __DIR__.'/client.php';
 require __DIR__.'/settings.php';
+require __DIR__.'/portal.php';
 
 // Unknown addresses go through the web middleware like any page, so the 404
 // page knows who is signed in and shows their own header and dashboard link.
