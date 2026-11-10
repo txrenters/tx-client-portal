@@ -4,6 +4,7 @@ import {
     CircleCheck,
     ClipboardCheck,
     LifeBuoy,
+    LogIn,
     MailCheck,
     ShieldCheck,
     Smartphone,
@@ -32,6 +33,7 @@ const icons: Record<string, unknown> = {
     work_order_declined: Wrench,
     propertyware_approval: ClipboardCheck,
     app_session: Smartphone,
+    signed_in: LogIn,
     help_request: LifeBuoy,
     admin_action: ShieldCheck,
 };

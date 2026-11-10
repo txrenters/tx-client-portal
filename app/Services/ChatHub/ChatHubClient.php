@@ -4,6 +4,7 @@ namespace App\Services\ChatHub;
 
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
@@ -194,11 +195,13 @@ class ChatHubClient
     }
 
     /**
-     * Read from the hub, trying once more if the first attempt never connected.
+     * Read from the hub, trying once more if the first attempt never connected
+     * or the hub failed on its side.
      *
-     * The portal's DNS lookups occasionally stall for a few seconds, so a
-     * second try usually gets through. Only reads retry: a write that timed out
-     * may already have landed on the hub.
+     * The portal's DNS lookups occasionally stall for a few seconds, and the
+     * hub's rate limiter can briefly deadlock in MySQL under concurrent reads,
+     * so a second try usually gets through. A 4xx is final. Only reads retry:
+     * a write that timed out may already have landed on the hub.
      *
      * @param  array<string, mixed>  $query
      *
@@ -207,7 +210,8 @@ class ChatHubClient
     private function get(string $path, array $query = []): Response
     {
         return $this->send(fn (PendingRequest $http) => $http
-            ->retry(2, 250, fn (Throwable $exception): bool => $exception instanceof ConnectionException, throw: false)
+            ->retry(2, 250, fn (Throwable $exception): bool => $exception instanceof ConnectionException
+                || ($exception instanceof RequestException && $exception->response->serverError()), throw: false)
             ->get($path, $query));
     }
 
