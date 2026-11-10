@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ClientAccount;
+use App\Models\SignInEvent;
 use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Notification;
@@ -62,6 +63,16 @@ test('refuses a wrong password without issuing a token', function () {
     ])->assertJsonValidationErrors(['email' => 'These credentials do not match our records.']);
 
     expect($user->tokens()->count())->toBe(0);
+});
+
+test('tells someone with no login to create an account', function () {
+    $this->postJson(route('api.v1.auth.login'), [
+        'email' => 'new-tenant@example.com',
+        'password' => 'their-propertyware-password',
+        'device_name' => 'Pixel',
+    ])->assertJsonValidationErrors(['email' => 'There is no account with this email yet. Tap Create an account below to set one up with the email TexasRenters has on file.']);
+
+    expect(SignInEvent::where('email', 'new-tenant@example.com')->sole()->event)->toBe('failed');
 });
 
 test('asks for an authenticator code when two factor is enabled', function () {

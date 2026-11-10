@@ -49,7 +49,12 @@ class AuthController extends Controller
         if ($user === null || ! Hash::check($request->validated('password'), $user->password)) {
             $log->record($request, 'failed', $user, $email, 'app', 'password');
 
-            throw ValidationException::withMessages(['email' => __('auth.failed')]);
+            // Most failed app sign-ins are clients trying their Propertyware
+            // password before they have made a login here, so point them at
+            // sign-up. Sign-up already says whether an email is a client's.
+            throw ValidationException::withMessages(['email' => $user === null
+                ? __('There is no account with this email yet. Tap Create an account below to set one up with the email TexasRenters has on file.')
+                : __('auth.failed')]);
         }
 
         if ($user->isSuspended()) {
