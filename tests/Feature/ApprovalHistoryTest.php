@@ -1,11 +1,13 @@
 <?php
 
+use App\Console\Commands\RecordApprovalHistory;
 use App\Enums\StaffRole;
 use App\Models\PropertywareApproval;
 use App\Models\User;
 use App\Services\Propertyware\ApprovalHistory;
 use App\Services\Propertyware\PropertywareException;
 use App\Services\Propertyware\PropertywareSoap;
+use App\Services\Propertyware\PropertywareUnavailableException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
@@ -92,6 +94,37 @@ test('reads the same work orders again next run when Propertyware fails', functi
 
     expect(Cache::get(ApprovalHistory::SINCE))->toBe('2026-10-28T09:00:00+00:00')
         ->and(PropertywareApproval::count())->toBe(0);
+});
+
+test('a short Propertyware outage is waited out, and a long one fails the run', function () {
+    $this->mock(PropertywareSoap::class)->shouldReceive('isConfigured')->andReturnTrue();
+    $this->mock(ApprovalHistory::class)->shouldReceive('record')
+        ->andThrow(new PropertywareUnavailableException('Propertyware returned 503 for [workorders].'));
+
+    $this->artisan('approvals:history')->assertSuccessful();
+    $this->travel(RecordApprovalHistory::UNAVAILABLE_GRACE_MINUTES - 30)->minutes();
+    $this->artisan('approvals:history')->assertSuccessful();
+    $this->travel(30)->minutes();
+    $this->artisan('approvals:history')->assertFailed();
+});
+
+test('the outage clock restarts once a run succeeds', function () {
+    Cache::forever(RecordApprovalHistory::UNAVAILABLE_SINCE, now()->subHours(5)->toIso8601String());
+    $soap = $this->mock(PropertywareSoap::class);
+    $soap->shouldReceive('isConfigured')->andReturnTrue();
+    $soap->shouldReceive('workOrderApproval')->andReturn(propertywareApproval());
+
+    $this->artisan('approvals:history')->assertSuccessful();
+
+    expect(Cache::has(RecordApprovalHistory::UNAVAILABLE_SINCE))->toBeFalse();
+});
+
+test('Propertyware rejecting the request fails the run straight away', function () {
+    $this->mock(PropertywareSoap::class)->shouldReceive('isConfigured')->andReturnTrue();
+    $this->mock(ApprovalHistory::class)->shouldReceive('record')
+        ->andThrow(new PropertywareException('Propertyware returned 401 for [workorders].'));
+
+    $this->artisan('approvals:history')->assertFailed();
 });
 
 test('admins see Propertyware approval changes in the activity feed', function () {

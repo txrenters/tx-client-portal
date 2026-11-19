@@ -100,6 +100,9 @@ test('a client attaches screenshots so staff can see what they saw', function ()
 test('a large photo attached to a help request is kept scaled down', function () {
     Storage::fake('local');
     Notification::fake();
+    // The production limit (deploy/docker/php/php.ini), whatever the machine running the tests allows.
+    $memoryLimit = ini_get('memory_limit');
+    ini_set('memory_limit', '256M');
 
     $this->actingAs($this->user)
         ->post(route('help.store'), [
@@ -115,6 +118,8 @@ test('a large photo attached to a help request is kept scaled down', function ()
     expect([$size[0], $size[1]])->toBe([2000, 1500])
         ->and($attachment->name)->toBe('phone.jpg')
         ->and($attachment->mime_type)->toBe('image/jpeg');
+
+    ini_set('memory_limit', $memoryLimit);
 });
 
 test('a help request takes at most five files, and only pictures and PDFs', function () {
