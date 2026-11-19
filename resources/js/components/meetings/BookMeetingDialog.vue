@@ -40,6 +40,8 @@ const http = useHttp();
 const slots = ref<Slot[] | null>(null);
 const loadFailed = ref(false);
 const selectedDay = ref<string | null>(null);
+/** The first day asked about: today, in Houston, when the times were loaded. */
+const firstDay = ref('');
 
 const form = useForm({
     event_type: '',
@@ -55,6 +57,13 @@ const dayLabel = appDateFormatter({
     day: 'numeric',
 });
 const timeLabel = appDateFormatter({ hour: 'numeric', minute: '2-digit' });
+/** A time of day in Houston, such as "13:30", to line the same time up across days. */
+const timeKey = new Intl.DateTimeFormat('en-GB', {
+    timeZone: APP_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+});
 
 function addDays(day: string, count: number): string {
     const date = new Date(`${day}T12:00:00Z`);
@@ -71,6 +80,7 @@ async function loadSlots(): Promise<void> {
     slots.value = null;
     loadFailed.value = false;
     const from = dayKey.format(new Date());
+    firstDay.value = from;
 
     try {
         const response = (await http.submit(
@@ -80,13 +90,18 @@ async function loadSlots(): Promise<void> {
         )) as { data: Slot[] };
 
         slots.value = response.data;
-        selectedDay.value = days.value[0]?.key ?? null;
+        selectedDay.value =
+            days.value.find((day) => day.times.length > 0)?.key ?? null;
     } catch {
         loadFailed.value = true;
     }
 }
 
-/** The days with at least one open time, in order. */
+/**
+ * Every day from today to the last one coresched has a time on, so a day
+ * with nothing open (a weekend, a holiday, fully booked) shows but can't be
+ * picked, as on a calendar.
+ */
 const days = computed(() => {
     const byDay = new Map<string, Slot[]>();
 
@@ -95,16 +110,55 @@ const days = computed(() => {
         byDay.set(key, [...(byDay.get(key) ?? []), slot]);
     }
 
-    return [...byDay.entries()].map(([key, times]) => ({
-        key,
-        label: dayLabel.format(new Date(times[0].startsAt)),
-        times,
-    }));
+    const lastDay = [...byDay.keys()].sort().at(-1);
+
+    if (!lastDay || !firstDay.value) {
+        return [];
+    }
+
+    const all = [];
+
+    for (let key = firstDay.value; key <= lastDay; key = addDays(key, 1)) {
+        all.push({
+            key,
+            label: dayLabel.format(new Date(`${key}T12:00:00Z`)),
+            times: byDay.get(key) ?? [],
+        });
+    }
+
+    return all;
 });
 
-const timesForDay = computed(
-    () => days.value.find((day) => day.key === selectedDay.value)?.times ?? [],
-);
+/**
+ * Every time this meeting is offered on any day, earliest first. On the day
+ * picked, the ones not open there (booked, past, or outside that day's hours)
+ * show but can't be picked.
+ */
+const timeGrid = computed(() => {
+    const grid = new Map<string, string>();
+
+    for (const slot of slots.value ?? []) {
+        const at = new Date(slot.startsAt);
+        grid.set(timeKey.format(at), timeLabel.format(at));
+    }
+
+    return [...grid.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, label]) => ({ key, label }));
+});
+
+const timesForDay = computed(() => {
+    const open = new Map(
+        (
+            days.value.find((day) => day.key === selectedDay.value)?.times ?? []
+        ).map((slot) => [timeKey.format(new Date(slot.startsAt)), slot]),
+    );
+
+    return timeGrid.value.map((time) => ({
+        ...time,
+        slot: open.get(time.key) ?? null,
+    }));
+});
 
 watch(open, (isOpen) => {
     if (isOpen && props.meeting) {
@@ -183,6 +237,7 @@ function book(): void {
                             :key="day.key"
                             type="button"
                             size="sm"
+                            :disabled="day.times.length === 0"
                             :variant="
                                 day.key === selectedDay ? 'default' : 'outline'
                             "
@@ -202,19 +257,24 @@ function book(): void {
                     <Label>Time (Houston)</Label>
                     <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
                         <Button
-                            v-for="slot in timesForDay"
-                            :key="slot.startsAt"
+                            v-for="time in timesForDay"
+                            :key="time.key"
                             type="button"
                             size="sm"
+                            :disabled="time.slot === null"
                             :variant="
-                                slot.startsAt === form.starts_at
+                                time.slot &&
+                                time.slot.startsAt === form.starts_at
                                     ? 'default'
                                     : 'outline'
                             "
-                            :aria-pressed="slot.startsAt === form.starts_at"
-                            @click="form.starts_at = slot.startsAt"
+                            :aria-pressed="
+                                time.slot !== null &&
+                                time.slot.startsAt === form.starts_at
+                            "
+                            @click="form.starts_at = time.slot?.startsAt ?? ''"
                         >
-                            {{ timeLabel.format(new Date(slot.startsAt)) }}
+                            {{ time.label }}
                         </Button>
                     </div>
                     <p
