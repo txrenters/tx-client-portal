@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
-import { CalendarClock, ExternalLink } from '@lucide/vue';
-import { onMounted, onUnmounted } from 'vue';
+import { CalendarClock, Clock, ExternalLink, MapPin } from '@lucide/vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import AppCard from '@/components/AppCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import BookMeetingDialog from '@/components/meetings/BookMeetingDialog.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { appDateFormatter } from '@/lib/timezone';
 import { dashboard } from '@/routes/owner';
 import { index } from '@/routes/owner/meetings';
-import type { UpcomingMeeting } from '@/types';
+import type { MeetingType, UpcomingMeeting } from '@/types';
 
 defineOptions({
     layout: {
@@ -24,8 +25,10 @@ defineOptions({
 
 const props = defineProps<{
     available: boolean;
-    /** tx-scheduling's departments page, where the meeting is chosen and booked. */
+    /** Coresched's own departments page, offered as a fallback. */
     bookingUrl: string | null;
+    /** The meetings staff approved for owners. Undefined while loading. */
+    meetingTypes?: MeetingType[];
     /** This login's private channel, where booking changes are announced. */
     channel: string;
     /** Undefined while loading. */
@@ -35,9 +38,9 @@ const props = defineProps<{
 /**
  * Pick up a booking made in the other tab.
  *
- * Booking happens on scheduling's own page, and scheduling's webhook tells
- * the portal the moment one is booked, moved or cancelled. Only the booked
- * list is refetched, so nothing else on the page flickers.
+ * Coresched's webhook tells the portal the moment a booking is made, moved
+ * or cancelled, here or on coresched's own pages. Only the booked list is
+ * refetched, so nothing else on the page flickers.
  */
 if (props.available) {
     useEcho(props.channel, '.meetings.updated', () =>
@@ -62,6 +65,14 @@ onUnmounted(() =>
     document.removeEventListener('visibilitychange', refreshBooked),
 );
 
+const booking = ref<MeetingType | null>(null);
+const isBooking = ref(false);
+
+function startBooking(meeting: MeetingType): void {
+    booking.value = meeting;
+    isBooking.value = true;
+}
+
 const when = appDateFormatter({
     weekday: 'short',
     month: 'short',
@@ -80,32 +91,74 @@ const when = appDateFormatter({
             description="Meet with our leasing, maintenance or accounting team."
         />
 
-        <AppCard v-if="bookingUrl">
+        <AppCard v-if="available" title="Book a meeting">
             <div
-                class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                v-if="meetingTypes === undefined"
+                class="grid gap-3 sm:grid-cols-2"
+                aria-busy="true"
             >
-                <div class="flex items-start gap-3">
-                    <CalendarClock
-                        class="text-primary mt-0.5 size-5 shrink-0"
-                    />
-                    <div class="flex flex-col gap-1">
-                        <h2 class="font-heading font-semibold">
-                            Book a meeting
-                        </h2>
-                        <p class="text-muted-foreground text-sm text-pretty">
-                            Choose a department, how you'd like to meet and a
-                            time that suits you. Booking opens on our scheduling
-                            page.
-                        </p>
-                    </div>
-                </div>
-                <Button as-child class="shrink-0">
-                    <a :href="bookingUrl" target="_blank" rel="noreferrer">
-                        Choose a department
-                        <ExternalLink />
-                    </a>
-                </Button>
+                <Skeleton v-for="row in 4" :key="row" class="h-20 w-full" />
             </div>
+
+            <p
+                v-else-if="meetingTypes.length === 0"
+                class="text-muted-foreground text-sm"
+            >
+                There are no meetings to book right now. Please send us a
+                message instead.
+            </p>
+
+            <ul v-else class="grid gap-3 sm:grid-cols-2">
+                <li
+                    v-for="meeting in meetingTypes"
+                    :key="meeting.slug"
+                    class="border-border flex items-center justify-between gap-3 rounded-xl border p-3"
+                >
+                    <span class="min-w-0">
+                        <span class="block font-medium text-pretty">{{
+                            meeting.name
+                        }}</span>
+                        <span
+                            class="text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 text-xs"
+                        >
+                            <span class="inline-flex items-center gap-1">
+                                <Clock class="size-3" aria-hidden="true" />
+                                {{ meeting.durationMinutes }} min
+                            </span>
+                            <span
+                                v-if="meeting.locationLabel"
+                                class="inline-flex items-center gap-1"
+                            >
+                                <MapPin class="size-3" aria-hidden="true" />
+                                {{ meeting.locationLabel }}
+                            </span>
+                        </span>
+                    </span>
+                    <Button
+                        size="sm"
+                        class="shrink-0"
+                        @click="startBooking(meeting)"
+                    >
+                        Book
+                    </Button>
+                </li>
+            </ul>
+
+            <p
+                v-if="bookingUrl"
+                class="text-muted-foreground mt-5 border-t pt-4 text-xs"
+            >
+                Prefer our scheduling page?
+                <a
+                    :href="bookingUrl"
+                    target="_blank"
+                    rel="noreferrer"
+                    class="text-primary inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline"
+                >
+                    Choose a department there
+                    <ExternalLink class="size-3" aria-hidden="true" />
+                </a>
+            </p>
         </AppCard>
 
         <EmptyState
@@ -114,6 +167,8 @@ const when = appDateFormatter({
             title="Booking isn't switched on yet"
             description="Meetings will appear here once scheduling is connected."
         />
+
+        <BookMeetingDialog v-model:open="isBooking" :meeting="booking" />
 
         <template v-if="available">
             <AppCard
