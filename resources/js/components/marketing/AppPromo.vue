@@ -1,22 +1,16 @@
 <script setup lang="ts">
 import { Play } from '@lucide/vue';
-import { nextTick, ref, useTemplateRef } from 'vue';
+import { ref } from 'vue';
 
 /**
- * The app's promo video, from tx-mobile's store/promo (Remotion), compressed
- * into public/videos. It is landscape from tablets up and portrait on phones,
- * where it fills the screen. preload="none" with a poster means only the one
- * being shown downloads, and only once it is played.
+ * The app's promo video, hosted on the TexasRenters YouTube channel. Until it
+ * is played the section shows a local poster, so YouTube's player (and its
+ * cookies) only loads for visitors who click play.
  */
-const video = useTemplateRef<HTMLVideoElement>('video');
-const isVideoStarted = ref(false);
+const youTubeVideoId = '8oDalAMczQs';
+const embedUrl = `https://www.youtube-nocookie.com/embed/${youTubeVideoId}?autoplay=1&rel=0&playsinline=1`;
 
-/** Swap the poster's play button for the player's own controls. */
-const playVideo = async (): Promise<void> => {
-    isVideoStarted.value = true;
-    await nextTick();
-    video.value?.play();
-};
+const isVideoStarted = ref(false);
 </script>
 
 <template>
@@ -32,36 +26,36 @@ const playVideo = async (): Promise<void> => {
         </h2>
 
         <div
-            class="bg-muted ring-border relative mx-auto mt-8 aspect-[9/16] max-w-sm overflow-hidden rounded-[2rem] ring-1 md:aspect-video md:max-w-none"
+            class="bg-muted ring-border relative mt-8 aspect-video overflow-hidden rounded-2xl ring-1 sm:rounded-[2rem]"
         >
-            <video
-                ref="video"
-                class="hidden size-full object-cover md:block"
-                src="/videos/app-promo-landscape.mp4"
-                poster="/videos/app-promo-landscape.webp"
-                preload="none"
-                playsinline
-                :controls="isVideoStarted"
-                aria-label="TexasRenters App promo video"
-            ></video>
-            <video
-                class="size-full object-cover md:hidden"
-                src="/videos/app-promo-portrait.mp4"
-                poster="/videos/app-promo-portrait.webp"
-                preload="none"
-                playsinline
-                controls
-                aria-label="TexasRenters App promo video"
-            ></video>
+            <iframe
+                v-if="isVideoStarted"
+                class="size-full"
+                :src="embedUrl"
+                title="Introducing the TexasRenters App"
+                allow="
+                    autoplay;
+                    encrypted-media;
+                    picture-in-picture;
+                    fullscreen;
+                "
+                referrerpolicy="strict-origin-when-cross-origin"
+                allowfullscreen
+            ></iframe>
 
             <button
-                v-if="!isVideoStarted"
+                v-else
                 type="button"
-                class="group focus-visible:ring-ring/50 absolute inset-0 hidden items-end justify-start p-8 outline-none focus-visible:ring-4 md:flex"
-                @click="playVideo"
+                class="group focus-visible:ring-ring/50 absolute inset-0 flex items-end justify-start p-4 outline-none focus-visible:ring-4 sm:p-8"
+                @click="isVideoStarted = true"
             >
+                <img
+                    src="/videos/app-promo-landscape.webp"
+                    alt=""
+                    class="absolute inset-0 size-full object-cover"
+                />
                 <span
-                    class="bg-primary text-primary-foreground flex items-center gap-3 rounded-full py-2 pr-5 pl-2 shadow-xl transition-transform duration-200 group-hover:scale-105 motion-reduce:transition-none"
+                    class="bg-primary text-primary-foreground relative flex items-center gap-3 rounded-full py-2 pr-5 pl-2 shadow-xl transition-transform duration-200 group-hover:scale-105 motion-reduce:transition-none"
                 >
                     <span
                         class="bg-primary-foreground text-primary flex size-10 items-center justify-center rounded-full"
@@ -69,9 +63,6 @@ const playVideo = async (): Promise<void> => {
                         <Play class="size-4 translate-x-px fill-current" />
                     </span>
                     <span class="font-medium">Watch the video</span>
-                    <span class="text-primary-foreground/70 tabular-nums">
-                        0:57
-                    </span>
                 </span>
             </button>
         </div>

@@ -12,8 +12,9 @@ import {
 import { events as landingEvents } from '@/routes/landing';
 
 /**
- * The web portal's tutorial in a dialog. The video comes from
- * ~/projects/tx-web-tutorial (Remotion), compressed into public/videos.
+ * The web portal's tutorial in a dialog, played from the TexasRenters YouTube
+ * channel. The player only mounts while the dialog is open, so closing it stops
+ * the video.
  */
 
 /** Tells Insights the tutorial was played; it counts each visitor once a day. */
@@ -42,14 +43,19 @@ const trackPlay = (isOpen: boolean): void => {
                 Signing up, reporting a repair, messaging the team and finding
                 your documents, start to finish.
             </DialogDescription>
-            <video
+            <iframe
                 class="aspect-video w-full"
-                src="/videos/web-tutorial.mp4"
-                poster="/videos/web-tutorial.webp"
-                autoplay
-                controls
-                playsinline
-            ></video>
+                src="https://www.youtube-nocookie.com/embed/Xp0__SI4WgY?autoplay=1&rel=0&playsinline=1"
+                title="TexasRenters Web Portal Tutorial"
+                allow="
+                    autoplay;
+                    encrypted-media;
+                    picture-in-picture;
+                    fullscreen;
+                "
+                referrerpolicy="strict-origin-when-cross-origin"
+                allowfullscreen
+            ></iframe>
         </DialogContent>
     </Dialog>
 </template>
