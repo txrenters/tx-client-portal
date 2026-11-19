@@ -3,6 +3,16 @@
 use App\Services\Images\UploadedPhotos;
 use Illuminate\Http\UploadedFile;
 
+// The production limit (deploy/docker/php/php.ini), whatever the machine running the tests allows.
+beforeEach(function () {
+    $this->memoryLimit = ini_get('memory_limit');
+    ini_set('memory_limit', '256M');
+});
+
+afterEach(function () {
+    ini_set('memory_limit', $this->memoryLimit);
+});
+
 /**
  * A JPEG with an EXIF block naming the camera, as a phone photo carries one.
  */
@@ -36,6 +46,30 @@ test('a large phone photo is turned upright, scaled down and stripped of its EXI
         ->and($optimized->getClientOriginalName())->toBe('kitchen.jpeg')
         ->and($optimized->getMimeType())->toBe('image/jpeg')
         ->and($optimized->getSize())->toBeLessThan($photo->getSize());
+});
+
+test('a sideways phone photo is scaled down and turned upright', function () {
+    $image = imagecreatetruecolor(4000, 3000);
+    ob_start();
+    imagejpeg($image, null, 90);
+    $jpeg = (string) ob_get_clean();
+
+    // IFD0 with one entry: Orientation (0x0112), SHORT, 6 = rotate 90° clockwise to view.
+    $tiff = 'II*'."\0".pack('V', 8).pack('v', 1).pack('vvVvv', 0x0112, 3, 1, 6, 0).pack('V', 0);
+    $exif = "Exif\0\0".$tiff;
+    $app1 = "\xFF\xE1".pack('n', strlen($exif) + 2).$exif;
+    $photo = UploadedFile::fake()->createWithContent('hallway.jpg', substr($jpeg, 0, 2).$app1.substr($jpeg, 2));
+
+    $size = getimagesize(app(UploadedPhotos::class)->optimize($photo)->getRealPath());
+
+    expect([$size[0], $size[1]])->toBe([1500, 2000]);
+});
+
+test('a photo too large for the memory left to decode it is passed on untouched', function () {
+    $photo = photoWithExif(4000, 3000);
+    ini_set('memory_limit', (string) (memory_get_usage() + 64 * 1024 * 1024));
+
+    expect(app(UploadedPhotos::class)->optimize($photo))->toBe($photo);
 });
 
 test('a picture in a format few viewers open is sent on as a JPEG', function () {
