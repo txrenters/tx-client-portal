@@ -29,6 +29,12 @@ class UploadedPhotos
     /** Pictures larger than this are left alone, since decoding them could run out of memory. */
     private const MAX_PIXELS = 32_000_000;
 
+    /** Bytes GD holds for each pixel of a decoded picture. */
+    private const BYTES_PER_PIXEL = 4;
+
+    /** Memory kept free for the encoder, the scaled copy and the rest of the request. */
+    private const HEADROOM_BYTES = 48 * 1024 * 1024;
+
     /**
      * The format each kind of picture is re-encoded to. Screenshots stay PNG
      * so their text stays sharp; formats few viewers open become JPEG.
@@ -66,9 +72,12 @@ class UploadedPhotos
         }
 
         try {
+            // Scaled before it is turned upright: the bounds are square, so the
+            // result is the same, and only the small copy is rotated, never a
+            // second full-size one.
             $image = Image::fromUpload($file)
-                ->orient()
                 ->scale(self::MAX_EDGE, self::MAX_EDGE)
+                ->orient()
                 ->toFormat($output['format'])
                 ->quality(self::QUALITY);
 
@@ -91,11 +100,31 @@ class UploadedPhotos
         return $this->temporaryUpload($contents, $this->renamed($file->getClientOriginalName(), $output['extension']), $output['mimeType']);
     }
 
+    /**
+     * Whether decoding the picture could exhaust the pixel cap or the memory still free.
+     */
     private function isTooLarge(UploadedFile $file): bool
     {
         $size = @getimagesize($file->getRealPath());
 
-        return is_array($size) && $size[0] * $size[1] > self::MAX_PIXELS;
+        if (! is_array($size)) {
+            return false;
+        }
+
+        $pixels = $size[0] * $size[1];
+
+        return $pixels > self::MAX_PIXELS
+            || $pixels * self::BYTES_PER_PIXEL + self::HEADROOM_BYTES > $this->memoryAvailable();
+    }
+
+    /**
+     * Bytes this request may still allocate, or PHP_INT_MAX when there is no limit.
+     */
+    private function memoryAvailable(): int
+    {
+        $limit = ini_parse_quantity((string) ini_get('memory_limit'));
+
+        return $limit <= 0 ? PHP_INT_MAX : $limit - memory_get_usage();
     }
 
     private function renamed(string $name, string $extension): string

@@ -17,6 +17,8 @@ use Throwable;
  * an hour, so a broken page that many people open sends one email. Propertyware
  * being unavailable is left out: it is the vendor's outage, shown on the
  * Integrations page, and would otherwise email from every page that reads it.
+ * So is the scheduler's "failed with exit code" error: ScheduledTaskFailures
+ * already emails once when a command starts failing, until it recovers.
  */
 class ErrorAlerts
 {
@@ -24,7 +26,7 @@ class ErrorAlerts
 
     public function report(Throwable $exception): void
     {
-        if (! app()->isProduction() || $exception instanceof PropertywareException) {
+        if (! app()->isProduction() || $exception instanceof PropertywareException || $this->isScheduledCommandFailure($exception)) {
             return;
         }
 
@@ -48,5 +50,13 @@ class ErrorAlerts
             // The error itself is still in the log; an alert that cannot be sent must not hide it.
             Log::warning('Could not email the error alert.', ['message' => $mailFailure->getMessage()]);
         }
+    }
+
+    /**
+     * The scheduler's own error for a command that exited with a failure code.
+     */
+    private function isScheduledCommandFailure(Throwable $exception): bool
+    {
+        return str_ends_with($exception->getFile(), 'Console'.DIRECTORY_SEPARATOR.'Scheduling'.DIRECTORY_SEPARATOR.'ScheduleRunCommand.php');
     }
 }
