@@ -21,6 +21,7 @@ use App\Http\Controllers\Resident\ConversationController as ResidentConversation
 use App\Http\Controllers\Resident\DashboardController as ResidentDashboardController;
 use App\Http\Controllers\Resident\DocumentController as ResidentDocumentController;
 use App\Http\Controllers\Resident\LeaseController as ResidentLeaseController;
+use App\Http\Controllers\Resident\LedgerDownloadController as ResidentLedgerDownloadController;
 use App\Http\Controllers\Resident\MaintenanceController as ResidentMaintenanceController;
 use App\Http\Controllers\Resident\MessageController as ResidentMessageController;
 use App\Http\Controllers\Resident\PropertyController as ResidentPropertyController;
@@ -58,6 +59,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('referrals', [ResidentReferralController::class, 'index'])->name('referrals.index');
         Route::post('referrals', [ResidentReferralController::class, 'store'])->middleware('throttle:10,1')->name('referrals.store');
         Route::get('lease', ResidentLeaseController::class)->name('lease');
+        Route::get('lease/ledger/download', ResidentLedgerDownloadController::class)->middleware('throttle:10,1')->name('lease.download');
         // Payments live on the lease page now; the old address still works.
         Route::redirect('payments', '/resident/lease')->name('payments');
         Route::get('documents', [ResidentDocumentController::class, 'index'])->name('documents');

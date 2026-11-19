@@ -59,37 +59,15 @@ class LeaseLedger
      */
     public function forTenant(ClientScope $scope, ?string $from = null, ?string $to = null, int $page = 1, ?string $path = null): ?array
     {
-        $leaseId = $scope->role === ClientRole::Resident ? ($scope->leaseIds[0] ?? null) : null;
+        $tenancy = $this->tenancy($scope);
 
-        if ($leaseId === null || ! $this->isAvailable()) {
+        if ($tenancy === null) {
             return null;
         }
 
-        $zone = config('app.display_timezone');
-        $today = CarbonImmutable::now($zone)->toDateString();
-        $earliest = CarbonImmutable::parse($today, $zone)->subMonths(self::MONTHS)->toDateString();
-
-        $syncing = $this->store->isEmpty($leaseId) && $this->store->isStale($leaseId, $earliest, $today);
-        $tenancy = $this->store->entries($leaseId, $earliest, $today)
-            ->map(fn (LeaseLedgerEntry $entry): array => [
-                'id' => (string) $entry->id,
-                'date' => $entry->occurred_on->toDateString(),
-                'kind' => $entry->kind,
-                'direction' => $entry->direction,
-                'amount' => (float) $entry->amount,
-                'description' => $entry->description,
-                'detail' => $entry->detail,
-                'reference' => $entry->reference,
-                ...$this->settlement($entry, $today),
-            ])
-            ->all();
-
-        $from ??= $earliest;
-        $to ??= $today;
-        $entries = array_values(array_filter(
-            $tenancy,
-            fn (array $entry): bool => $entry['date'] >= $from && $entry['date'] <= $to,
-        ));
+        $from ??= $tenancy['earliest'];
+        $to ??= $tenancy['today'];
+        $entries = $this->between($tenancy['entries'], $from, $to);
 
         $page = max($page, 1);
         $paginator = new LengthAwarePaginator(
@@ -102,7 +80,7 @@ class LeaseLedger
 
         return [
             // True while the first read of this tenancy is still running.
-            'syncing' => $syncing,
+            'syncing' => $tenancy['syncing'],
             // The page on screen, and the whole run behind the totals.
             'entries' => $paginator->items(),
             'results' => $paginator->toArray(),
@@ -114,10 +92,92 @@ class LeaseLedger
             'paid' => $this->paid($entries),
             // The same two totals month by month, for the dashboard chart.
             // The chart always ends with this month, whatever the list shows.
-            'months' => $this->months($tenancy, $today, $zone),
+            'months' => $this->months($tenancy['entries'], $tenancy['today'], config('app.display_timezone')),
             'from' => $from,
             'to' => $to,
         ];
+    }
+
+    /**
+     * Every entry in a period, oldest first, with the same totals as the page,
+     * for the tenant to download.
+     *
+     * @return array{syncing: bool, entries: array<int, array<string, mixed>>, charged: float, paid: float, from: string, to: string}|null
+     *
+     * @throws PropertywareException
+     */
+    public function export(ClientScope $scope, ?string $from = null, ?string $to = null): ?array
+    {
+        $tenancy = $this->tenancy($scope);
+
+        if ($tenancy === null) {
+            return null;
+        }
+
+        $from ??= $tenancy['earliest'];
+        $to ??= $tenancy['today'];
+        $entries = $this->between($tenancy['entries'], $from, $to);
+
+        return [
+            'syncing' => $tenancy['syncing'],
+            'entries' => array_reverse($entries),
+            'charged' => $this->charged($entries),
+            'paid' => $this->paid($entries),
+            'from' => $from,
+            'to' => $to,
+        ];
+    }
+
+    /**
+     * The tenant's whole tenancy, newest first, or null when they have no
+     * lease or the ledger connection isn't set up.
+     *
+     * @return array{syncing: bool, entries: array<int, array<string, mixed>>, earliest: string, today: string}|null
+     */
+    private function tenancy(ClientScope $scope): ?array
+    {
+        $leaseId = $scope->role === ClientRole::Resident ? ($scope->leaseIds[0] ?? null) : null;
+
+        if ($leaseId === null || ! $this->isAvailable()) {
+            return null;
+        }
+
+        $zone = config('app.display_timezone');
+        $today = CarbonImmutable::now($zone)->toDateString();
+        $earliest = CarbonImmutable::parse($today, $zone)->subMonths(self::MONTHS)->toDateString();
+
+        return [
+            'syncing' => $this->store->isEmpty($leaseId) && $this->store->isStale($leaseId, $earliest, $today),
+            'entries' => $this->store->entries($leaseId, $earliest, $today)
+                ->map(fn (LeaseLedgerEntry $entry): array => [
+                    'id' => (string) $entry->id,
+                    'date' => $entry->occurred_on->toDateString(),
+                    'kind' => $entry->kind,
+                    'direction' => $entry->direction,
+                    'amount' => (float) $entry->amount,
+                    'description' => $entry->description,
+                    'detail' => $entry->detail,
+                    'reference' => $entry->reference,
+                    ...$this->settlement($entry, $today),
+                ])
+                ->all(),
+            'earliest' => $earliest,
+            'today' => $today,
+        ];
+    }
+
+    /**
+     * The entries dated from one day to another, both included.
+     *
+     * @param  array<int, array<string, mixed>>  $entries
+     * @return array<int, array<string, mixed>>
+     */
+    private function between(array $entries, string $from, string $to): array
+    {
+        return array_values(array_filter(
+            $entries,
+            fn (array $entry): bool => $entry['date'] >= $from && $entry['date'] <= $to,
+        ));
     }
 
     /**

@@ -5,6 +5,9 @@ import {
     ArrowUpRight,
     CalendarDays,
     CreditCard,
+    Download,
+    FileSpreadsheet,
+    FileText,
     Receipt,
     ScrollText,
 } from '@lucide/vue';
@@ -21,6 +24,12 @@ import PaymentStatusBadge from '@/components/PaymentStatusBadge.vue';
 import ResultsPagination from '@/components/ResultsPagination.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -36,6 +45,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useFormattedDate } from '@/composables/useFormattedDate';
 import { PERIOD_PRESETS, presetDates } from '@/lib/dateRange';
 import { dashboard, lease as leaseRoute } from '@/routes/resident';
+import { download as downloadLedger } from '@/routes/resident/lease';
 import type { LeaseLedger, PortalProperty, ResidentLease } from '@/types';
 
 defineOptions({
@@ -149,6 +159,16 @@ function query(filters: Filters, page = 1): Record<string, string | number> {
         ...(filters.to ? { to: filters.to } : {}),
         ...(page > 1 ? { page } : {}),
     };
+}
+
+/**
+ * The ledger for the period on screen, as a file: the applied filters, not
+ * dates still being typed, so the file matches what the page shows.
+ */
+function downloadUrl(format: 'pdf' | 'csv'): string {
+    return downloadLedger.url({
+        query: { ...query(props.filters), format },
+    });
 }
 
 function visit(filters: Filters, page = 1): void {
@@ -456,6 +476,33 @@ const term = computed(() => [
                         >
                             Clear filter
                         </Button>
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                                <Button
+                                    variant="outline"
+                                    class="sm:ml-auto"
+                                    :disabled="!ledger || ledger.syncing"
+                                >
+                                    <Download />
+                                    Download
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem as-child>
+                                    <a :href="downloadUrl('pdf')" download>
+                                        <FileText />
+                                        PDF statement
+                                    </a>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem as-child>
+                                    <a :href="downloadUrl('csv')" download>
+                                        <FileSpreadsheet />
+                                        Spreadsheet (CSV)
+                                    </a>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
 
                     <div class="grid gap-4 sm:grid-cols-3">
