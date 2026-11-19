@@ -30,8 +30,11 @@ const open = defineModel<boolean>('open', { required: true });
 
 type Slot = { startsAt: string; endsAt: string };
 
-/** How many days ahead the picker offers. */
-const DAYS_AHEAD = 14;
+/**
+ * How many days ahead to ask coresched about: the most one request may cover.
+ * Coresched trims it to each meeting's own booking window, notice and hours.
+ */
+const DAYS_AHEAD = 31;
 
 const http = useHttp();
 const slots = ref<Slot[] | null>(null);
