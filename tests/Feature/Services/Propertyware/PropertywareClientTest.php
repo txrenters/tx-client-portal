@@ -2,6 +2,7 @@
 
 use App\Services\Propertyware\PropertywareClient;
 use App\Services\Propertyware\PropertywareException;
+use App\Services\Propertyware\PropertywareUnavailableException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -57,13 +58,26 @@ test('throws when propertyware rejects the request', function () {
 
     expect(fn () => propertyware()->list('leases'))
         ->toThrow(PropertywareException::class, 'Propertyware returned 403 for [leases].');
+
+    try {
+        propertyware()->list('leases');
+    } catch (PropertywareException $exception) {
+        expect($exception)->not->toBeInstanceOf(PropertywareUnavailableException::class);
+    }
 });
+
+test('throws an unavailable error when propertyware is down or busy', function (int $status) {
+    Http::fake(['*' => Http::response(['error' => 'Unavailable'], $status)]);
+
+    expect(fn () => propertyware()->list('leases'))
+        ->toThrow(PropertywareUnavailableException::class, "Propertyware returned {$status} for [leases].");
+})->with([503, 500, 429]);
 
 test('throws when propertyware cannot be reached', function () {
     Http::fake(fn () => throw new ConnectionException('Connection timed out'));
 
     expect(fn () => propertyware()->get('buildings/1'))
-        ->toThrow(PropertywareException::class, 'Could not reach Propertyware.');
+        ->toThrow(PropertywareUnavailableException::class, 'Could not reach Propertyware.');
 });
 
 test('throws without sending a request when credentials are missing', function () {

@@ -144,12 +144,9 @@ class PropertywareClient
         try {
             return $this->request()->timeout($timeout)->get(ltrim($path, '/'))->throw();
         } catch (ConnectionException $exception) {
-            throw new PropertywareException('Could not reach Propertyware.', previous: $exception);
+            throw new PropertywareUnavailableException('Could not reach Propertyware.', previous: $exception);
         } catch (RequestException $exception) {
-            throw new PropertywareException(
-                "Propertyware returned {$exception->response->status()} for [{$path}].",
-                previous: $exception,
-            );
+            throw $this->rejection($path, $exception->response->status(), $exception);
         }
     }
 
@@ -244,7 +241,7 @@ class PropertywareClient
 
         foreach ($responses as $key => $response) {
             if (! $response instanceof Response) {
-                throw new PropertywareException('Could not reach Propertyware.', previous: $response);
+                throw new PropertywareUnavailableException('Could not reach Propertyware.', previous: $response);
             }
 
             [$path, $query] = $requests[(int) $key];
@@ -295,13 +292,13 @@ class PropertywareClient
             $response = $responses[(string) $key] ?? null;
 
             if (! $response instanceof Response) {
-                throw new PropertywareException('Could not reach Propertyware.', previous: $response instanceof Throwable ? $response : null);
+                throw new PropertywareUnavailableException('Could not reach Propertyware.', previous: $response instanceof Throwable ? $response : null);
             }
 
             if ($response->failed()) {
                 Log::error('Propertyware rejected a request.', ['path' => $path, 'status' => $response->status()]);
 
-                throw new PropertywareException("Propertyware returned {$response->status()} for [{$path}].");
+                throw $this->rejection($path, $response->status());
             }
 
             $record = $response->json();
@@ -347,6 +344,19 @@ class PropertywareClient
     }
 
     /**
+     * The error for a failed response: unavailable when Propertyware is down or
+     * busy (5xx, 429), so callers can wait it out, and a plain rejection otherwise.
+     */
+    private function rejection(string $path, int $status, ?Throwable $previous = null): PropertywareException
+    {
+        $message = "Propertyware returned {$status} for [{$path}].";
+
+        return $status >= 500 || $status === 429
+            ? new PropertywareUnavailableException($message, previous: $previous)
+            : new PropertywareException($message, previous: $previous);
+    }
+
+    /**
      * Send a GET request and return the decoded body.
      *
      * @param  array<string, mixed>  $query
@@ -368,17 +378,14 @@ class PropertywareClient
                 'message' => $exception->getMessage(),
             ]);
 
-            throw new PropertywareException('Could not reach Propertyware.', previous: $exception);
+            throw new PropertywareUnavailableException('Could not reach Propertyware.', previous: $exception);
         } catch (RequestException $exception) {
             Log::error('Propertyware rejected a request.', [
                 'path' => $path,
                 'status' => $exception->response->status(),
             ]);
 
-            throw new PropertywareException(
-                "Propertyware returned {$exception->response->status()} for [{$path}].",
-                previous: $exception,
-            );
+            throw $this->rejection($path, $exception->response->status(), $exception);
         }
 
         return $response->json() ?? [];
@@ -403,7 +410,7 @@ class PropertywareClient
         } catch (ConnectionException $exception) {
             Log::error('Propertyware write failed to connect.', ['path' => $path, 'message' => $exception->getMessage()]);
 
-            throw new PropertywareException('Could not reach Propertyware.', previous: $exception);
+            throw new PropertywareUnavailableException('Could not reach Propertyware.', previous: $exception);
         } catch (RequestException $exception) {
             Log::error('Propertyware rejected a write.', [
                 'path' => $path,
@@ -411,7 +418,7 @@ class PropertywareClient
                 'userMessage' => $exception->response->json('userMessage'),
             ]);
 
-            throw new PropertywareException("Propertyware returned {$exception->response->status()} for [{$path}].", previous: $exception);
+            throw $this->rejection($path, $exception->response->status(), $exception);
         }
 
         return $response->json() ?? [];

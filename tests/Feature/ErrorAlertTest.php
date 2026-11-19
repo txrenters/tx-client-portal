@@ -58,3 +58,14 @@ test('does not email outside production', function () {
 
     Notification::assertNothingSent();
 });
+
+test('does not email the scheduler\'s failed-command error, which the failing job alert already covers', function () {
+    Notification::fake();
+
+    $failure = new Exception("Scheduled command ['/usr/local/bin/php' 'artisan' approvals:history] failed with exit code [1].");
+    (new ReflectionProperty(Exception::class, 'file'))->setValue($failure, base_path('vendor/laravel/framework/src/Illuminate/Console/Scheduling/ScheduleRunCommand.php'));
+
+    report($failure);
+
+    Notification::assertNothingSent();
+});
