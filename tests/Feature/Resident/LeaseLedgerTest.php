@@ -269,3 +269,82 @@ test('says the history is still coming while the first read runs', function () {
 
     Queue::assertPushed(SyncLeaseLedger::class);
 });
+
+/**
+ * The rows of a downloaded CSV, without the byte-order mark that tells Excel it is UTF-8.
+ *
+ * @return array<int, array<int, string>>
+ */
+function downloadedCsvRows(string $csv): array
+{
+    expect(str_starts_with($csv, "\u{FEFF}"))->toBeTrue();
+
+    return array_map(fn (string $line): array => str_getcsv($line, escape: ''), array_values(array_filter(explode("\n", substr($csv, 3)))));
+}
+
+test('the tenant downloads the ledger for the period on the page as a spreadsheet', function () {
+    $this->actingAs($this->tenant);
+
+    $response = $this->get(route('resident.lease.download', ['format' => 'csv', 'from' => '2026-08-01', 'to' => '2026-09-30']))
+        ->assertOk()
+        ->assertDownload('Ledger 2026-08-01 to 2026-09-30 - 12 Elm St.csv')
+        ->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+
+    expect(downloadedCsvRows($response->streamedContent()))->toBe([
+        ['Date', 'Type', 'Description', 'Details', 'Reference', 'Amount', 'Charged', 'Paid'],
+        // Oldest first; the July credit is outside the period.
+        ['2026-08-01', 'Charge', 'Tenant Benefit Package', '', '', '40.00', '40.00', ''],
+        // Prepaid money being applied counts on neither side, as on the page.
+        ['2026-08-01', 'Prepayment applied', 'Prepayment', 'PREPAY Applied to Charges', '', '40.00', '', ''],
+        ['2026-09-01', 'Charge', 'Rent', '', '', '1400.00', '1400.00', ''],
+        ['2026-09-03', 'Payment', 'Payment', 'One Time ePayment received', 'EP-9', '1400.00', '', '1400.00'],
+        ['', 'Total', '', '', '', '', '1440.00', '1400.00'],
+    ]);
+});
+
+test('the tenant downloads the ledger as a PDF', function () {
+    $this->actingAs($this->tenant);
+
+    $response = $this->get(route('resident.lease.download', ['format' => 'pdf', 'from' => '2026-07-01', 'to' => '2026-09-30']))
+        ->assertOk()
+        ->assertDownload('Ledger 2026-07-01 to 2026-09-30 - 12 Elm St.pdf')
+        ->assertHeader('Content-Type', 'application/pdf');
+
+    expect(str_starts_with((string) $response->getContent(), '%PDF'))->toBeTrue();
+});
+
+test('a downloaded spreadsheet keeps text that looks like a formula as plain text', function () {
+    $this->ledger[1]['comments'] = '=HYPERLINK("https://example.test","Pay here")';
+    $this->actingAs($this->tenant);
+
+    $rows = downloadedCsvRows($this->get(route('resident.lease.download', ['format' => 'csv', 'range' => 'all']))->streamedContent());
+
+    expect(collect($rows)->firstWhere(1, 'Payment')[3])->toBe('\'=HYPERLINK("https://example.test","Pay here")');
+});
+
+test('the app downloads the same ledger, and only for a resident account', function () {
+    Sanctum::actingAs($this->tenant);
+    $owner = ClientAccount::factory()->owner()->for($this->tenant)->create(['propertyware_id' => '500']);
+
+    $response = $this->get(route('api.v1.accounts.payments.download', [$this->account, 'format' => 'csv', 'from' => '2026-09-01', 'to' => '2026-09-30']))
+        ->assertOk()
+        ->assertDownload('Ledger 2026-09-01 to 2026-09-30 - 12 Elm St.csv');
+
+    expect(downloadedCsvRows($response->streamedContent()))->toHaveCount(4);
+
+    $this->getJson(route('api.v1.accounts.payments.download', [$owner, 'format' => 'csv']))->assertNotFound();
+});
+
+test('a ledger download needs a file type the portal makes', function () {
+    Sanctum::actingAs($this->tenant);
+
+    $this->getJson(route('api.v1.accounts.payments.download', [$this->account, 'format' => 'xlsx']))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['format' => 'The selected format is invalid.']);
+});
+
+test('another client cannot download the tenant\'s ledger', function () {
+    Sanctum::actingAs(User::factory()->create());
+
+    $this->getJson(route('api.v1.accounts.payments.download', [$this->account, 'format' => 'csv']))->assertNotFound();
+});

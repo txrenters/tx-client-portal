@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\FinancialController;
 use App\Http\Controllers\Api\V1\HelpRequestController;
 use App\Http\Controllers\Api\V1\InvitationController;
 use App\Http\Controllers\Api\V1\LeaseController;
+use App\Http\Controllers\Api\V1\LedgerDownloadController;
 use App\Http\Controllers\Api\V1\MaintenanceController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\MeetingController;
@@ -111,6 +112,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('portfolio', PortfolioController::class)->name('portfolio');
             Route::get('lease', LeaseController::class)->name('lease');
             Route::get('payments', PaymentController::class)->name('payments');
+            Route::get('payments/download', LedgerDownloadController::class)->middleware('throttle:10,1')->name('payments.download');
             Route::get('financials', FinancialController::class)->name('financials');
             Route::get('ledger', OwnerLedgerController::class)->name('ledger');
             Route::get('statement', OwnerStatementController::class)->name('statement');
