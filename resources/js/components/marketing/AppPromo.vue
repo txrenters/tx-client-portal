@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Play } from '@lucide/vue';
+import { ExternalLink, Play } from '@lucide/vue';
 import { ref } from 'vue';
 
 /**
@@ -11,6 +11,9 @@ const youTubeVideoId = '8oDalAMczQs';
 const embedUrl = `https://www.youtube-nocookie.com/embed/${youTubeVideoId}?autoplay=1&rel=0&playsinline=1`;
 
 const isVideoStarted = ref(false);
+
+/** The full walkthrough, from signing up to every feature, for anyone who wants more than a minute. */
+const walkthroughUrl = 'https://youtu.be/lyH3Gxtdv98';
 </script>
 
 <template>
@@ -66,5 +69,19 @@ const isVideoStarted = ref(false);
                 </span>
             </button>
         </div>
+
+        <p class="text-muted-foreground mt-4 text-sm sm:text-base">
+            Want the full tour, from signing up to every feature?
+            <a
+                :href="walkthroughUrl"
+                target="_blank"
+                rel="noopener"
+                class="text-primary inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline"
+            >
+                Watch the app walkthrough
+                <ExternalLink class="size-3.5" aria-hidden="true" />
+                <span class="sr-only">(opens YouTube in a new tab)</span>
+            </a>
+        </p>
     </section>
 </template>
