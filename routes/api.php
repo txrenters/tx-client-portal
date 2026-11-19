@@ -121,6 +121,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('properties', [PropertyController::class, 'index'])->name('properties.index');
             Route::get('properties/{property}', [PropertyController::class, 'show'])->whereNumber('property')->name('properties.show');
             Route::get('meetings', [MeetingController::class, 'index'])->name('meetings.index');
+            Route::get('meetings/{eventType}/slots', [MeetingController::class, 'slots'])->middleware('throttle:60,1')->name('meetings.slots');
+            Route::post('meetings', [MeetingController::class, 'store'])->middleware('throttle:10,1')->name('meetings.store');
             Route::get('approvals', ApprovalController::class)->name('approvals.index');
             Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
             Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');

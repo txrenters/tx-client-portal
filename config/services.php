@@ -65,18 +65,18 @@ return [
     'security_alert_email' => (string) (env('SECURITY_ALERT_EMAIL') ?: 'it@texasrenters.com'),
 
     /*
-     * tx-scheduling: staff availability and bookings. The portal shows what a
-     * page offers and books against it; availability, reminders and calendar
-     * sync all stay in that app rather than being rebuilt here.
+     * coresched (coresched.com): staff availability and bookings. The portal
+     * and the app show the approved meetings, their open times, and book them
+     * there; hosts, reminders, calendars and rescheduling all stay in coresched.
      */
     'scheduling' => [
         'url' => env('SCHEDULING_URL'),
         'token' => env('SCHEDULING_TOKEN'),
         // Whose booking page owners are offered.
         'page' => env('SCHEDULING_PAGE'),
-        // Where owners pick a meeting: the departments page lists each team
-        // and its ways to meet, so the portal links there instead of listing them.
-        'booking_url' => env('SCHEDULING_BOOKING_URL', 'https://scheduling.texasrenters.com/book/texasrenterscom-llc/departments/rzs7sj1p'),
+        // Coresched's own departments page, still offered for anything the
+        // portal does not book itself.
+        'booking_url' => env('SCHEDULING_BOOKING_URL', 'https://coresched.com/book/texasrenterscom-llc/departments/rzs7sj1p'),
         // Signs the booking webhooks scheduling sends to /api/v1/scheduling/events;
         // issued on the API key's settings in scheduling.
         'webhook_secret' => env('SCHEDULING_WEBHOOK_SECRET'),
