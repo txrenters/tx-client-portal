@@ -156,12 +156,18 @@ const securityPoints = [
                             screen="07-financials"
                             alt=""
                             eager
+                            :turn="-24"
+                            :lean="8"
+                            :roll="2"
                             class="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-24 motion-safe:fill-mode-both absolute top-16 right-0 w-[52%] opacity-90 motion-safe:delay-150 motion-safe:duration-1000 lg:top-28 lg:w-[20rem]"
                         />
                         <PhoneFrame
                             screen="01-home"
                             alt=""
                             eager
+                            :turn="16"
+                            :lean="6"
+                            :roll="-2"
                             class="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-24 motion-safe:fill-mode-both absolute top-0 left-0 w-[60%] motion-safe:duration-1000 lg:top-12 lg:left-4 lg:w-[22rem]"
                         />
                     </div>
@@ -236,6 +242,8 @@ const securityPoints = [
                         <PhoneFrame
                             screen="09-lock"
                             alt=""
+                            :turn="-10"
+                            :lean="14"
                             class="mx-auto mt-8 -mb-48 w-56"
                         />
                     </div>
