@@ -136,6 +136,23 @@ function startBooking(meeting: MeetingType): void {
     isBooking.value = true;
 }
 
+/**
+ * The time now, moved on every minute, so a meeting that starts while the
+ * page is open stops offering Change.
+ */
+const now = ref(Date.now());
+let clock: ReturnType<typeof setInterval> | undefined;
+
+onMounted(() => {
+    clock = setInterval(() => (now.value = Date.now()), 60_000);
+});
+onUnmounted(() => clearInterval(clock));
+
+/** A meeting whose start has passed can no longer be moved or cancelled. */
+function hasStarted(meeting: UpcomingMeeting): boolean {
+    return new Date(meeting.startsAt).getTime() <= now.value;
+}
+
 const when = appDateFormatter({
     weekday: 'short',
     month: 'short',
@@ -267,11 +284,22 @@ const when = appDateFormatter({
 
                 <ul v-else class="divide-border divide-y text-sm">
                     <li v-for="meeting in upcoming" :key="meeting.uid">
-                        <a
-                            :href="meeting.manageUrl"
-                            target="_blank"
-                            rel="noreferrer"
-                            class="hover:bg-muted/50 focus-visible:bg-muted/50 -mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-2.5 transition-colors focus-visible:outline-none"
+                        <component
+                            :is="hasStarted(meeting) ? 'div' : 'a'"
+                            v-bind="
+                                hasStarted(meeting)
+                                    ? {}
+                                    : {
+                                          href: meeting.manageUrl,
+                                          target: '_blank',
+                                          rel: 'noreferrer',
+                                      }
+                            "
+                            class="-mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-2.5"
+                            :class="{
+                                'hover:bg-muted/50 focus-visible:bg-muted/50 transition-colors focus-visible:outline-none':
+                                    !hasStarted(meeting),
+                            }"
                         >
                             <span class="min-w-0">
                                 <span class="block truncate font-medium">{{
@@ -288,12 +316,13 @@ const when = appDateFormatter({
                                 </span>
                             </span>
                             <span
+                                v-if="!hasStarted(meeting)"
                                 class="text-primary flex shrink-0 items-center gap-1 text-xs font-medium"
                             >
                                 Change
                                 <ExternalLink class="size-3.5" />
                             </span>
-                        </a>
+                        </component>
                     </li>
                 </ul>
             </AppCard>

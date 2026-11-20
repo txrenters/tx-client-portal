@@ -28,10 +28,12 @@ test('a local copy shows made-up meetings, counted from today, without asking co
 
     $upcoming = schedulingClientIn('local')->upcoming('owner@example.com');
 
-    expect($upcoming)->toHaveCount(4)
+    expect($upcoming)->toHaveCount(5)
+        // Two hours ago, in Houston.
+        ->and($upcoming[0]['startsAt'])->toBe('2026-11-21T13:00:00+00:00')
         // Tomorrow at 10:00 in Houston.
-        ->and($upcoming[0]['startsAt'])->toBe('2026-11-22T16:00:00+00:00')
-        ->and($upcoming[0]['name'])->toBe('Accounting Team Meeting - Phone Call');
+        ->and($upcoming[1]['startsAt'])->toBe('2026-11-22T16:00:00+00:00')
+        ->and($upcoming[1]['name'])->toBe('Accounting Team Meeting - Phone Call');
 
     Http::assertNothingSent();
 });

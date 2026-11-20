@@ -10,7 +10,8 @@ use Carbon\CarbonImmutable;
  * Turned on with SCHEDULING_SAMPLE_BOOKINGS, and only ever on a local copy:
  * booking for real would email staff and hold their calendars. Times are
  * counted from today in Houston, so the list always looks current, and are
- * shaped like coresched's bookings API.
+ * shaped like coresched's bookings API. One started two hours ago, to show
+ * how a meeting that has begun looks.
  */
 class SampleBookings
 {
@@ -21,9 +22,12 @@ class SampleBookings
      */
     public static function upcoming(string $email, ?string $manageUrl = null): array
     {
-        $today = CarbonImmutable::now(self::TIMEZONE)->startOfDay();
+        $now = CarbonImmutable::now(self::TIMEZONE);
+        $today = $now->startOfDay();
 
         $meetings = [
+            // Started two hours ago and so no longer changeable.
+            ['Leasing Team Meeting - Phone Call', 0, $now->subHours(2)->format('H:i'), 'Phone call (host calls invitee)', null],
             ['Accounting Team Meeting - Phone Call', 1, '10:00', 'Phone call (host calls invitee)', null],
             ['Leasing Team Meeting - Screen Share', 3, '14:30', 'Microsoft Teams', 'https://teams.microsoft.com/l/meetup-join/sample'],
             ['Maintenance Team Meeting - Phone Call', 6, '09:00', 'Phone call (host calls invitee)', null],
