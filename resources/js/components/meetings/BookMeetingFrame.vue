@@ -10,11 +10,14 @@ import {
 } from 'vue';
 import {
     Dialog,
+    DialogClose,
     DialogContent,
     DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import type { MeetingType } from '@/types';
 
 /**
@@ -94,9 +97,9 @@ onUnmounted(() => window.removeEventListener('message', resize));
     <Dialog v-model:open="open">
         <DialogContent
             v-if="meeting && src"
-            class="max-h-[92dvh] gap-3 overflow-y-auto p-0 sm:max-w-3xl"
+            class="max-h-[92dvh] gap-0 overflow-y-auto p-0 sm:max-w-3xl"
         >
-            <DialogHeader class="px-6 pt-6">
+            <DialogHeader class="px-6 pt-6 pb-3">
                 <DialogTitle>{{ meeting.name }}</DialogTitle>
                 <DialogDescription>
                     Pick a day and time. We'll email you the invitation.
@@ -109,6 +112,14 @@ onUnmounted(() => window.removeEventListener('message', resize));
                 class="block w-full border-0"
                 :style="{ height: `${height}px` }"
             />
+            <!-- Stays in view while the calendar scrolls under it. -->
+            <DialogFooter
+                class="bg-background sticky bottom-0 border-t px-6 py-4"
+            >
+                <DialogClose as-child>
+                    <Button variant="outline">Close</Button>
+                </DialogClose>
+            </DialogFooter>
         </DialogContent>
     </Dialog>
 </template>

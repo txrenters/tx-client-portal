@@ -68,14 +68,32 @@ onUnmounted(() =>
 );
 
 /**
+ * One colour per department, so its meetings read as a set. Departments are
+ * sorted by name, so each keeps its colour from visit to visit; "Other
+ * meetings" and the unheaded list stay plain (null).
+ */
+const DEPARTMENT_COLORS = [
+    '#0284c7', // sky
+    '#059669', // emerald
+    '#d97706', // amber
+    '#7c3aed', // violet
+    '#e11d48', // rose
+    '#0d9488', // teal
+];
+
+type Department = {
+    name: string | null;
+    color: string | null;
+    meetings: MeetingType[];
+};
+
+/**
  * The approved meetings under their departments, as coresched's departments
  * page lists them. A meeting listed by two departments shows under both;
  * one listed by none goes under "Other meetings" at the end. When coresched
  * sends no departments at all, there is one group with no heading.
  */
-const departments = computed<
-    { name: string | null; meetings: MeetingType[] }[]
->(() => {
+const departments = computed<Department[]>(() => {
     const groups = new Map<string, MeetingType[]>();
     const other: MeetingType[] = [];
 
@@ -91,15 +109,18 @@ const departments = computed<
         }
     }
 
-    const named: { name: string | null; meetings: MeetingType[] }[] = [
-        ...groups.entries(),
-    ]
+    const named: Department[] = [...groups.entries()]
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([name, meetings]) => ({ name, meetings }));
+        .map(([name, meetings], index) => ({
+            name,
+            color: DEPARTMENT_COLORS[index % DEPARTMENT_COLORS.length],
+            meetings,
+        }));
 
     if (other.length > 0) {
         named.push({
             name: named.length > 0 ? 'Other meetings' : null,
+            color: null,
             meetings: other,
         });
     }
@@ -158,8 +179,16 @@ const when = appDateFormatter({
                 >
                     <h3
                         v-if="department.name"
-                        class="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
+                        class="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase"
                     >
+                        <span
+                            v-if="department.color"
+                            class="size-2 rounded-full"
+                            :style="{
+                                backgroundColor: department.color,
+                            }"
+                            aria-hidden="true"
+                        />
                         {{ department.name }}
                     </h3>
                     <ul class="grid gap-3 sm:grid-cols-2">
@@ -167,6 +196,17 @@ const when = appDateFormatter({
                             v-for="meeting in department.meetings"
                             :key="`${department.name}:${meeting.slug}`"
                             class="border-border flex items-center justify-between gap-3 rounded-xl border p-3"
+                            :class="{
+                                'border-l-4': department.color,
+                            }"
+                            :style="
+                                department.color
+                                    ? {
+                                          borderLeftColor: department.color,
+                                          backgroundColor: `color-mix(in oklab, ${department.color} 7%, transparent)`,
+                                      }
+                                    : undefined
+                            "
                         >
                             <span class="min-w-0">
                                 <span class="block font-medium text-pretty">{{
