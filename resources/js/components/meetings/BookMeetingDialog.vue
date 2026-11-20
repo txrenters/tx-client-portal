@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, useHttp } from '@inertiajs/vue3';
+import { useForm, useHttp, usePage } from '@inertiajs/vue3';
 import { CalendarX2, Clock, MapPin } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
@@ -20,7 +21,8 @@ import { slots as slotsRoute, store } from '@/routes/owner/meetings';
 import type { MeetingType } from '@/types';
 
 /**
- * Book one approved meeting without leaving the portal: a day, a time and an
+ * Book one approved meeting without leaving the portal: who it is for (filled
+ * in from the account, and the owner may change it), a day, a time and an
  * optional note. The booking is made in coresched, which emails the
  * invitation and keeps the calendar; times show in Houston time, like the
  * rest of the portal.
@@ -43,8 +45,12 @@ const selectedDay = ref<string | null>(null);
 /** The first day asked about: today, in Houston, when the times were loaded. */
 const firstDay = ref('');
 
+const page = usePage();
+
 const form = useForm({
     event_type: '',
+    name: '',
+    email: '',
     starts_at: '',
     notes: '',
     timezone: APP_TIME_ZONE,
@@ -165,6 +171,8 @@ watch(open, (isOpen) => {
         form.reset();
         form.clearErrors();
         form.event_type = props.meeting.slug;
+        form.name = page.props.auth.user?.name ?? '';
+        form.email = page.props.auth.user?.email ?? '';
         void loadSlots();
     }
 });
@@ -229,6 +237,44 @@ function book(): void {
             </div>
 
             <form v-else class="grid gap-4" @submit.prevent="book">
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="grid gap-2">
+                        <Label for="meeting-name">Name</Label>
+                        <Input
+                            id="meeting-name"
+                            v-model="form.name"
+                            autocomplete="name"
+                            maxlength="255"
+                            required
+                        />
+                        <p
+                            v-if="form.errors.name"
+                            class="text-destructive text-sm"
+                            role="alert"
+                        >
+                            {{ form.errors.name }}
+                        </p>
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="meeting-email">Email</Label>
+                        <Input
+                            id="meeting-email"
+                            v-model="form.email"
+                            type="email"
+                            autocomplete="email"
+                            maxlength="255"
+                            required
+                        />
+                        <p
+                            v-if="form.errors.email"
+                            class="text-destructive text-sm"
+                            role="alert"
+                        >
+                            {{ form.errors.email }}
+                        </p>
+                    </div>
+                </div>
+
                 <div class="grid gap-2">
                     <Label>Day</Label>
                     <div class="flex flex-wrap gap-2">
@@ -305,7 +351,12 @@ function book(): void {
                 <DialogFooter>
                     <Button
                         type="submit"
-                        :disabled="form.processing || form.starts_at === ''"
+                        :disabled="
+                            form.processing ||
+                            form.starts_at === '' ||
+                            form.name.trim() === '' ||
+                            form.email.trim() === ''
+                        "
                     >
                         <Spinner v-if="form.processing" />
                         Book meeting

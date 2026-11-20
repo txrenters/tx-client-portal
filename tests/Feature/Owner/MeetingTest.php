@@ -188,7 +188,7 @@ function fakeBookableScheduling(int $bookingStatus = 201): void
 {
     Http::fake([
         '*/event-types' => Http::response(['data' => [
-            ['slug' => 'owner-meeting', 'page' => 'accounting-team', 'name' => 'Owner meeting', 'durationMinutes' => 30, 'locationLabel' => 'Phone call', 'host' => 'Accounting', 'url' => 'https://scheduling.test/book/accounting-team/owner-meeting'],
+            ['slug' => 'owner-meeting', 'page' => 'accounting-team', 'departments' => ['Accounting'], 'name' => 'Owner meeting', 'durationMinutes' => 30, 'locationLabel' => 'Phone call', 'host' => 'Accounting', 'url' => 'https://scheduling.test/book/accounting-team/owner-meeting'],
             // Not approved for clients.
             ['slug' => 'job-interview', 'page' => 'hr', 'name' => 'Job interview', 'durationMinutes' => 45, 'url' => 'https://scheduling.test/book/hr/job-interview'],
         ]]),
@@ -217,7 +217,7 @@ test('an owner sees the open times for an approved meeting', function () {
         && $request['from'] === '2026-11-19' && $request['to'] === '2026-11-25');
 });
 
-test('an owner books a meeting in their own name, whatever the request says', function () {
+test('an owner books a meeting under the name and email they give', function () {
     $this->travelTo('2026-11-19 12:00:00');
     fakeBookableScheduling();
 
@@ -227,8 +227,8 @@ test('an owner books a meeting in their own name, whatever the request says', fu
             'starts_at' => '2026-11-20T16:40:00+00:00',
             'notes' => 'About the November statement.',
             'timezone' => 'America/Chicago',
-            'name' => 'Someone Else',
-            'email' => 'someone@example.com',
+            'name' => ' Xue G. ',
+            'email' => 'xue.personal@example.com',
         ])
         ->assertRedirect(route('owner.meetings.index'))
         ->assertInertiaFlash('toast.type', 'success');
@@ -238,10 +238,42 @@ test('an owner books a meeting in their own name, whatever the request says', fu
         && $request['page'] === 'accounting-team'
         && $request['event_type'] === 'owner-meeting'
         && $request['starts_at'] === '2026-11-20T16:40:00+00:00'
-        && $request['name'] === 'Xue Gao'
-        && $request['email'] === 'owner@example.com'
+        && $request['name'] === 'Xue G.'
+        && $request['email'] === 'xue.personal@example.com'
         && $request['notes'] === 'About the November statement.'
         && $request['timezone'] === 'America/Chicago');
+});
+
+test('without a name or email the booking uses the account\'s own', function () {
+    $this->travelTo('2026-11-19 12:00:00');
+    fakeBookableScheduling();
+
+    $this->actingAs($this->owner)
+        ->post(route('owner.meetings.store'), [
+            'event_type' => 'owner-meeting',
+            'starts_at' => '2026-11-20T16:40:00+00:00',
+            'name' => '',
+        ])
+        ->assertRedirect(route('owner.meetings.index'));
+
+    Http::assertSent(fn (Request $request): bool => $request->method() === 'POST'
+        && $request['name'] === 'Xue Gao'
+        && $request['email'] === 'owner@example.com');
+});
+
+test('a booking email must be a real address', function () {
+    $this->travelTo('2026-11-19 12:00:00');
+    fakeBookableScheduling();
+
+    $this->actingAs($this->owner)
+        ->post(route('owner.meetings.store'), [
+            'event_type' => 'owner-meeting',
+            'starts_at' => '2026-11-20T16:40:00+00:00',
+            'email' => 'not-an-email',
+        ])
+        ->assertSessionHasErrors('email');
+
+    Http::assertNotSent(fn (Request $request): bool => $request->method() === 'POST');
 });
 
 test('an owner is asked to pick another time when someone else booked it first', function () {

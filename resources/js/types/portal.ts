@@ -582,6 +582,8 @@ export type MeetingType = {
     slug: string;
     /** The booking page this one is booked on; they differ within an org. */
     page: string;
+    /** The departments listing it on coresched's departments page; may be empty. */
+    departments?: string[];
     host: string | null;
     name: string;
     description: string | null;

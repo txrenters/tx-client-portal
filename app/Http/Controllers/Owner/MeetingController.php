@@ -94,6 +94,8 @@ class MeetingController extends Controller
                 (string) $request->validated('starts_at'),
                 $request->validated('notes'),
                 $request->validated('timezone'),
+                $request->validated('name'),
+                $request->validated('email'),
             );
         } catch (SlotTakenException $exception) {
             return back()->withErrors(['starts_at' => $exception->getMessage()]);

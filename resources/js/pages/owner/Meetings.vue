@@ -2,7 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
 import { CalendarClock, Clock, ExternalLink, MapPin } from '@lucide/vue';
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import AppCard from '@/components/AppCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import BookMeetingDialog from '@/components/meetings/BookMeetingDialog.vue';
@@ -65,6 +65,46 @@ onUnmounted(() =>
     document.removeEventListener('visibilitychange', refreshBooked),
 );
 
+/**
+ * The approved meetings under their departments, as coresched's departments
+ * page lists them. A meeting listed by two departments shows under both;
+ * one listed by none goes under "Other meetings" at the end. When coresched
+ * sends no departments at all, there is one group with no heading.
+ */
+const departments = computed<
+    { name: string | null; meetings: MeetingType[] }[]
+>(() => {
+    const groups = new Map<string, MeetingType[]>();
+    const other: MeetingType[] = [];
+
+    for (const meeting of props.meetingTypes ?? []) {
+        const names = meeting.departments ?? [];
+
+        if (names.length === 0) {
+            other.push(meeting);
+        }
+
+        for (const name of names) {
+            groups.set(name, [...(groups.get(name) ?? []), meeting]);
+        }
+    }
+
+    const named: { name: string | null; meetings: MeetingType[] }[] = [
+        ...groups.entries(),
+    ]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([name, meetings]) => ({ name, meetings }));
+
+    if (other.length > 0) {
+        named.push({
+            name: named.length > 0 ? 'Other meetings' : null,
+            meetings: other,
+        });
+    }
+
+    return named;
+});
+
 const booking = ref<MeetingType | null>(null);
 const isBooking = ref(false);
 
@@ -108,41 +148,63 @@ const when = appDateFormatter({
                 message instead.
             </p>
 
-            <ul v-else class="grid gap-3 sm:grid-cols-2">
-                <li
-                    v-for="meeting in meetingTypes"
-                    :key="meeting.slug"
-                    class="border-border flex items-center justify-between gap-3 rounded-xl border p-3"
+            <div v-else class="flex flex-col gap-6">
+                <section
+                    v-for="department in departments"
+                    :key="department.name ?? ''"
+                    class="flex flex-col gap-3"
                 >
-                    <span class="min-w-0">
-                        <span class="block font-medium text-pretty">{{
-                            meeting.name
-                        }}</span>
-                        <span
-                            class="text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 text-xs"
-                        >
-                            <span class="inline-flex items-center gap-1">
-                                <Clock class="size-3" aria-hidden="true" />
-                                {{ meeting.durationMinutes }} min
-                            </span>
-                            <span
-                                v-if="meeting.locationLabel"
-                                class="inline-flex items-center gap-1"
-                            >
-                                <MapPin class="size-3" aria-hidden="true" />
-                                {{ meeting.locationLabel }}
-                            </span>
-                        </span>
-                    </span>
-                    <Button
-                        size="sm"
-                        class="shrink-0"
-                        @click="startBooking(meeting)"
+                    <h3
+                        v-if="department.name"
+                        class="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
                     >
-                        Book
-                    </Button>
-                </li>
-            </ul>
+                        {{ department.name }}
+                    </h3>
+                    <ul class="grid gap-3 sm:grid-cols-2">
+                        <li
+                            v-for="meeting in department.meetings"
+                            :key="`${department.name}:${meeting.slug}`"
+                            class="border-border flex items-center justify-between gap-3 rounded-xl border p-3"
+                        >
+                            <span class="min-w-0">
+                                <span class="block font-medium text-pretty">{{
+                                    meeting.name
+                                }}</span>
+                                <span
+                                    class="text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 text-xs"
+                                >
+                                    <span
+                                        class="inline-flex items-center gap-1"
+                                    >
+                                        <Clock
+                                            class="size-3"
+                                            aria-hidden="true"
+                                        />
+                                        {{ meeting.durationMinutes }} min
+                                    </span>
+                                    <span
+                                        v-if="meeting.locationLabel"
+                                        class="inline-flex items-center gap-1"
+                                    >
+                                        <MapPin
+                                            class="size-3"
+                                            aria-hidden="true"
+                                        />
+                                        {{ meeting.locationLabel }}
+                                    </span>
+                                </span>
+                            </span>
+                            <Button
+                                size="sm"
+                                class="shrink-0"
+                                @click="startBooking(meeting)"
+                            >
+                                Book
+                            </Button>
+                        </li>
+                    </ul>
+                </section>
+            </div>
 
             <p
                 v-if="bookingUrl"

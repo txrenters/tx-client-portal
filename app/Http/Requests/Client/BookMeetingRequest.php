@@ -6,8 +6,9 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * A meeting to book: which one, when, and anything the client wants us to know.
- * Who it is for always comes from the signed-in account, never the request.
+ * A meeting to book: which one, when, who it is for, and anything the client
+ * wants us to know. The page fills the name and email in from the account,
+ * and the client may change them; left out, the account's own are used.
  */
 class BookMeetingRequest extends FormRequest
 {
@@ -21,6 +22,8 @@ class BookMeetingRequest extends FormRequest
         return [
             'event_type' => ['required', 'string', 'max:255'],
             'starts_at' => ['required', 'date', 'after:now'],
+            'name' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'string', 'email', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'timezone' => ['nullable', 'timezone:all'],
         ];
