@@ -27,6 +27,7 @@ class SchedulingClient
         private ?string $token,
         private ?string $page,
         private bool|string $verify = true,
+        private bool $sampleBookings = false,
     ) {}
 
     /** How long the key's own organization is remembered. */
@@ -93,6 +94,10 @@ class SchedulingClient
      */
     public function upcoming(string $email): array
     {
+        if ($this->sampleBookings) {
+            return SampleBookings::upcoming($email, config('services.scheduling.booking_url'));
+        }
+
         return $this->send(fn (PendingRequest $request): Response => $request
             ->get('bookings', ['email' => $email]))->json('data') ?? [];
     }

@@ -61,6 +61,8 @@ class AppServiceProvider extends ServiceProvider
             config('services.scheduling.token'),
             config('services.scheduling.page'),
             self::tlsVerify(config('services.scheduling.verify', true)),
+            // Never outside a local copy, whatever the environment file says.
+            $this->app->isLocal() && config('services.scheduling.sample_bookings'),
         ));
 
         $this->app->singleton(DepartmentDirectory::class, fn (): DepartmentDirectory => new DepartmentDirectory(

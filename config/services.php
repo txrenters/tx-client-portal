@@ -82,6 +82,9 @@ return [
         'webhook_secret' => env('SCHEDULING_WEBHOOK_SECRET'),
         // TLS check: true by default, or a CA bundle path for local .test sites.
         'verify' => env('SCHEDULING_VERIFY', true),
+        // A local copy only: show made-up booked meetings instead of asking
+        // coresched (App\Services\Scheduling\SampleBookings).
+        'sample_bookings' => (bool) env('SCHEDULING_SAMPLE_BOOKINGS', false),
     ],
 
     'propertyware' => [
