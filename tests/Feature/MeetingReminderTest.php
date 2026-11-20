@@ -73,8 +73,10 @@ test('a meeting booked with under an hour to go says how long is left', function
     Notification::assertSentTo($this->owner, fn (MeetingReminderNotification $notification): bool => $notification->notice['title'] === 'Your meeting starts in 40 minutes');
 });
 
-test('canceled and moved bookings, strangers and demo logins are not reminded', function () {
+test('canceled and moved bookings, strangers, unverified and demo logins are not reminded', function () {
     Notification::fake();
+    User::factory()->unverified()->create(['email' => 'unverified@example.com'])
+        ->clientAccounts()->save(ClientAccount::factory()->owner()->make());
     User::factory()->create(['email' => 'demo@example.com', 'is_demo' => true])
         ->clientAccounts()->save(ClientAccount::factory()->owner()->make());
 
@@ -83,6 +85,7 @@ test('canceled and moved bookings, strangers and demo logins are not reminded', 
         ['uid' => 'bk-moved', 'status' => 'rescheduled', 'startsAt' => '2026-11-21T16:30:00+00:00'],
         ['uid' => 'bk-stranger', 'invitee' => ['email' => 'nobody@example.com'], 'startsAt' => '2026-11-21T16:30:00+00:00'],
         ['uid' => 'bk-demo', 'invitee' => ['email' => 'demo@example.com'], 'startsAt' => '2026-11-21T16:30:00+00:00'],
+        ['uid' => 'bk-unverified', 'invitee' => ['email' => 'unverified@example.com'], 'startsAt' => '2026-11-21T16:30:00+00:00'],
     ]);
 
     $this->artisan('meetings:remind')->assertSuccessful();

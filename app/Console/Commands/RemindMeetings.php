@@ -91,8 +91,9 @@ class RemindMeetings extends Command
     }
 
     /**
-     * The owner logins booked under this address. App Review demo logins and
-     * suspended ones are never reminded.
+     * The owner logins booked under this address. Anyone can book in coresched
+     * under any address, so only a login that proved it owns the address is
+     * reminded. App Review demo logins and suspended ones never are.
      *
      * @return iterable<int, User>
      */
@@ -100,6 +101,7 @@ class RemindMeetings extends Command
     {
         return User::query()
             ->whereRaw('lower(email) = ?', [mb_strtolower($email)])
+            ->whereNotNull('email_verified_at')
             ->where('is_demo', false)
             ->whereNull('suspended_at')
             ->whereHas('clientAccounts', fn ($accounts) => $accounts->where('role', ClientRole::Owner))
