@@ -8,6 +8,8 @@ use App\Http\Controllers\Concerns\ResolvesClientScope;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Client\BookMeetingRequest;
 use App\Http\Requests\Client\MeetingSlotsRequest;
+use App\Services\Propertyware\PropertywareDirectory;
+use App\Services\Propertyware\PropertywareException;
 use App\Services\Scheduling\MeetingBookings;
 use App\Services\Scheduling\MeetingCatalog;
 use App\Services\Scheduling\SchedulingClient;
@@ -31,7 +33,7 @@ class MeetingController extends Controller
      * asks, extra guests, and rescheduling. The portal links there and reads
      * back what the owner booked, matched on their email address.
      */
-    public function index(Request $request, SchedulingClient $scheduling, MeetingCatalog $catalog): Response
+    public function index(Request $request, SchedulingClient $scheduling, MeetingCatalog $catalog, PropertywareDirectory $directory): Response
     {
         $account = $this->activeClientAccount($request, ClientRole::Owner);
         abort_if($account === null, 403);
@@ -49,6 +51,14 @@ class MeetingController extends Controller
                     return $catalog->forClients();
                 } catch (SchedulingException) {
                     return [];
+                }
+            }),
+            // Filled into coresched's booking form, for the phone-call meetings.
+            'phone' => Inertia::defer(function () use ($directory, $account): ?string {
+                try {
+                    return $directory->phoneFor($directory->scopeFor($account));
+                } catch (PropertywareException) {
+                    return null;
                 }
             }),
             'upcoming' => Inertia::defer(function () use ($scheduling, $email): array {
@@ -94,8 +104,6 @@ class MeetingController extends Controller
                 (string) $request->validated('starts_at'),
                 $request->validated('notes'),
                 $request->validated('timezone'),
-                $request->validated('name'),
-                $request->validated('email'),
             );
         } catch (SlotTakenException $exception) {
             return back()->withErrors(['starts_at' => $exception->getMessage()]);

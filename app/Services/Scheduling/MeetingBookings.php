@@ -9,8 +9,8 @@ use App\Models\User;
  *
  * Only the meeting types staff allow on the admin Meetings page can be read
  * or booked, whatever slug a request names. The booking is made in coresched
- * under the name and email the client gives, the account's own by default,
- * and coresched sends the invitation there and keeps the calendar.
+ * under the signed-in client's own name and email, so nobody can book for
+ * someone else, and coresched sends the invitation and keeps the calendar.
  */
 class MeetingBookings
 {
@@ -63,7 +63,7 @@ class MeetingBookings
      * @throws SlotTakenException when someone booked the time first.
      * @throws SchedulingException
      */
-    public function book(User $client, string $slug, string $startsAt, ?string $notes, ?string $timezone, ?string $name = null, ?string $email = null): ?array
+    public function book(User $client, string $slug, string $startsAt, ?string $notes, ?string $timezone): ?array
     {
         $type = $this->type($slug);
 
@@ -72,8 +72,8 @@ class MeetingBookings
         }
 
         return $this->scheduling->book((string) $type['page'], $slug, $startsAt, [
-            'name' => filled($name) ? trim($name) : (string) $client->name,
-            'email' => filled($email) ? trim($email) : (string) $client->email,
+            'name' => (string) $client->name,
+            'email' => (string) $client->email,
             'notes' => $notes,
             'timezone' => $timezone,
         ]);

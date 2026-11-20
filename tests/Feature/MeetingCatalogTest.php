@@ -29,6 +29,7 @@ beforeEach(function () {
             ['slug' => 'staff-lunch', 'name' => 'Staff lunch'],
         ]]),
         '*/bookings*' => Http::response(['data' => []]),
+        '*/contacts/*' => Http::response(['id' => 1, 'mobilePhone' => '713-555-0101']),
     ]);
 });
 

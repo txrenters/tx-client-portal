@@ -5,7 +5,7 @@ import { CalendarClock, Clock, ExternalLink, MapPin } from '@lucide/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import AppCard from '@/components/AppCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
-import BookMeetingDialog from '@/components/meetings/BookMeetingDialog.vue';
+import BookMeetingFrame from '@/components/meetings/BookMeetingFrame.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,6 +33,8 @@ const props = defineProps<{
     channel: string;
     /** Undefined while loading. */
     upcoming?: UpcomingMeeting[];
+    /** The owner's number on file, filled into the booking form. */
+    phone?: string | null;
 }>();
 
 /**
@@ -230,7 +232,11 @@ const when = appDateFormatter({
             description="Meetings will appear here once scheduling is connected."
         />
 
-        <BookMeetingDialog v-model:open="isBooking" :meeting="booking" />
+        <BookMeetingFrame
+            v-model:open="isBooking"
+            :meeting="booking"
+            :phone="phone"
+        />
 
         <template v-if="available">
             <AppCard
