@@ -153,6 +153,22 @@ function hasStarted(meeting: UpcomingMeeting): boolean {
     return new Date(meeting.startsAt).getTime() <= now.value;
 }
 
+/**
+ * Booked meetings, upcoming first with the soonest at the top; those that
+ * have started go below, the most recent first.
+ */
+const booked = computed<UpcomingMeeting[]>(() => {
+    const at = (meeting: UpcomingMeeting): number =>
+        new Date(meeting.startsAt).getTime();
+    const upcoming = (props.upcoming ?? []).filter((m) => !hasStarted(m));
+    const started = (props.upcoming ?? []).filter(hasStarted);
+
+    return [
+        ...upcoming.sort((a, b) => at(a) - at(b)),
+        ...started.sort((a, b) => at(b) - at(a)),
+    ];
+});
+
 const when = appDateFormatter({
     weekday: 'short',
     month: 'short',
@@ -283,7 +299,7 @@ const when = appDateFormatter({
                 </p>
 
                 <ul v-else class="divide-border divide-y text-sm">
-                    <li v-for="meeting in upcoming" :key="meeting.uid">
+                    <li v-for="meeting in booked" :key="meeting.uid">
                         <component
                             :is="hasStarted(meeting) ? 'div' : 'a'"
                             v-bind="
