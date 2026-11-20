@@ -22,6 +22,9 @@ class DepartmentDirectory
 
     private const CACHE_MINUTES = 15;
 
+    /** The most department pages read, whatever the departments page lists. */
+    private const MAX_DEPARTMENTS = 20;
+
     /** How long a failed read is remembered, so an outage is not retried on every visit. */
     private const FAILURE_CACHE_MINUTES = 1;
 
@@ -74,11 +77,13 @@ class DepartmentDirectory
 
         $bySlug = [];
 
-        foreach ($page['departments'] as $department) {
+        foreach (array_slice($page['departments'], 0, self::MAX_DEPARTMENTS) as $department) {
             $name = trim((string) ($department['name'] ?? ''));
             $url = (string) ($department['url'] ?? '');
 
-            if ($name === '' || $url === '') {
+            // The links come from a page the portal does not control, so only
+            // ones on the departments page's own site are followed.
+            if ($name === '' || ! $this->onBookingSite($url)) {
                 continue;
             }
 
@@ -95,6 +100,18 @@ class DepartmentDirectory
     }
 
     /**
+     * Whether an address is https on the same host as the departments page.
+     */
+    private function onBookingSite(string $url): bool
+    {
+        $host = parse_url((string) $this->departmentsUrl, PHP_URL_HOST);
+
+        return parse_url($url, PHP_URL_SCHEME) === 'https'
+            && is_string($host)
+            && strcasecmp((string) parse_url($url, PHP_URL_HOST), $host) === 0;
+    }
+
+    /**
      * The Inertia props a coresched booking page was rendered with.
      *
      * @return array<string, mixed>
@@ -102,7 +119,8 @@ class DepartmentDirectory
     private function props(string $url): array
     {
         try {
-            $response = Http::withOptions(['verify' => $this->verify])
+            // Redirects are not followed, so a link cannot hop to another site.
+            $response = Http::withOptions(['verify' => $this->verify, 'allow_redirects' => false])
                 ->timeout(10)
                 ->connectTimeout(5)
                 ->get($url);

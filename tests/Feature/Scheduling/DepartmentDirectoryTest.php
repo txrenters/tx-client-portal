@@ -82,3 +82,17 @@ test('departments coresched sends itself are kept, and the page is not read', fu
 
     Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/departments/'));
 });
+
+test('department links to another site are not followed', function () {
+    Http::fake([
+        '*/api/v1/organizations/*/event-types' => Http::response(['data' => [['slug' => 'accounting-team-meeting']]]),
+        '*/departments/abc' => Http::response(bookingPage(['departments' => [
+            ['name' => 'Elsewhere', 'url' => 'https://internal.example/admin'],
+            ['name' => 'Plain http', 'url' => 'http://scheduling.test/book/texas-renters/accounting'],
+        ]])),
+    ]);
+
+    expect(app(MeetingCatalog::class)->forClients()[0]['departments'])->toBe([]);
+
+    Http::assertSentCount(2);
+});
