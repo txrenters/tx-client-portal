@@ -5,6 +5,7 @@ import {
     SidebarGroup,
     SidebarGroupLabel,
     SidebarMenu,
+    SidebarMenuBadge,
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
@@ -59,8 +60,19 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                     <Link v-else :href="item.href" prefetch>
                         <component :is="item.icon" />
                         <span>{{ item.title }}</span>
+                        <span v-if="item.badge" class="sr-only"
+                            >, {{ item.badge }} unread</span
+                        >
                     </Link>
                 </SidebarMenuButton>
+                <SidebarMenuBadge
+                    v-if="item.badge"
+                    class="bg-primary text-primary-foreground peer-hover/menu-button:text-primary-foreground peer-data-active/menu-button:text-primary-foreground rounded-full"
+                    aria-hidden="true"
+                    >{{
+                        item.badge > 99 ? '99+' : item.badge
+                    }}</SidebarMenuBadge
+                >
             </SidebarMenuItem>
         </SidebarMenu>
     </SidebarGroup>

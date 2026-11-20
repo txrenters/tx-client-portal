@@ -77,6 +77,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Textarea } from '@/components/ui/textarea';
+import { useAttention } from '@/composables/useAttention';
 import { dashboard as ownerDashboard } from '@/routes/owner';
 import { show as ownerWorkOrder } from '@/routes/owner/maintenance';
 import {
@@ -495,6 +496,8 @@ const listedEarlierTexts = computed<ChatThread[]>(() => {
     });
 });
 
+const { refresh: refreshAttention } = useAttention();
+
 /** Conversations opened on this page; the server records them as read too. */
 const openedThreadIds = ref(new Set<number>());
 
@@ -517,6 +520,8 @@ function open(threadId: number | null): void {
             only: ['selectedThreadId', 'conversation'],
             preserveState: true,
             preserveScroll: true,
+            // Opening it marked it read, so the unread counts drop now.
+            onSuccess: () => refreshAttention(true),
         },
     );
 }

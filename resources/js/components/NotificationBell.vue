@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, router, useHttp } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import { echo, echoIsConfigured } from '@laravel/echo-vue';
 import {
     Bell,
@@ -20,52 +20,26 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAttention } from '@/composables/useAttention';
 import {
     index as notifications,
-    latest as latestNotifications,
     read as readNotice,
 } from '@/routes/notifications';
 import { show as maintenanceShow } from '@/routes/owner/maintenance';
 import { index as ownerMessages } from '@/routes/owner/messages';
 import { index as residentMessages } from '@/routes/resident/messages';
-import type { ChatThread, Notice, WorkOrder } from '@/types';
-
-type Section<T> = { count: number; items: T[] } | null;
-
-type Latest = {
-    count: number;
-    portal: 'owner' | 'resident' | null;
-    /** Private channel that announces new replies for the account in view. */
-    channel: string | null;
-    approvals: Section<WorkOrder>;
-    messages: Section<ChatThread>;
-    notices?: Section<Notice>;
-};
+import type { ChatThread } from '@/types';
 
 /**
  * The header bell: a badge with how many things need the client's attention
  * (unread replies, lease reminders, and for owners, work orders waiting for approval) and a
  * dropdown listing the first few. It loads after the page, refreshes when a
  * reply arrives over Reverb, when it's opened, and after the client changes
- * something; otherwise at most once a minute.
+ * something; otherwise at most once a minute. The sidebar's Messages count
+ * reads the same fetch.
  */
-const latest = ref<Latest | null>(null);
-const http = useHttp({});
-let fetchedAt = 0;
+const { latest, refresh } = useAttention();
 let listeningOn: string | null = null;
-
-function refresh(force = false): void {
-    if (http.processing || (!force && Date.now() - fetchedAt < 60_000)) {
-        return;
-    }
-
-    fetchedAt = Date.now();
-    http.get(latestNotifications.url(), {
-        onSuccess: (response) => {
-            latest.value = response as Latest;
-        },
-    });
-}
 
 /** Follow the channel of the account in view, so a new reply updates the badge at once. */
 watch(

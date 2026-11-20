@@ -13,6 +13,8 @@ export type NavItem = {
     isActive?: boolean;
     /** Another site, opened in a new tab rather than visited in the portal. */
     external?: boolean;
+    /** How many things wait behind the link, such as unread replies; hidden at 0. */
+    badge?: number;
 };
 
 /** A labelled run of sidebar links, so a long menu reads as a few short lists. */
