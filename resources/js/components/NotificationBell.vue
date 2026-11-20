@@ -38,7 +38,7 @@ import type { ChatThread } from '@/types';
  * something; otherwise at most once a minute. The sidebar's Messages count
  * reads the same fetch.
  */
-const { latest, refresh } = useAttention();
+const { latest, refresh, reset } = useAttention();
 let listeningOn: string | null = null;
 
 /** Follow the channel of the account in view, so a new reply updates the badge at once. */
@@ -70,6 +70,7 @@ const stopListening = router.on('finish', (event) =>
 onMounted(() => refresh(true));
 onBeforeUnmount(() => {
     stopListening();
+    reset();
 
     if (listeningOn && echoIsConfigured()) {
         echo().leave(listeningOn);

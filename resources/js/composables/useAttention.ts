@@ -26,12 +26,20 @@ export type Attention = {
 const latest = ref<Attention | null>(null);
 let http: ReturnType<typeof useHttp> | null = null;
 let fetchedAt = 0;
+/** Bumped by reset(), so an answer to a request made before it is dropped. */
+let generation = 0;
 
 export type UseAttentionReturn = {
     latest: Ref<Attention | null>;
     unreadMessages: ComputedRef<number>;
     /** Refetch, at most once a minute unless forced. */
     refresh: (force?: boolean) => void;
+    /**
+     * Forget everything, for when the bell leaves the page (signing out, or
+     * the staff side), so the next person in this tab never sees the last
+     * one's replies while their own load.
+     */
+    reset: () => void;
 };
 
 export function useAttention(): UseAttentionReturn {
@@ -42,17 +50,29 @@ export function useAttention(): UseAttentionReturn {
             return;
         }
 
+        const asked = generation;
         fetchedAt = Date.now();
         void http.get(latestNotifications.url(), {
             onSuccess: (response) => {
-                latest.value = response as Attention;
+                if (asked === generation) {
+                    latest.value = response as Attention;
+                }
             },
         });
+    }
+
+    function reset(): void {
+        generation++;
+        latest.value = null;
+        fetchedAt = 0;
+        // A new client, so a request still out for the last one can't hold up theirs.
+        http = null;
     }
 
     return {
         latest,
         unreadMessages: computed(() => latest.value?.messages?.count ?? 0),
         refresh,
+        reset,
     };
 }
