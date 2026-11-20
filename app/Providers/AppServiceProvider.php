@@ -16,6 +16,7 @@ use App\Services\Propertyware\PropertywareClient;
 use App\Services\Propertyware\PropertywareDirectory;
 use App\Services\Propertyware\PropertywareSoap;
 use App\Services\Push\ExpoPushClient;
+use App\Services\Scheduling\DepartmentDirectory;
 use App\Services\Scheduling\SchedulingClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Notifications\VerifyEmail;
@@ -59,6 +60,11 @@ class AppServiceProvider extends ServiceProvider
             config('services.scheduling.url'),
             config('services.scheduling.token'),
             config('services.scheduling.page'),
+            self::tlsVerify(config('services.scheduling.verify', true)),
+        ));
+
+        $this->app->singleton(DepartmentDirectory::class, fn (): DepartmentDirectory => new DepartmentDirectory(
+            config('services.scheduling.booking_url'),
             self::tlsVerify(config('services.scheduling.verify', true)),
         ));
 

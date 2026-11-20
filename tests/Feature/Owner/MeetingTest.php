@@ -42,6 +42,8 @@ function fakeScheduling(array $bookings = []): void
             'url' => 'https://scheduling.test/book/texas-renters/owner-meeting',
         ]]]),
         '*/bookings*' => Http::response(['data' => $bookings]),
+        // Coresched's public departments page, which lists no departments here.
+        '*/book/*' => Http::response('<html></html>'),
         '*/contacts/*' => Http::response(['id' => 1, 'workPhone' => '713-555-0101', 'mobilePhone' => ' ', 'homePhone' => '713-555-0303']),
     ]);
 }

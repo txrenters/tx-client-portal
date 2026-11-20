@@ -33,7 +33,10 @@ class MeetingCatalog
         'new-to-market-meeting-virtual-via-microsoft-teams',
     ];
 
-    public function __construct(private SchedulingClient $scheduling) {}
+    public function __construct(
+        private SchedulingClient $scheduling,
+        private DepartmentDirectory $departments,
+    ) {}
 
     /**
      * The slugs clients may book. Empty means none, not all.
@@ -62,7 +65,11 @@ class MeetingCatalog
     }
 
     /**
-     * The meeting types clients see, in scheduling's order.
+     * The meeting types clients see, in scheduling's order, each with the
+     * departments that list it.
+     *
+     * Coresched's API may say the departments itself; until it does, they
+     * come from its public departments page.
      *
      * @return array<int, array<string, mixed>>
      *
@@ -72,10 +79,20 @@ class MeetingCatalog
     {
         $allowed = $this->allowedSlugs();
 
-        return array_values(array_filter(
+        $types = array_values(array_filter(
             $this->scheduling->eventTypes(),
             fn (array $type): bool => in_array($type['slug'] ?? null, $allowed, strict: true),
         ));
+
+        if ($types === [] || collect($types)->every(fn (array $type): bool => array_key_exists('departments', $type))) {
+            return $types;
+        }
+
+        $departments = $this->departments->bySlug();
+
+        return array_map(fn (array $type): array => $type + [
+            'departments' => $departments[$type['slug']] ?? [],
+        ], $types);
     }
 
     /**

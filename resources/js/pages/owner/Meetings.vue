@@ -5,10 +5,10 @@ import { CalendarClock, Clock, ExternalLink, MapPin } from '@lucide/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import AppCard from '@/components/AppCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import LoadingSkeleton from '@/components/LoadingSkeleton.vue';
 import BookMeetingFrame from '@/components/meetings/BookMeetingFrame.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { appDateFormatter } from '@/lib/timezone';
 import { dashboard } from '@/routes/owner';
 import { index } from '@/routes/owner/meetings';
@@ -154,152 +154,116 @@ const when = appDateFormatter({
             description="Meet with our leasing, maintenance or accounting team."
         />
 
-        <AppCard v-if="available" title="Book a meeting">
-            <div
-                v-if="meetingTypes === undefined"
-                class="grid gap-3 sm:grid-cols-2"
-                aria-busy="true"
-            >
-                <Skeleton v-for="row in 4" :key="row" class="h-20 w-full" />
-            </div>
-
-            <p
-                v-else-if="meetingTypes.length === 0"
-                class="text-muted-foreground text-sm"
-            >
-                There are no meetings to book right now. Please send us a
-                message instead.
-            </p>
-
-            <div v-else class="flex flex-col gap-6">
-                <section
-                    v-for="department in departments"
-                    :key="department.name ?? ''"
-                    class="flex flex-col gap-3"
-                >
-                    <h3
-                        v-if="department.name"
-                        class="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase"
-                    >
-                        <span
-                            v-if="department.color"
-                            class="size-2 rounded-full"
-                            :style="{
-                                backgroundColor: department.color,
-                            }"
-                            aria-hidden="true"
-                        />
-                        {{ department.name }}
-                    </h3>
-                    <ul class="grid gap-3 sm:grid-cols-2">
-                        <li
-                            v-for="meeting in department.meetings"
-                            :key="`${department.name}:${meeting.slug}`"
-                            class="border-border flex items-center justify-between gap-3 rounded-xl border p-3"
-                            :class="{
-                                'border-l-4': department.color,
-                            }"
-                            :style="
-                                department.color
-                                    ? {
-                                          borderLeftColor: department.color,
-                                          backgroundColor: `color-mix(in oklab, ${department.color} 7%, transparent)`,
-                                      }
-                                    : undefined
-                            "
-                        >
-                            <span class="min-w-0">
-                                <span class="block font-medium text-pretty">{{
-                                    meeting.name
-                                }}</span>
-                                <span
-                                    class="text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 text-xs"
-                                >
-                                    <span
-                                        class="inline-flex items-center gap-1"
-                                    >
-                                        <Clock
-                                            class="size-3"
-                                            aria-hidden="true"
-                                        />
-                                        {{ meeting.durationMinutes }} min
-                                    </span>
-                                    <span
-                                        v-if="meeting.locationLabel"
-                                        class="inline-flex items-center gap-1"
-                                    >
-                                        <MapPin
-                                            class="size-3"
-                                            aria-hidden="true"
-                                        />
-                                        {{ meeting.locationLabel }}
-                                    </span>
-                                </span>
-                            </span>
-                            <Button
-                                size="sm"
-                                class="shrink-0"
-                                @click="startBooking(meeting)"
-                            >
-                                Book
-                            </Button>
-                        </li>
-                    </ul>
-                </section>
-            </div>
-
-            <p
-                v-if="bookingUrl"
-                class="text-muted-foreground mt-5 border-t pt-4 text-xs"
-            >
-                Prefer our scheduling page?
-                <a
-                    :href="bookingUrl"
-                    target="_blank"
-                    rel="noreferrer"
-                    class="text-primary inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline"
-                >
-                    Choose a department there
-                    <ExternalLink class="size-3" aria-hidden="true" />
-                </a>
-            </p>
-        </AppCard>
-
         <EmptyState
-            v-else
+            v-if="!available"
             :icon="CalendarClock"
             title="Booking isn't switched on yet"
             description="Meetings will appear here once scheduling is connected."
         />
 
-        <BookMeetingFrame
-            v-model:open="isBooking"
-            :meeting="booking"
-            :phone="phone"
-        />
+        <div v-else class="grid items-start gap-6 lg:grid-cols-3">
+            <AppCard title="Book a meeting" class="lg:order-2">
+                <LoadingSkeleton v-if="meetingTypes === undefined" :rows="4" />
 
-        <template v-if="available">
-            <AppCard
-                v-if="upcoming === undefined || upcoming.length > 0"
-                title="Booked"
-            >
-                <ul
-                    v-if="upcoming === undefined"
-                    class="divide-border divide-y"
-                    aria-busy="true"
+                <p
+                    v-else-if="meetingTypes.length === 0"
+                    class="text-muted-foreground text-sm"
                 >
-                    <li
-                        v-for="row in 2"
-                        :key="row"
-                        class="flex items-center justify-between gap-3 py-2.5"
+                    There are no meetings to book right now. Please send us a
+                    message instead.
+                </p>
+
+                <div v-else class="flex flex-col gap-5">
+                    <section
+                        v-for="department in departments"
+                        :key="department.name ?? ''"
+                        class="flex flex-col gap-2"
                     >
-                        <span class="flex flex-col gap-1.5">
-                            <Skeleton class="h-5 w-48" />
-                            <Skeleton class="h-4 w-36" />
-                        </span>
-                        <Skeleton class="h-4 w-16" />
-                    </li>
-                </ul>
+                        <h3
+                            v-if="department.name"
+                            class="flex items-center gap-2 text-sm font-medium"
+                        >
+                            <span
+                                v-if="department.color"
+                                class="size-2 shrink-0 rounded-full"
+                                :style="{ backgroundColor: department.color }"
+                                aria-hidden="true"
+                            />
+                            {{ department.name }}
+                        </h3>
+                        <ul
+                            class="bg-card divide-border divide-y overflow-hidden rounded-xl border"
+                        >
+                            <li
+                                v-for="meeting in department.meetings"
+                                :key="`${department.name}:${meeting.slug}`"
+                                class="flex items-center gap-4 px-4 py-3"
+                            >
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-medium text-pretty">
+                                        {{ meeting.name }}
+                                    </p>
+                                    <p
+                                        class="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-3 text-xs"
+                                    >
+                                        <span
+                                            class="inline-flex items-center gap-1"
+                                        >
+                                            <Clock
+                                                class="size-3"
+                                                aria-hidden="true"
+                                            />
+                                            {{ meeting.durationMinutes }} min
+                                        </span>
+                                        <span
+                                            v-if="meeting.locationLabel"
+                                            class="inline-flex items-center gap-1"
+                                        >
+                                            <MapPin
+                                                class="size-3"
+                                                aria-hidden="true"
+                                            />
+                                            {{ meeting.locationLabel }}
+                                        </span>
+                                    </p>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    class="shrink-0"
+                                    @click="startBooking(meeting)"
+                                >
+                                    Book
+                                </Button>
+                            </li>
+                        </ul>
+                    </section>
+                </div>
+
+                <template v-if="bookingUrl" #footer>
+                    <p class="text-xs">
+                        Prefer our scheduling page?
+                        <a
+                            :href="bookingUrl"
+                            target="_blank"
+                            rel="noreferrer"
+                            class="text-primary inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline"
+                        >
+                            Choose a department there
+                            <ExternalLink class="size-3" aria-hidden="true" />
+                        </a>
+                    </p>
+                </template>
+            </AppCard>
+
+            <AppCard title="Booked" class="lg:order-1 lg:col-span-2">
+                <LoadingSkeleton v-if="upcoming === undefined" :rows="2" />
+
+                <p
+                    v-else-if="upcoming.length === 0"
+                    class="text-muted-foreground text-sm"
+                >
+                    Nothing booked yet. Meetings you book show up here.
+                </p>
 
                 <ul v-else class="divide-border divide-y text-sm">
                     <li v-for="meeting in upcoming" :key="meeting.uid">
@@ -333,6 +297,12 @@ const when = appDateFormatter({
                     </li>
                 </ul>
             </AppCard>
-        </template>
+        </div>
+
+        <BookMeetingFrame
+            v-model:open="isBooking"
+            :meeting="booking"
+            :phone="phone"
+        />
     </div>
 </template>

@@ -54,6 +54,7 @@
         <env name="TX_CMA_TOKEN" value=""/>
         <env name="SCHEDULING_URL" value=""/>
         <env name="SCHEDULING_TOKEN" value=""/>
+        <env name="SCHEDULING_BOOKING_URL" value=""/>
         <env name="MICROSOFT_TENANT_ID" value=""/>
         <env name="MICROSOFT_CLIENT_ID" value=""/>
         <env name="MICROSOFT_CLIENT_SECRET" value=""/>

@@ -1,23 +1,13 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
-import {
-    computed,
-    onMounted,
-    onUnmounted,
-    ref,
-    useTemplateRef,
-    watch,
-} from 'vue';
+import { computed } from 'vue';
 import {
     Dialog,
-    DialogClose,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import type { MeetingType } from '@/types';
 
 /**
@@ -28,6 +18,11 @@ import type { MeetingType } from '@/types';
  * around it. The owner's name, email and phone ride along on the address so
  * the form starts filled in, and they can change them there. The Booked list
  * picks the booking up from coresched's webhook.
+ *
+ * The window keeps a fixed height and only the calendar scrolls, inside the
+ * frame, so there is one scrollbar however long coresched's steps get. The
+ * calendar shows the meeting's name itself, so the title here is for screen
+ * readers only.
  */
 const props = defineProps<{
     meeting: MeetingType | null;
@@ -37,9 +32,6 @@ const props = defineProps<{
 const open = defineModel<boolean>('open', { required: true });
 
 const page = usePage();
-const frame = useTemplateRef<HTMLIFrameElement>('frame');
-/** The height the embed asks for; until it says, a sensible start. */
-const height = ref(640);
 
 /** The meeting's /book address with /embed in its place, and the owner's details. */
 const src = computed<string | null>(() => {
@@ -65,61 +57,25 @@ const src = computed<string | null>(() => {
 
     return url.toString();
 });
-
-watch(open, (isOpen) => {
-    if (isOpen) {
-        height.value = 640;
-    }
-});
-
-/** The embed posts its height as it changes, so the frame never scrolls twice. */
-function resize(event: MessageEvent): void {
-    const data = event.data as { type?: string; height?: unknown } | null;
-
-    if (
-        !src.value ||
-        event.origin !== new URL(src.value).origin ||
-        event.source !== frame.value?.contentWindow ||
-        data?.type !== 'coresched:resize' ||
-        typeof data.height !== 'number'
-    ) {
-        return;
-    }
-
-    height.value = Math.max(data.height, 200);
-}
-
-onMounted(() => window.addEventListener('message', resize));
-onUnmounted(() => window.removeEventListener('message', resize));
 </script>
 
 <template>
     <Dialog v-model:open="open">
         <DialogContent
             v-if="meeting && src"
-            class="max-h-[92dvh] gap-0 overflow-y-auto p-0 sm:max-w-3xl"
+            class="flex h-[92dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl"
         >
-            <DialogHeader class="px-6 pt-6 pb-3">
+            <DialogHeader class="sr-only">
                 <DialogTitle>{{ meeting.name }}</DialogTitle>
                 <DialogDescription>
                     Pick a day and time. We'll email you the invitation.
                 </DialogDescription>
             </DialogHeader>
             <iframe
-                ref="frame"
                 :src="src"
                 :title="`Book ${meeting.name}`"
-                class="block w-full border-0"
-                :style="{ height: `${height}px` }"
+                class="block min-h-0 w-full flex-1 border-0"
             />
-            <!-- Stays in view while the calendar scrolls under it. -->
-            <DialogFooter
-                class="bg-background sticky bottom-0 border-t px-6 py-4"
-            >
-                <DialogClose as-child>
-                    <Button variant="outline">Close</Button>
-                </DialogClose>
-            </DialogFooter>
         </DialogContent>
     </Dialog>
 </template>
