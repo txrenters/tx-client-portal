@@ -17,6 +17,7 @@ import {
 } from '@lucide/vue';
 import type { ComputedRef } from 'vue';
 import { computed } from 'vue';
+import { useAttention } from '@/composables/useAttention';
 import { dashboard as adminDashboard } from '@/routes/admin';
 import { help } from '@/routes';
 import {
@@ -51,7 +52,7 @@ export type UseClientNavigationReturn = {
  * Residents have a short menu, so it splits in three: where they land, what
  * they do about their home, and the paperwork they look up.
  */
-const residentNavGroups = (): NavGroup[] => [
+const residentNavGroups = (unreadMessages: number): NavGroup[] => [
     {
         label: 'Overview',
         items: [{ title: 'Dashboard', href: residentDashboard(), icon: Home }],
@@ -64,6 +65,7 @@ const residentNavGroups = (): NavGroup[] => [
                 title: 'Messages',
                 href: residentMessages(),
                 icon: MessageSquare,
+                badge: unreadMessages,
             },
         ],
     },
@@ -81,7 +83,7 @@ const residentNavGroups = (): NavGroup[] => [
  * nine-item list: how the portfolio is doing, the properties themselves, the
  * money, and talking to us.
  */
-const ownerNavGroups = (): NavGroup[] => [
+const ownerNavGroups = (unreadMessages: number): NavGroup[] => [
     {
         label: 'Overview',
         items: [
@@ -107,7 +109,12 @@ const ownerNavGroups = (): NavGroup[] => [
     {
         label: 'Connect',
         items: [
-            { title: 'Messages', href: ownerMessages(), icon: MessageSquare },
+            {
+                title: 'Messages',
+                href: ownerMessages(),
+                icon: MessageSquare,
+                badge: unreadMessages,
+            },
             {
                 title: 'Meetings',
                 href: ownerMeetings(),
@@ -123,13 +130,17 @@ const ownerNavGroups = (): NavGroup[] => [
 export function useClientNavigation(): UseClientNavigationReturn {
     const page = usePage();
     const activeRole = computed(() => page.props.client?.activeRole ?? null);
+    // Unread replies, from the same fetch as the header bell's badge.
+    const { unreadMessages } = useAttention();
 
     const mainNavGroups = computed<NavGroup[]>(() => {
         if (activeRole.value === 'owner') {
-            return ownerNavGroups();
+            return ownerNavGroups(unreadMessages.value);
         }
 
-        return activeRole.value === 'resident' ? residentNavGroups() : [];
+        return activeRole.value === 'resident'
+            ? residentNavGroups(unreadMessages.value)
+            : [];
     });
 
     const secondaryNavItems = computed<NavItem[]>(() => [
