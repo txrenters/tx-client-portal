@@ -214,6 +214,9 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         // A work order was scheduled, completed or canceled. Always kept in the
         // app's list; this only decides whether the phone is buzzed.
         'work_order_updates_push' => true,
+        // A booked meeting starts in an hour, or in five minutes. Always kept
+        // in the app's list; this only decides whether the phone is buzzed.
+        'meeting_reminders_push' => true,
     ];
 
     /**

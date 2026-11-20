@@ -2,6 +2,7 @@
 
 namespace App\Services\Scheduling;
 
+use Carbon\CarbonInterface;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
@@ -100,6 +101,23 @@ class SchedulingClient
 
         return $this->send(fn (PendingRequest $request): Response => $request
             ->get('bookings', ['email' => $email]))->json('data') ?? [];
+    }
+
+    /**
+     * Every booking with the organization starting between two moments,
+     * canceled ones included (each says its status).
+     *
+     * @return array<int, array<string, mixed>>
+     *
+     * @throws SchedulingException
+     */
+    public function bookingsBetween(CarbonInterface $from, CarbonInterface $to): array
+    {
+        return $this->send(fn (PendingRequest $request): Response => $request
+            ->get("organizations/{$this->page()}/bookings", [
+                'from' => $from->toIso8601String(),
+                'to' => $to->toIso8601String(),
+            ]))->json('data') ?? [];
     }
 
     /**
