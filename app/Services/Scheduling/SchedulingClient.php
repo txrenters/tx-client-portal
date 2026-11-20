@@ -2,6 +2,7 @@
 
 namespace App\Services\Scheduling;
 
+use Carbon\CarbonInterface;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
@@ -9,12 +10,13 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Talks to tx-scheduling, which owns meetings.
+ * Talks to coresched, which owns meetings.
  *
- * Booking itself stays there: its own page already knows about timezones,
- * the questions each meeting asks, extra guests and rescheduling. The portal
- * asks what is on offer and what this client has booked, and links out for
- * the rest, rather than keeping a second answer that would drift.
+ * The portal and the app book through here, but every booking lives in
+ * coresched: it picks the host, holds the calendar, sends the invitations and
+ * handles rescheduling and cancelling on its own manage page. The portal only
+ * asks what is on offer and free, books a time, and reads back what this
+ * client has booked, rather than keeping a second answer that would drift.
  */
 class SchedulingClient
 {
@@ -26,6 +28,7 @@ class SchedulingClient
         private ?string $token,
         private ?string $page,
         private bool|string $verify = true,
+        private bool $sampleBookings = false,
     ) {}
 
     /** How long the key's own organization is remembered. */
@@ -92,16 +95,77 @@ class SchedulingClient
      */
     public function upcoming(string $email): array
     {
+        if ($this->sampleBookings) {
+            return SampleBookings::upcoming($email, config('services.scheduling.booking_url'));
+        }
+
         return $this->send(fn (PendingRequest $request): Response => $request
             ->get('bookings', ['email' => $email]))->json('data') ?? [];
     }
 
     /**
-     * @param  callable(PendingRequest): Response  $request
+     * Every booking with the organization starting between two moments,
+     * canceled ones included (each says its status).
+     *
+     * @return array<int, array<string, mixed>>
      *
      * @throws SchedulingException
      */
-    private function send(callable $request): Response
+    public function bookingsBetween(CarbonInterface $from, CarbonInterface $to): array
+    {
+        return $this->send(fn (PendingRequest $request): Response => $request
+            ->get("organizations/{$this->page()}/bookings", [
+                'from' => $from->toIso8601String(),
+                'to' => $to->toIso8601String(),
+            ]))->json('data') ?? [];
+    }
+
+    /**
+     * The times a meeting can be booked between two days, both included.
+     *
+     * @return array<int, array{startsAt: string, endsAt: string, seatsRemaining?: int}>
+     *
+     * @throws SchedulingException
+     */
+    public function slots(string $page, string $eventType, string $from, string $to): array
+    {
+        return $this->send(fn (PendingRequest $request): Response => $request
+            ->get('pages/'.rawurlencode($page).'/event-types/'.rawurlencode($eventType).'/slots', ['from' => $from, 'to' => $to]))
+            ->json('data') ?? [];
+    }
+
+    /**
+     * Book a time for someone. Scheduling checks the time is still free.
+     *
+     * @param  array{name: string, email: string, notes?: ?string, timezone?: ?string}  $invitee
+     * @return array<string, mixed>
+     *
+     * @throws SlotTakenException when someone booked the time first.
+     * @throws SchedulingException
+     */
+    public function book(string $page, string $eventType, string $startsAt, array $invitee): array
+    {
+        $response = $this->send(fn (PendingRequest $request): Response => $request->post('bookings', [
+            'page' => $page,
+            'event_type' => $eventType,
+            'starts_at' => $startsAt,
+            ...$invitee,
+        ]), allow: [409]);
+
+        if ($response->status() === 409) {
+            throw new SlotTakenException('That time has just been taken.');
+        }
+
+        return $response->json('data') ?? [];
+    }
+
+    /**
+     * @param  callable(PendingRequest): Response  $request
+     * @param  array<int, int>  $allow  Failing statuses the caller handles itself.
+     *
+     * @throws SchedulingException
+     */
+    private function send(callable $request, array $allow = []): Response
     {
         if (! $this->isConfigured()) {
             throw new SchedulingException('Scheduling is not configured.');
@@ -118,7 +182,7 @@ class SchedulingClient
             throw new SchedulingException('Could not reach the scheduling app.', previous: $exception);
         }
 
-        if ($response->failed()) {
+        if ($response->failed() && ! in_array($response->status(), $allow, strict: true)) {
             throw new SchedulingException("The scheduling app answered {$response->status()}.");
         }
 

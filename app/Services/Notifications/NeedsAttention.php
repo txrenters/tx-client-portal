@@ -58,7 +58,9 @@ class NeedsAttention
     }
 
     /**
-     * The stored lease and work order notices that belong to one of the user's accounts.
+     * The stored lease, work order and meeting notices that belong to one of
+     * the user's accounts. A meeting reminder lists every owner account of
+     * its login, so it shows under each.
      *
      * The account is matched with a JSON "contains" rather than `=`: its
      * binding is JSON text, so Postgres compares jsonb to jsonb instead of the
@@ -71,7 +73,7 @@ class NeedsAttention
     public function notices(User $user, ClientAccount $account): MorphMany
     {
         return $user->notifications()
-            ->whereIn('data->type', ['lease_expiring', 'work_order_update'])
+            ->whereIn('data->type', ['lease_expiring', 'work_order_update', 'meeting_reminder'])
             ->whereJsonContains('data->account_id', $account->id);
     }
 

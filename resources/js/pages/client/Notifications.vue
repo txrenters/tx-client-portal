@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { CalendarClock, CircleCheck, MessageSquare, Wrench } from '@lucide/vue';
+import {
+    CalendarCheck,
+    CalendarClock,
+    CircleCheck,
+    MessageSquare,
+    Wrench,
+} from '@lucide/vue';
 import AppCard from '@/components/AppCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
@@ -62,7 +68,9 @@ const timeFormatter = appDateFormatter({
                             :is="
                                 notice.type === 'work_order_update'
                                     ? Wrench
-                                    : CalendarClock
+                                    : notice.type === 'meeting_reminder'
+                                      ? CalendarCheck
+                                      : CalendarClock
                             "
                             class="text-primary mt-0.5 size-4 shrink-0"
                             aria-hidden="true"

@@ -582,6 +582,8 @@ export type MeetingType = {
     slug: string;
     /** The booking page this one is booked on; they differ within an org. */
     page: string;
+    /** The departments listing it on coresched's departments page; may be empty. */
+    departments?: string[];
     host: string | null;
     name: string;
     description: string | null;
@@ -665,10 +667,10 @@ export type Promotion = {
     link: { type: 'referrals' } | { type: 'url'; url: string };
 };
 
-/** A stored notice: a lease reminder or a work order update. */
+/** A stored notice: a lease reminder, a work order update or a meeting reminder. */
 export type Notice = {
     id: string;
-    type: 'lease_expiring' | 'work_order_update';
+    type: 'lease_expiring' | 'work_order_update' | 'meeting_reminder';
     role: 'owner' | 'resident' | null;
     title: string;
     body: string;

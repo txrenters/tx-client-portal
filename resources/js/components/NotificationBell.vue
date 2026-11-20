@@ -3,6 +3,7 @@ import { Link, router, useHttp } from '@inertiajs/vue3';
 import { echo, echoIsConfigured } from '@laravel/echo-vue';
 import {
     Bell,
+    CalendarCheck,
     CalendarClock,
     CircleCheck,
     MessageSquare,
@@ -180,7 +181,9 @@ const count = (): number => latest.value?.count ?? 0;
                                 :is="
                                     notice.type === 'work_order_update'
                                         ? Wrench
-                                        : CalendarClock
+                                        : notice.type === 'meeting_reminder'
+                                          ? CalendarCheck
+                                          : CalendarClock
                                 "
                                 class="text-primary mt-0.5 size-4 shrink-0"
                                 aria-hidden="true"

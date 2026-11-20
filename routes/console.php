@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\MeetingReminder;
 use App\Models\PortalVisit;
 use App\Models\SecurityEvent;
 use App\Models\SignInEvent;
@@ -26,11 +27,15 @@ Schedule::command('approvals:notify')->everyThirtyMinutes()->between('8:00', '20
 // daytime only, like approvals.
 Schedule::command('work-orders:notify-updates')->everyThirtyMinutes()->between('8:00', '20:00')->timezone('America/Chicago')->withoutOverlapping();
 
+// Owners with a meeting booked in coresched: an hour before, and five
+// minutes before. Every minute, at any hour, since that is when meetings are.
+Schedule::command('meetings:remind')->everyMinute()->withoutOverlapping();
+
 // Owners and tenants whose lease ends within 90 days.
 Schedule::command('leases:notify-expiring')->dailyAt('09:00')->timezone('America/Chicago')->withoutOverlapping();
 
 // Old sign-in log entries and visits (see the models' KEEP_DAYS).
-Schedule::command('model:prune', ['--model' => [SignInEvent::class, PortalVisit::class, SecurityEvent::class]])->daily();
+Schedule::command('model:prune', ['--model' => [SignInEvent::class, PortalVisit::class, SecurityEvent::class, MeetingReminder::class]])->daily();
 
 Artisan::command('notifications:prune', function () {
     $deleted = DatabaseNotification::where('created_at', '<', now()->subDays(90))->delete();

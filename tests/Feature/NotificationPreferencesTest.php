@@ -24,7 +24,7 @@ test('the app reads and changes notification settings', function () {
     // No client account, so nothing to text: "sms" is null.
     $this->getJson(route('api.v1.notification-preferences.show'))
         ->assertExactJson([
-            'data' => ['message_replies_email' => true, 'message_replies_push' => true, 'work_order_approvals_push' => true, 'lease_expiry_push' => true, 'work_order_updates_push' => true],
+            'data' => ['message_replies_email' => true, 'message_replies_push' => true, 'work_order_approvals_push' => true, 'lease_expiry_push' => true, 'work_order_updates_push' => true, 'meeting_reminders_push' => true],
             'meta' => ['sms' => null],
         ]);
 
@@ -50,7 +50,7 @@ test('clients cannot turn texts off, though older apps still send the switch', f
 
     // Nothing reaches the messaging hub, and nothing about texts is stored here.
     Http::assertNothingSent();
-    expect($user->refresh()->notificationPreferences())->toBe(['message_replies_email' => true, 'message_replies_push' => true, 'work_order_approvals_push' => true, 'lease_expiry_push' => true, 'work_order_updates_push' => true]);
+    expect($user->refresh()->notificationPreferences())->toBe(['message_replies_email' => true, 'message_replies_push' => true, 'work_order_approvals_push' => true, 'lease_expiry_push' => true, 'work_order_updates_push' => true, 'meeting_reminders_push' => true]);
 });
 
 test('ignores settings that do not exist', function () {
@@ -59,5 +59,5 @@ test('ignores settings that do not exist', function () {
 
     $this->putJson(route('api.v1.notification-preferences.update'), ['marketing_sms' => true])->assertOk();
 
-    expect($user->refresh()->notificationPreferences())->toBe(['message_replies_email' => true, 'message_replies_push' => true, 'work_order_approvals_push' => true, 'lease_expiry_push' => true, 'work_order_updates_push' => true]);
+    expect($user->refresh()->notificationPreferences())->toBe(['message_replies_email' => true, 'message_replies_push' => true, 'work_order_approvals_push' => true, 'lease_expiry_push' => true, 'work_order_updates_push' => true, 'meeting_reminders_push' => true]);
 });

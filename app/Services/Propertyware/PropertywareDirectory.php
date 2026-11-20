@@ -73,6 +73,30 @@ class PropertywareDirectory
     }
 
     /**
+     * The client's best number on file: mobile first, then work, home, other.
+     *
+     * @throws PropertywareException
+     */
+    public function phoneFor(ClientScope $scope): ?string
+    {
+        if ($this->findContact($scope->contactId) === null) {
+            return null;
+        }
+
+        $record = Cache::get("propertyware:contact:{$scope->contactId}", []);
+
+        foreach (['mobilePhone', 'workPhone', 'homePhone', 'otherPhone'] as $field) {
+            $phone = trim((string) ($record[$field] ?? ''));
+
+            if ($phone !== '') {
+                return $phone;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Build the set of Propertyware records the client account may see.
      *
      * @throws PropertywareException

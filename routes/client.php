@@ -90,6 +90,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('maintenance/{workOrder}/documents/{document}/preview', [OwnerMaintenanceController::class, 'previewDocument'])
             ->name('maintenance.documents.preview');
         Route::get('meetings', [OwnerMeetingController::class, 'index'])->name('meetings.index');
+        Route::get('meetings/{eventType}/slots', [OwnerMeetingController::class, 'slots'])->middleware('throttle:60,1')->name('meetings.slots');
+        Route::post('meetings', [OwnerMeetingController::class, 'store'])->middleware('throttle:10,1')->name('meetings.store');
 
         Route::get('messages', [OwnerMessageController::class, 'index'])->name('messages.index');
         Route::get('messages/earlier-media/{media}/{name}', [OwnerMessageController::class, 'earlierMedia'])->whereNumber('media')->name('messages.earlier-media');
