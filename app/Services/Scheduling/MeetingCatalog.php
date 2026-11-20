@@ -17,15 +17,20 @@ class MeetingCatalog
     public const SETTING = 'meetings.allowed_event_types';
 
     /**
-     * The list until staff first save their own: the four phone calls.
+     * The list until staff first save their own: each department's phone
+     * call and screen share, as on coresched's departments page.
      *
      * @var array<int, string>
      */
     public const DEFAULT_SLUGS = [
         'accounting-team-meeting',
+        'accounting-team-meeting-virtual-via-microsoft-teams',
         'leasing-team-meeting-phone-call',
+        'leasing-team-meeting-virtual-via-microsoft-teams',
         'maintenance-team-meeting-phone-call',
+        'maintenance-team-meeting-virtual-via-microsoft-teams',
         'new-to-market-meeting-phone-call',
+        'new-to-market-meeting-virtual-via-microsoft-teams',
     ];
 
     public function __construct(private SchedulingClient $scheduling) {}

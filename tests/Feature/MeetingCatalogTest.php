@@ -19,7 +19,7 @@ beforeEach(function () {
     $this->owner = User::factory()->create();
     $this->account = ClientAccount::factory()->owner()->for($this->owner)->create();
 
-    // Two of the approved phone calls, a screen share, and something a
+    // Two approved phone calls, an approved screen share, and something a
     // colleague made in scheduling that has nothing to do with clients.
     Http::fake([
         '*/event-types' => Http::response(['data' => [
@@ -44,7 +44,7 @@ test('the app only gets the approved meeting types too', function () {
 
     $this->getJson(route('api.v1.accounts.meetings.index', $this->account))
         ->assertOk()
-        ->assertJsonCount(2, 'data')
+        ->assertJsonCount(3, 'data')
         ->assertJsonMissing(['slug' => 'staff-lunch']);
 });
 
